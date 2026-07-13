@@ -1,0 +1,78 @@
+[
+  {
+    "id": "RULE-ARQ-001",
+    "description": "Penaliza arquitetura por violações de dependência",
+    "when": {
+      "metric": "violationDensity",
+      "operator": "gt",
+      "value": 0
+    },
+    "then": {
+      "type": "linear",
+      "metric": "totalViolations",
+      "factor": 10,
+      "limit": 100
+    },
+    "impacts": ["ARQ"]
+  },
+  {
+    "id": "RULE-CON-001",
+    "description": "Penaliza consistência por erros de linting",
+    "when": {
+      "metric": "totalErrors",
+      "operator": "gt",
+      "value": 0
+    },
+    "then": {
+      "type": "linear",
+      "metric": "totalErrors",
+      "factor": 5,
+      "limit": 50
+    },
+    "impacts": ["CON"]
+  },
+  {
+    "id": "RULE-CON-002",
+    "description": "Penaliza consistência por volume excessivo de warnings",
+    "when": {
+      "metric": "totalWarnings",
+      "operator": "gt",
+      "value": 100
+    },
+    "then": {
+      "type": "fixed",
+      "points": 10
+    },
+    "impacts": ["CON"]
+  },
+  {
+    "id": "RULE-TST-001",
+    "description": "Penaliza testabilidade por testes falhando",
+    "when": {
+      "metric": "testsFailed",
+      "operator": "gt",
+      "value": 0
+    },
+    "then": {
+      "type": "linear",
+      "metric": "testsFailed",
+      "factor": 10,
+      "limit": 50
+    },
+    "impacts": ["TST"]
+  },
+  {
+    "id": "RULE-TST-002",
+    "description": "Penaliza testabilidade por taxa de falha alta",
+    "when": {
+      "metric": "testFailureRate",
+      "operator": "gt",
+      "value": 10
+    },
+    "then": {
+      "type": "fixed",
+      "points": 30
+    },
+    "impacts": ["TST"]
+  }
+]

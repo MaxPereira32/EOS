@@ -1,0 +1,35 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "projeto": "Nome do Projeto",
+  "data": "YYYY-MM-DD",
+  "versao_eos": "0.1.8",
+  "perfil_arquitetural": "PROF-FRONTEND-SPA | PROF-LARAVEL-AR | PROF-NEXTJS-SSR | PROF-CLEAN-ARCH",
+  "indicadores": {
+    "ARQ": 100,
+    "GOV": 100,
+    "TST": 100,
+    "EVO": 100,
+    "ADQ": 100,
+    "CON": 100,
+    "CXA": 100,
+    "PRP": 100
+  },
+  "evidencias": {
+    "linter_dependencias": {
+      "config_file": ".dependency-cruiser.cjs",
+      "executado": true
+    },
+    "linter_codigo": {
+      "config_file": "eslint.config.js | eslintrc.json | package.json",
+      "executado": true
+    },
+    "testes_automatizados": {
+      "config_file": "vitest.config.ts | phpunit.xml",
+      "executado": true
+    },
+    "governanca": {
+      "diretorio_decisoes": ".eos/decisoes",
+      "adrs_ativas": []
+    }
+  }
+}
