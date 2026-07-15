@@ -1,4 +1,4 @@
-# Engineering Operating System (EOS) — v0.4.0
+# Engineering Operating System (EOS) — v0.9.0
 
 Bem-vindo ao **Engineering Operating System (EOS)**, uma plataforma de **Continuous Architecture** orientada por evidências, projetada para guiar tomadas de decisões técnicas, governança arquitetural e evolução de sistemas de forma verificável, automatizada, extensível e pautada em um Modelo de Domínio formal (Domain-Driven).
 
@@ -6,9 +6,9 @@ O EOS não é um projeto de aplicação; ele é um **método de operação, gove
 
 ---
 
-## 1. Estrutura de Diretórios (v0.4.0)
+## 1. Estrutura de Diretórios (v0.9.0)
 
-A versão `v0.4.0` introduz uma especificação formal de **Modelo de Domínio (RFC-002)**, reestruturando o núcleo em camadas desacopladas de infraestrutura (`platform/`), lógica de processamento (`engines/`), contratos formais (`domain/`), coletores (`collectors/`) e formatos de saída (`reporters/`), coordenados por um **Event Bus tipado**.
+A versão `v0.9.0` introduz o **Semantic Graph Compartilhado**, o **Knowledge Graph**, a **Dependency Engine (v0.8)**, a **Security Engine (v0.8)** e a **Architecture Diff Engine (v0.9)** integrados ao **Artifact Consistency Framework (ACF)** e ao **Modelo de Domínio formal (RFC-002)**.
 
 ```
 Engineering-Operating-System/
@@ -16,21 +16,37 @@ Engineering-Operating-System/
 │   ├── README.md                     # Visão geral da plataforma
 │   ├── core/
 │   │   ├── platform/                 # Infraestrutura de execução
-│   │   │   ├── eos-platform.js       # Orquestrador central da plataforma (v0.4.0)
+│   │   │   ├── eos-platform.js       # Orquestrador central da plataforma (v0.9.0)
 │   │   │   ├── event-bus.js          # Barramento tipado com ExecutionContext (v0.4.0)
-│   │   │   └── execution-context.js  # Identidade imutável (branch, commit, env) (v0.4.0)
+│   │   │   ├── execution-context.js  # Identidade imutável (branch, commit, env) (v0.4.0)
+│   │   │   └── semantic-graph.js     # Grafo Semântico e de Conhecimento Compartilhado (v0.9.0)
 │   │   ├── domain/                   # Contratos formais e validações (Domain Model)
 │   │   │   ├── fact.js               # Entidade Fact (imutável) (v0.4.0)
 │   │   │   ├── metric.js             # Entidade Metric (v0.4.0)
 │   │   │   ├── indicator.js          # Entidade Indicator (v0.4.0)
 │   │   │   └── rule-result.js        # Entidade RuleResult (v0.4.0)
 │   │   ├── engines/                  # Processadores e analisadores
-│   │   │   ├── normalizer.js         # Normalizador de fatos canônicos (v0.4.0)
-│   │   │   ├── metrics-engine.js     # Motor de cálculo de métricas derivadas (v0.4.0)
+│   │   │   ├── normalizer.js         # Normalizador de fatos canônicos (v0.5.0)
+│   │   │   ├── metrics-engine.js     # Motor de cálculo de métricas derivadas (v0.5.0)
 │   │   │   ├── rule-engine.js        # Motor de regras declarativas sem eval (v0.4.0)
-│   │   │   └── quality-gate-engine.js# Motor de portões de qualidade (v0.4.0)
+│   │   │   ├── quality-gate-engine.js# Motor de portões de qualidade (v0.4.0)
+│   │   │   ├── dependency-engine.js  # Motor de acoplamentos e restrições de domínio (v0.8.0)
+│   │   │   ├── security-engine.js    # Motor de segurança e rotas expostas (v0.8.0)
+│   │   │   └── architecture-diff-engine.js # Motor de diff de versões arquiteturais (v0.9.0)
+│   │   ├── acf/                      # Módulo Artifact Consistency Framework (ACF) (v0.6.0)
+│   │   │   ├── acf-core.js           # Orquestrador do pipeline de consistência
+│   │   │   ├── adapter-registry.js   # Registro dinâmico de adaptadores
+│   │   │   ├── domain/               # Entidades de domínio tipadas e validadas (DDD)
+│   │   │   │   ├── facts.js          # Construtores de fatos estruturados
+│   │   │   │   ├── artifact.js       # Entidade Artifact
+│   │   │   │   ├── reference.js      # Objeto de Valor Reference
+│   │   │   │   ├── dependency.js     # Entidade Dependency
+│   │   │   │   ├── inconsistency.js  # Entidade Inconsistency
+│   │   │   │   └── refactoring-plan.js # Entidade RefactoringPlan (v0.6.0)
+│   │   │   ├── engines/              # Engines dos 8 Modelos Analíticos
+│   │   │   └── adapters/             # Adaptadores de tecnologia (react, css e bases)
 │   │   ├── reporters/                # Emissão de relatórios desacoplados
-│   │   │   ├── json-reporter.js      # Gerador de auditoria.json (preserva config) (v0.4.0)
+│   │   │   ├── json-reporter.js      # Gerador de auditoria.json (preserva config) (v0.5.0)
 │   │   │   └── markdown-reporter.js  # Gerador de auditoria-automatica.md (v0.4.0)
 │   │   ├── eos-collector.js          # Legado: Collector Engine (v0.2.0)
 │   │   ├── eos-validator.js          # Legado: Evidence Engine (v0.1.8)
@@ -45,7 +61,7 @@ Engineering-Operating-System/
 │   │   │   ├── vitest.js             # Adaptador Vitest
 │   │   │   └── phpunit.js            # Adaptador PHPUnit
 │   │   └── rules/                    # Regras declarativas
-│   │       └── default-rules.json    # Políticas de pontuação em JSON
+│   │       └── default-rules.json    # Políticas de pontuação em JSON (v0.5.0)
 │   ├── perfis/                       # Catálogo de Perfis Arquiteturais
 │   ├── modelos/                      # Modelos analíticos
 │   ├── antipadroes/                  # Catálogo de antipadrões
@@ -64,7 +80,8 @@ Engineering-Operating-System/
     ├── evolucao-eos-v0.1.9.md
     ├── evolucao-eos-v0.2.0.md
     ├── evolucao-eos-v0.3.0.md
-    └── evolucao-eos-v0.4.0.md         # Relatório de entrega v0.4.0
+    ├── evolucao-eos-v0.4.0.md         # Relatório de entrega v0.4.0
+    └── evolucao-eos-v0.5.0.md         # Relatório de entrega v0.5.0 (ACF)
 ```
 
 ---

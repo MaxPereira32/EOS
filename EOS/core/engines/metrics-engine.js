@@ -23,7 +23,7 @@ class MetricsEngine {
       ? parseFloat(((testsFailed / totalTests) * 100).toFixed(2))
       : 0;
 
-    return [
+    const baseMetrics = [
       new Metric('totalErrors', totalErrors, 'soma de errors de todos os coletores'),
       new Metric('totalWarnings', totalWarnings, 'soma de warnings de todos os coletores'),
       new Metric('totalViolations', totalViolations, 'soma de violations de todos os coletores'),
@@ -35,6 +35,14 @@ class MetricsEngine {
       new Metric('warningDensity', totalWarnings, 'total de warnings'),
       new Metric('violationDensity', totalViolations, 'total de violações arquiteturais')
     ];
+
+    if (canonicalFacts.acf) {
+      Object.keys(canonicalFacts.acf).forEach(metricName => {
+        baseMetrics.push(new Metric(metricName, canonicalFacts.acf[metricName], `Métrica importada do módulo ACF: ${metricName}`));
+      });
+    }
+
+    return baseMetrics;
   }
 }
 

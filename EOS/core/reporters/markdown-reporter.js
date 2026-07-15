@@ -11,7 +11,7 @@ class MarkdownReporter {
     const ctx = execution.context;
     const gateResults = execution.gateResults || {};
 
-    let md = `# Relatório de Auditoria Automática — EOS v0.4.0\n\n`;
+    let md = `# Relatório de Auditoria Automática — EOS v0.6.0\n\n`;
     md += `| Campo | Valor |\n|---|---|\n`;
     md += `| Projeto | ${ctx.project} |\n`;
     md += `| Branch | ${ctx.branch} |\n`;
@@ -22,9 +22,9 @@ class MarkdownReporter {
 
     // Métricas
     md += `## 1. Métricas Coletadas\n\n`;
-    md += `| Métrica | Valor | Fórmula |\n|---|---|---|\n`;
+    md += `| Métrica | Valor | Descrição |\n|---|---|---|\n`;
     execution.metrics.forEach(m => {
-      md += `| ${m.name} | ${m.value} | ${m.formula} |\n`;
+      md += `| \`${m.name}\` | **${m.value}** | ${m.formula} |\n`;
     });
     md += `\n`;
 
@@ -56,6 +56,50 @@ class MarkdownReporter {
       gateResults.violations.forEach(v => {
         md += `* **${v.indicator}** = ${v.score}/100 (mínimo exigido: ${v.min})\n`;
       });
+      md += `\n`;
+    }
+
+    // Architecture Diff (v0.9)
+    if (execution.archDiff && (
+      execution.archDiff.nodesAdded.length > 0 ||
+      execution.archDiff.nodesRemoved.length > 0 ||
+      execution.archDiff.edgesAdded.length > 0 ||
+      execution.archDiff.edgesRemoved.length > 0
+    )) {
+      md += `## 5. Diferencial de Arquitetura (Diff — v0.9)\n\n`;
+      md += `Abaixo estão listadas as mutações estruturais na topologia do projeto detectadas em comparação com a linha de base anterior:\n\n`;
+
+      if (execution.archDiff.nodesAdded.length > 0) {
+        md += `### ➕ Novos Artefatos Identificados\n`;
+        execution.archDiff.nodesAdded.forEach(n => {
+          md += `* [Novo ${n.type.toUpperCase()}] \`${n.id}\`\n`;
+        });
+        md += `\n`;
+      }
+
+      if (execution.archDiff.nodesRemoved.length > 0) {
+        md += `### ➖ Artefatos Removidos\n`;
+        execution.archDiff.nodesRemoved.forEach(n => {
+          md += `* [Removido] \`${n.id}\`\n`;
+        });
+        md += `\n`;
+      }
+
+      if (execution.archDiff.edgesAdded.length > 0) {
+        md += `### 🔌 Novas Conexões / Dependências de Código\n`;
+        execution.archDiff.edgesAdded.forEach(e => {
+          md += `* \`${e.from}\` ── [${e.type}] ──> \`${e.to}\`\n`;
+        });
+        md += `\n`;
+      }
+
+      if (execution.archDiff.edgesRemoved.length > 0) {
+        md += `### 🔌 Conexões de Dependência Removidas\n`;
+        execution.archDiff.edgesRemoved.forEach(e => {
+          md += `* \`${e.from}\` ── [${e.type}] ──x \`${e.to}\`\n`;
+        });
+        md += `\n`;
+      }
     }
 
     fs.writeFileSync(mdPath, md, 'utf8');

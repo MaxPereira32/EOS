@@ -17,26 +17,24 @@ class JSONReporter {
     const metricsMap = {};
     execution.metrics.forEach(m => { metricsMap[m.name] = m.value; });
 
-    let evidencias = {};
+    let original = {};
     if (fs.existsSync(jsonPath)) {
       try {
-        const original = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
-        evidencias = original.evidencias || {};
+        original = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
       } catch (e) {}
     }
 
-    const output = {
+    const output = Object.assign({}, original, {
       $schema: 'http://json-schema.org/draft-07/schema#',
       versao_eos: '0.4.0',
       context: execution.context.toJSON(),
-      evidencias,
       indicadores: indicatorsMap,
       metricas: metricsMap,
-      fatos_brutos: execution.rawFacts.map(f => ({ metric: f.metric, value: f.value, source: f.source, timestamp: f.timestamp })),
+      fatos_brutos: execution.rawFacts.map(f => ({ metric: f.metric, value: f.value, source: f.source, timestamp: f.timestamp, metadata: f.metadata })),
       regras_aplicadas: execution.ruleResults.map(r => ({ ruleId: r.ruleId, description: r.description, impacts: r.impacts })),
       quality_gates: execution.gateResults,
       eventos: execution.eventLog
-    };
+    });
 
     fs.writeFileSync(jsonPath, JSON.stringify(output, null, 2), 'utf8');
     console.log(`[Reporter] JSON gerado em ${jsonPath}`);

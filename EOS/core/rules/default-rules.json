@@ -74,5 +74,49 @@
       "points": 30
     },
     "impacts": ["TST"]
+  },
+  {
+    "id": "RULE-CON-003",
+    "description": "Penaliza consistência se houver referências de artefatos quebradas (ACF)",
+    "when": {
+      "metric": "acf.brokenReferences",
+      "operator": "gt",
+      "value": 0
+    },
+    "then": {
+      "type": "linear",
+      "metric": "acf.brokenReferences",
+      "factor": 15,
+      "limit": 60
+    },
+    "impacts": ["CON", "ARQ"]
+  },
+  {
+    "id": "RULE-CON-004",
+    "description": "Penaliza consistência se o score de consistência ACF for insatisfatório (< 90)",
+    "when": {
+      "metric": "acf.consistencyScore",
+      "operator": "lt",
+      "value": 90
+    },
+    "then": {
+      "type": "fixed",
+      "points": 20
+    },
+    "impacts": ["CON"]
+  },
+  {
+    "id": "RULE-CON-005",
+    "description": "Penaliza consistência se houver mais de 5 artefatos órfãos",
+    "when": {
+      "metric": "acf.orphans",
+      "operator": "gt",
+      "value": 5
+    },
+    "then": {
+      "type": "fixed",
+      "points": 10
+    },
+    "impacts": ["CON"]
   }
 ]

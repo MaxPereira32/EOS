@@ -23,10 +23,26 @@ const Normalizer = require('../engines/normalizer');
 const MetricsEngine = require('../engines/metrics-engine');
 const RuleEngine = require('../engines/rule-engine');
 const QualityGateEngine = require('../engines/quality-gate-engine');
+const DependencyEngine = require('../engines/dependency-engine');
+const SecurityEngine = require('../engines/security-engine');
+const ArchitectureDiffEngine = require('../engines/architecture-diff-engine');
 
 // Reporters
 const JSONReporter = require('../reporters/json-reporter');
 const MarkdownReporter = require('../reporters/markdown-reporter');
+
+// ACF
+const ACFPlatform = require('../acf/acf-core');
+const ReactAdapter = require('../acf/adapters/react-adapter');
+const CSSAdapter = require('../acf/adapters/css-adapter');
+
+const acfPlatform = new ACFPlatform();
+acfPlatform.registry.register(new ReactAdapter());
+acfPlatform.registry.register(new CSSAdapter());
+
+// Semantic Graph
+const SemanticGraph = require('./semantic-graph');
+const semanticGraph = new SemanticGraph();
 
 // ── Bootstrap ────────────────────────────────────────────────────
 
@@ -54,16 +70,49 @@ const normalizer = new Normalizer();
 const metricsEngine = new MetricsEngine();
 const ruleEngine = new RuleEngine();
 const gateEngine = new QualityGateEngine();
+const dependencyEngine = new DependencyEngine();
+const securityEngine = new SecurityEngine();
+const diffEngine = new ArchitectureDiffEngine();
 const jsonReporter = new JSONReporter();
 const mdReporter = new MarkdownReporter();
 
-// Objeto de execução (Execution) que acumula resultados
-const execution = { context, rawFacts: [], metrics: [], indicators: {}, ruleResults: [], gateResults: {} };
+// Objeto de execução (Execution) que acumula resultados e expõe o grafo semântico
+const execution = { context, rawFacts: [], metrics: [], indicators: {}, ruleResults: [], gateResults: {}, semanticGraph, archDiff: null };
 
 // ── Wiring: registrar handlers no Event Bus ──────────────────────
 
 bus.on('facts:collected', (facts) => {
   execution.rawFacts = facts;
+  
+  // 1. Alimentar o grafo semântico compartilhado com os fatos coletados na rodada
+  semanticGraph.loadFacts(facts);
+  // Carrega o metamodelo de conhecimento (Knowledge Graph)
+  semanticGraph.loadKnowledgeModel(auditData.acf || auditData.pcf);
+  
+  // 2. Executar Dependency Engine
+  const depViolations = dependencyEngine.evaluate(semanticGraph, auditData);
+  if (depViolations.length > 0) {
+    facts = facts.concat(depViolations);
+    semanticGraph.loadFacts(depViolations);
+  }
+
+  // 3. Executar Security Engine
+  const secViolations = securityEngine.evaluate(semanticGraph, auditData);
+  if (secViolations.length > 0) {
+    facts = facts.concat(secViolations);
+    semanticGraph.loadFacts(secViolations);
+  }
+
+  // 4. Executar Architecture Diff Engine
+  const { facts: diffFacts, diff } = diffEngine.compare(semanticGraph, auditData);
+  execution.archDiff = diff;
+  if (diffFacts.length > 0) {
+    facts = facts.concat(diffFacts);
+    semanticGraph.loadFacts(diffFacts);
+  }
+
+  execution.rawFacts = facts;
+  
   const canonical = normalizer.normalize(facts);
   bus.emit('facts:normalized', canonical);
 });
@@ -138,25 +187,46 @@ if (fs.existsSync(collectorsDir)) {
   });
 }
 
-// Executar coletores e acumular Fact[]
-Object.keys(evidencias).forEach(key => {
-  const config = evidencias[key];
-  if (config && config.executado) {
-    let pluginName = mapeamento[key];
-    if (typeof pluginName === 'function') pluginName = pluginName(config);
+// Executar coletores e acumular Fact[] de forma assíncrona
+(async () => {
+  Object.keys(evidencias).forEach(key => {
+    const config = evidencias[key];
+    if (config && config.executado) {
+      let pluginName = mapeamento[key];
+      if (typeof pluginName === 'function') pluginName = pluginName(config);
 
-    const plugin = plugins[pluginName];
-    if (plugin) {
-      try {
-        const facts = plugin.collect(config);
-        allFacts = allFacts.concat(facts);
-        console.log(`[✓] Plugin [${pluginName}] coletou ${facts.length} fatos.`);
-      } catch (err) {
-        console.error(`[-] Plugin [${pluginName}] falhou: ${err.message}`);
+      const plugin = plugins[pluginName];
+      if (plugin) {
+        try {
+          const facts = plugin.collect(config);
+          allFacts = allFacts.concat(facts);
+          console.log(`[✓] Plugin [${pluginName}] coletou ${facts.length} fatos.`);
+        } catch (err) {
+          console.error(`[-] Plugin [${pluginName}] falhou: ${err.message}`);
+        }
       }
     }
-  }
-});
+  });
 
-// Disparar o pipeline via Event Bus
-bus.emit('facts:collected', allFacts);
+  // Executar ACF se configurado no auditoria.json
+  if (auditData.acf || auditData.pcf) {
+    try {
+      const acfResult = await acfPlatform.run(auditData, context, {
+        outputDir: outputDir,
+        historicalReport: auditData,
+        semanticGraph: semanticGraph
+      });
+      allFacts = allFacts.concat(acfResult.facts);
+      
+      // Carregar também no grafo semântico os fatos deduzidos pelo diagnóstico/planejamento do ACF
+      semanticGraph.loadFacts(acfResult.facts);
+      
+      console.log(`[✓] ACF coletou ${acfResult.facts.length} fatos estruturados.`);
+    } catch (err) {
+      console.error(`[-] Falha na execução do ACF: ${err.message}`);
+    }
+  }
+
+  // Disparar o pipeline via Event Bus
+  bus.emit('facts:collected', allFacts);
+})();

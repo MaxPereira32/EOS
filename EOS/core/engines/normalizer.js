@@ -35,6 +35,10 @@ class Normalizer {
         if (!canonical.tests.sources.includes(fact.source)) {
           canonical.tests.sources.push(fact.source);
         }
+      } else if (fact.metric.startsWith('acf.')) {
+        if (!canonical.acf) canonical.acf = {};
+        // Para acf.inconsistency.detected e outros, acumulamos o valor numérico (ex: somamos inconsistências)
+        canonical.acf[fact.metric] = (canonical.acf[fact.metric] || 0) + fact.value;
       }
     });
 
