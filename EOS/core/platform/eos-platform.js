@@ -26,6 +26,7 @@ const QualityGateEngine = require('../engines/quality-gate-engine');
 const DependencyEngine = require('../engines/dependency-engine');
 const SecurityEngine = require('../engines/security-engine');
 const ArchitectureDiffEngine = require('../engines/architecture-diff-engine');
+const ArchitectureIdentityEngine = require('../engines/architecture-identity-engine');
 
 // Reporters
 const JSONReporter = require('../reporters/json-reporter');
@@ -73,6 +74,7 @@ const gateEngine = new QualityGateEngine();
 const dependencyEngine = new DependencyEngine();
 const securityEngine = new SecurityEngine();
 const diffEngine = new ArchitectureDiffEngine();
+const identityEngine = new ArchitectureIdentityEngine();
 const jsonReporter = new JSONReporter();
 const mdReporter = new MarkdownReporter();
 
@@ -109,6 +111,13 @@ bus.on('facts:collected', (facts) => {
   if (diffFacts.length > 0) {
     facts = facts.concat(diffFacts);
     semanticGraph.loadFacts(diffFacts);
+  }
+
+  // 5. Executar Architecture Identity Engine (AIE)
+  const aieViolations = identityEngine.evaluate(semanticGraph, auditData);
+  if (aieViolations.length > 0) {
+    facts = facts.concat(aieViolations);
+    semanticGraph.loadFacts(aieViolations);
   }
 
   execution.rawFacts = facts;
