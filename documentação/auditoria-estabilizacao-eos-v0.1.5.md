@@ -6,7 +6,7 @@ Este relatório registra o resultado da auditoria de estabilização do **Engine
 
 ## 1. Resumo Executivo
 
-O **EOS** evoluiu de forma robusta e modular ao longo das versões de desenvolvimento. A separação lógica entre o núcleo universal do framework (`/EOS`) e a instância local de aplicação (`.eos/` / `cebus/.eos/`) está consolidada e obedece à governança estabelecida no **Modelo de Instância**. 
+O **EOS** evoluiu de forma robusta e modular ao longo das versões de desenvolvimento. A separação lógica entre o núcleo universal do framework (`/EOS`) e a instância local de aplicação (`.eos/` / `projeto_alvo/.eos/`) está consolidada e obedece à governança estabelecida no **Modelo de Instância**. 
 
 A introdução da camada operacional de prompts na versão `v0.1.4` e do ciclo de engenharia baseado no **Project Lifecycle Controller** na versão `v0.1.5` dotou o framework de excelente capacidade operacional para orientar o trabalho de desenvolvedores e agentes cognitivos (IA). O framework demonstra maturidade arquitetural suficiente para ser homologado e congelado para uso sob a classificação **Aprovado com Ajustes** (com todos os ajustes obrigatórios já resolvidos nesta auditoria).
 
@@ -46,9 +46,9 @@ A introdução da camada operacional de prompts na versão `v0.1.4` e do ciclo d
 * **Recomendação**: Inicializar a Fase Zero criando o snapshot do próprio repositório de documentação.
 * **Status**: **RESOLVIDO** (snapshot criado durante esta auditoria).
 
-### 3.4 Dispersão Física de Arquivos na Instância Cebus
-* **Problema**: Arquivos chaves de contexto (`contexto-projeto.md`, `regras-negocio.md`) e roadmaps estão localizados na raiz de `cebus/.eos/` em vez de organizados nas subpastas estruturadas do padrão recomendado.
-* **Local**: `cebus/.eos/`.
+### 3.4 Dispersão Física de Arquivos na Instância do Projeto
+* **Problema**: Arquivos chaves de contexto (`contexto-projeto.md`, `regras-negocio.md`) e roadmaps estão localizados na raiz de `projeto_alvo/.eos/` em vez de organizados nas subpastas estruturadas do padrão recomendado.
+* **Local**: `projeto_alvo/.eos/`.
 * **Impacto**: Desorganização física da base de conhecimento da instância a longo prazo.
 * **Risco**: 🟢 Baixo (inconsistência de organização).
 * **Recomendação**: Agrupar fisicamente os arquivos em pastas conforme o padrão recomendado (`.eos/contexto/` e `.eos/roadmap/`).
@@ -64,7 +64,7 @@ A introdução da camada operacional de prompts na versão `v0.1.4` e do ciclo d
 * [x] **Criar snapshot inicial da instância interna do framework** (Concluído).
 
 ### 4.2 Recomendado (Evolução Futura)
-* [ ] **Reorganização de arquivos em subpastas no `cebus/.eos/`**: Mover arquivos de contexto, regras e roadmap para as respectivas subpastas físicas da instância.
+* [ ] **Reorganização de arquivos em subpastas no `projeto_alvo/.eos/`**: Mover arquivos de contexto, regras e roadmap para as respectivas subpastas físicas da instância.
 
 ### 4.3 Não Fazer Agora
 * [ ] **Criar novos modelos ou automação de linters para documentação**: Mudança prematura que geraria complexidade acidental desproporcional.
@@ -76,7 +76,7 @@ A introdução da camada operacional de prompts na versão `v0.1.4` e do ciclo d
 Com base na evolução técnica, o EOS v0.1.5 é classificado como:
 
 > **NÍVEL 3 — OPERAÇÃO (CONFORME)**
-> O framework não apenas possui regras escritas (Nível 1) e governança por decisões ADR (Nível 2), como também é capaz de orientar a execução prática de forma totalmente padronizada via prompts operacionais (Nível 3). O Nível 4 (Evolução contínua) será atingido à medida que os primeiros aprendizados do piloto Cebus forem retroalimentados no repositório.
+> O framework não apenas possui regras escritas (Nível 1) e governança por decisões ADR (Nível 2), como também é capaz de orientar a execução prática de forma totalmente padronizada via prompts operacionais (Nível 3). O Nível 4 (Evolução contínua) será atingido à medida que os primeiros aprendizados do piloto de projetos forem retroalimentados no repositório.
 
 ---
 

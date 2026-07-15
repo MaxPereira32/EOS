@@ -22,7 +22,7 @@ Este relatório descreve formalmente as melhorias, o escopo de entrega e os resu
 
 O Evidence Engine foi testado com sucesso nos projetos sob nossa governança:
 
-* **Cebus ERP**: Aprovado com sucesso (`exit 0`). O script atestou a conformidade das 8 dimensões de nota e comprovou a existência física de `eslint.config.js`, `.dependency-cruiser.cjs`, `vite.config.ts` e do diretório de decisões.
+* **Projeto Exemplo**: Aprovado com sucesso (`exit 0`). O script atestou a conformidade das 8 dimensões de nota e comprovou a existência física de `eslint.config.js`, `.dependency-cruiser.cjs`, `vite.config.ts` e do diretório de decisões.
 * **ControleEstoque**: Reprovado com sucesso (`exit 1`). O script confirmou a presença das assinaturas Laravel e do arquivo de testes `phpunit.xml`, mas bloqueou a homologação devido à violação do limiar de Testabilidade (85 < 90).
 
 Dessa forma, o EOS evolui de um validador de conformidade documental para um **validador de integridade e evidências físicas de arquitetura**.

@@ -33,8 +33,8 @@ class ArchitectureIdentityEngine {
     };
 
     const cwd = process.cwd();
-    const isCebus = fs.existsSync(path.join(cwd, 'src', 'estruturas')) || cwd.endsWith('cebus');
-    const adrDir = isCebus ? path.join(cwd, 'docs', 'adr') : path.join(cwd, 'documentação');
+    const hasDocsAdr = fs.existsSync(path.join(cwd, 'docs', 'adr'));
+    const adrDir = hasDocsAdr ? path.join(cwd, 'docs', 'adr') : path.join(cwd, 'documentação');
 
     // ─────────────────────────────────────────────────────────────────────────
     // FASE 0 — INVENTÁRIO (Mapeamento de arquivos e pastas críticas)
@@ -64,7 +64,7 @@ class ArchitectureIdentityEngine {
       }
     };
 
-    // Mapear arquivos de Cebus/EOS
+    // Mapear arquivos de código do projeto alvo
     scanDir(path.join(cwd, 'src', 'modulos'), 'components', '.tsx');
     scanDir(path.join(cwd, 'src', 'componentes', 'ui'), 'components', '.tsx');
     scanDir(path.join(cwd, 'src', 'estruturas'), 'components', '.tsx');

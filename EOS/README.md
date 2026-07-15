@@ -90,7 +90,7 @@ Engineering-Operating-System/
 
 Para aplicar o EOS em um projeto de software, crie um diretório chamado `.eos/` na raiz desse projeto. Este diretório conterá os registros de aplicação do framework adaptados ao contexto específico.
 
-Exemplo de estrutura em um projeto-alvo (como o `Cebus/`):
+Exemplo de estrutura em um projeto-alvo:
 ```
 Meu-Projeto/
 ├── src/

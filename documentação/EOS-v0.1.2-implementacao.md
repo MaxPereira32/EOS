@@ -1,6 +1,6 @@
 # Relatório de Implementação — EOS v0.1.2
 
-Este relatório registra a conclusão da evolução arquitetural do **Engineering Operating System (EOS)** da versão `v0.1.1` para a versão `v0.1.2`, consolidando a governança técnica e ferramentas analíticas aplicadas ao repositório do framework e à instância do **Cebus ERP**.
+Este relatório registra a conclusão da evolução arquitetural do **Engineering Operating System (EOS)** da versão `v0.1.1` para a versão `v0.1.2`, consolidando a governança técnica e ferramentas analíticas aplicadas ao repositório do framework e à instância do **projeto alvo**.
 
 ---
 
@@ -24,8 +24,8 @@ Este relatório registra a conclusão da evolução arquitetural do **Engineerin
 * **Alterado**: [EOS/README.md](file:///c:/Users/USER/Desktop/DevJornay/Projeto/Cebus_Github/Engineering-Operating-System/EOS/README.md)
   * *Objetivo*: Atualização da versão para `v0.1.2`, adição das novas referências no diagrama de árvore física de diretórios e inclusão dos novos modelos/protocolos na seção de próximos passos.
 
-### 1.2 Instância Aplicada no Cebus (`cebus/.eos/`)
-* **Alterado**: [cebus/.eos/roadmap-tecnico.md](file:///c:/Users/USER/Desktop/DevJornay/Projeto/Cebus_Github/cebus/.eos/roadmap-tecnico.md)
+### 1.2 Instância Aplicada no Projeto Alvo (`projeto_alvo/.eos/`)
+* **Alterado**: [projeto_alvo/.eos/roadmap-tecnico.md](file:///c:/Users/USER/Desktop/DevJornay/Projeto/Cebus_Github/cebus/.eos/roadmap-tecnico.md)
   * *Objetivo*: Atualizado para referenciar o EOS v0.1.2 e incorporado a **Matriz de Prioridade de Riscos e Débitos Técnicos** calculada de acordo com o modelo de score do framework.
 
 ---
@@ -33,7 +33,7 @@ Este relatório registra a conclusão da evolução arquitetural do **Engineerin
 ## 2. Decisões Tomadas nesta Versão
 
 1. **Abstração Metodológica sobre Implementação**: Decidiu-se manter o framework inteiramente focado em ferramentas lógicas e analíticas (tabelas, matrizes, templates e processos de verificação), postergando qualquer implementação física de ferramental ou aplicação web própria.
-2. **Priorização Rígida de Riscos no Piloto**: Classificou-se o acoplamento do Firebase nas stores Zustand do Cebus como risco de prioridade 🔴 **Crítica (Score 9)**, sinalizando que a aprovação e a execução incremental da ADR-001 deve preceder qualquer outra modificação técnica no repositório.
+2. **Priorização Rígida de Riscos no Piloto**: Classificou-se o acoplamento do Firebase nas stores Zustand do projeto alvo como risco de prioridade 🔴 **Crítica (Score 9)**, sinalizando que a aprovação e a execução incremental da ADR-001 deve preceder qualquer outra modificação técnica no repositório.
 3. **Cascalhamento de Salvaguardas**: Definiu-se que a refatoração do acoplamento do Firebase deve ser protegida por testes de integração automáticos criados *Antes* de mexer na lógica produtiva (conforme determinado no protocolo de refatoração segura).
 
 ---
@@ -41,6 +41,6 @@ Este relatório registra a conclusão da evolução arquitetural do **Engineerin
 ## 3. Próximos Passos Recomendados
 
 1. **Congelamento da v0.1.2**: Esta versão estabelece uma base de governança madura o suficiente para cobrir qualquer migração estrutural. O core do framework deve ser congelado para coletar dados reais.
-2. **Aprovação Formal da ADR-001 (Cebus)**: Iniciar o processo de code review da ADR de desacoplamento do Firebase.
-3. **Escrita do Plano de Refatoração do Cebus**: Utilizar o novo template `plano-refatoracao.md` para detalhar a transição da store global para a camada de serviços sem interferência visual.
+2. **Aprovação Formal da ADR-001 (Projeto Alvo)**: Iniciar o processo de code review da ADR de desacoplamento do Firebase.
+3. **Escrita do Plano de Refatoração do Projeto Alvo**: Utilizar o novo template `plano-refatoracao.md` para detalhar a transição da store global para a camada de serviços sem interferência visual.
 4. **Homologação e Validação Técnica**: Aplicar o protocolo de refatoração segura na execução do desacoplamento.

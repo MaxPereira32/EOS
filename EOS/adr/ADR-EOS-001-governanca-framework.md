@@ -26,7 +26,7 @@ Decidimos estabelecer regras explícitas para a governança e evolução contín
 * **Proibição de Duplicação**: Não é permitido criar prompts paralelos com o mesmo propósito (ex: múltiplos prompts de auditoria). Se um prompt for otimizado, o arquivo original deve ser sobrescrito ou reestruturado de forma unificada.
 
 ### 2.3 Proibição de Vazamento de Domínio (Desacoplamento)
-* Nenhum arquivo sob o core do framework (`EOS/`) deve conter caminhos absolutos, nomes de coleções ou referências de domínio específicas de um único projeto consumidor (como `cebus` ou `Cebus ERP`).
+* Nenhum arquivo sob o core do framework (`EOS/`) deve conter caminhos absolutos, nomes de coleções ou referências de domínio específicas de um único projeto consumidor (como um projeto cliente específico).
 * Exemplos e estruturas devem utilizar strings parametrizadas como `[nome-do-projeto]/` para garantir a universalidade de aplicação.
 
 ### 2.4 Processo de Validação de Mudanças (Dogfooding)

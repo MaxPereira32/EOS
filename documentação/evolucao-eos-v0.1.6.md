@@ -29,7 +29,7 @@ Este relatório descreve formalmente as melhorias, o escopo de entrega e os resu
 
 A introdução do APE eliminou falsos positivos nas instâncias sob nossa governança:
 
-* **Cebus ERP (Frontend SPA)**: Identificado corretamente sob o perfil `PROF-FRONTEND-SPA`. O acoplamento do React aos hooks customizados do Zustand é aceito como limitação inerente (dedução zero). O acoplamento assíncrono ao Firebase foi isolado por injeção de controle no onboarding.
+* **Projeto Exemplo (Frontend SPA)**: Identificado corretamente sob o perfil `PROF-FRONTEND-SPA`. O acoplamento do React aos hooks customizados do Zustand é aceito como limitação inerente (dedução zero). O acoplamento assíncrono ao Firebase foi isolado por injeção de controle no onboarding.
 * **ControleEstoque (Laravel ActiveRecord)**: Identificado corretamente sob o perfil `PROF-LARAVEL-AR`. A herança do Eloquent (Active Record) e a leitura de dados direta (`Produto::find()`) no controlador são aceitas e isentas de penalidade. As queries SQL complexas inline (`DB::raw()`) foram penalizadas, com a recomendação proporcional de extração para um **`ProdutoConsultaService`** (evitando o over-engineering do padrão Repository).
 
 O EOS v0.1.6 agora é capaz de interpretar contextos com flexibilidade e máxima precisão científica.

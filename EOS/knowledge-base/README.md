@@ -9,7 +9,7 @@ Este repositório atua como a memória técnica da engenharia do EOS. Ele consol
 ## 1. Refatorações de Referência (Padrões Ouro)
 
 ### 1.1 Desacoplamento de Estado Global e Infraestrutura (Firebase/Firestore)
-* **Contexto**: No projeto Cebus ERP, a fábrica de stores Zustand (`criarStoreCrud.ts`) importava e executava operações diretamente via SDK do Firebase.
+* **Contexto**: Em um projeto real de demonstração, a fábrica de stores Zustand (`criarStoreCrud.ts`) importava e executava operações diretamente via SDK do Firebase.
 * **Solução Aplicada**:
   1. Criação de uma interface genérica de serviço:
      ```typescript

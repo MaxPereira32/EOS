@@ -330,7 +330,7 @@ class ArchitectureReviewMode {
       parecer.evidencias.push(`O nome do arquivo/artefato "${path.basename(target)}" diverge do padrão configurado no projeto.`);
       parecer.evidencias.push(`Padrão regex exigido pelo validador: "${pattern}".`);
       
-      parecer.diagnostico = `A inconsistência de nomenclatura reduz o alinhamento com a arquitetura limpa de diretórios do Cebus ERP, prejudicando a governança de código a longo prazo.`;
+      parecer.diagnostico = `A inconsistência de nomenclatura reduz o alinhamento com a arquitetura limpa de diretórios do projeto, prejudicando a governança de código a longo prazo.`;
       parecer.impacto = `Aumento gradual da complexidade, menor legibilidade física e risco de duplicação por desenvolvedores que não localizarem o arquivo de forma imediata.`;
       parecer.beneficios.push('Padronização e clareza física da estrutura do projeto.');
       parecer.beneficios.push('Busca e substituição automatizada mais previsível.');
@@ -353,7 +353,7 @@ class ArchitectureReviewMode {
       parecer.evidencias.push(`O artefato "${path.basename(target)}" não possui dependências/referências direcionadas a si no Grafo Semântico.`);
       parecer.evidencias.push(`Ele foi classificado como código morto ou folha de estilo inativa.`);
       
-      parecer.diagnostico = `Arquivos de estilos ou componentes órfãos representam débito técnico de "Dead Code", poluindo a base de código do Cebus ERP.`;
+      parecer.diagnostico = `Arquivos de estilos ou componentes órfãos representam débito técnico de "Dead Code", poluindo a base de código do projeto.`;
       parecer.impacto = `Aumento gradual do tamanho do bundle final de compilação e confusão sobre a real árvore de dependências ativas no sistema.`;
       parecer.beneficios.push('Redução do tamanho do pacote web.');
       parecer.beneficios.push('Base de código limpa, reduzindo o custo de manutenção.');

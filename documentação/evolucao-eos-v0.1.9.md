@@ -23,7 +23,7 @@ Este relatório descreve formalmente as melhorias, o escopo de entrega e os resu
 
 ## 2. Testes de Execução Práticos (Resultados Reais)
 
-O Collector Engine foi validado no projeto **Cebus ERP**:
+O Collector Engine foi validado no projeto alvo de demonstração:
 * **Execução**:
   ```bash
   node ../Engineering-Operating-System/EOS/core/eos-collector.js

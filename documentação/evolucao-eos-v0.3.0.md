@@ -32,7 +32,7 @@ A v0.3.0 não é uma evolução incremental. Ela reorganiza o núcleo do EOS em 
 
 ---
 
-## 3. Resultados de Execução (Cebus ERP)
+## 3. Resultados de Execução (Projeto Exemplo)
 
 Pipeline executado com o comando único: `node eos-platform.js`
 

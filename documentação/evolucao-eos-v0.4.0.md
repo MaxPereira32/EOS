@@ -41,7 +41,7 @@ core/
 
 ---
 
-## 4. Validação e Homologação (Cebus ERP)
+## 4. Validação e Homologação (Projeto Exemplo)
 
 * **Execução**: `node ../Engineering-Operating-System/EOS/core/platform/eos-platform.js`
 * **Metadados Rastreáveis**: Capturou a branch `main` e commit `bb2ccbb` no `ExecutionContext`.

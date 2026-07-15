@@ -532,7 +532,7 @@ Deve conter:
 
 ## 1. Manifesto de Execução
 Condições em que a análise foi realizada:
-- Projeto analisado: [Ex: Cebus ERP]
+- Projeto analisado: [Ex: MeuProjeto]
 - Versão do EOS: [Ex: v0.1.5]
 - Versão do projeto: [Commit hash, tag ou branch]
 - Data da execução: [AAAA-MM-DD]

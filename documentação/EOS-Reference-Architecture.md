@@ -21,7 +21,7 @@ Engineering-Operating-System/
 └── package.json                 # Definição de dependências e scripts de execução
 ```
 
-No projeto cliente (ex: `Cebus ERP`), o EOS injeta e consome metadados através de:
+No projeto cliente (ex: `MeuProjeto`), o EOS injeta e consome metadados através de:
 ```
 Projeto-Cliente/
 └── .eos/

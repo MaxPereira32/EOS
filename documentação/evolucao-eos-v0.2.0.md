@@ -46,9 +46,9 @@ A versão `v0.2.0` remodela a estrutura do core para separar a coleta física de
 
 ---
 
-## 2. Testes de Execução Práticos (Resultados Reais no Cebus ERP)
+## 2. Testes de Execução Práticos (Resultados Reais no Projeto Exemplo)
 
-Ao executar a pipeline integrada no Cebus ERP:
+Ao executar a pipeline integrada no Projeto Exemplo:
 ```bash
 node ../Engineering-Operating-System/EOS/core/eos-collector.js && node ../Engineering-Operating-System/EOS/core/eos-validator.js
 ```

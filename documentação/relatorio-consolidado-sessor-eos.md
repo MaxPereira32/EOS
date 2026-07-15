@@ -1,6 +1,6 @@
 # Relatório Consolidado de Alterações — Sessão EOS
 
-Este relatório reúne de forma consolidada todas as alterações, criações de arquivos e atualizações arquiteturais realizadas no **Engineering Operating System (EOS)** e na instância de aplicação do **Cebus ERP** ao longo desta sessão de trabalho (evoluindo da versão `v0.1.1` até a versão `v0.1.5`).
+Este relatório reúne de forma consolidada todas as alterações, criações de arquivos e atualizações arquiteturais realizadas no **Engineering Operating System (EOS)** e na instância de aplicação do **projeto alvo** ao longo desta sessão de trabalho (evoluindo da versão `v0.1.1` até a versão `v0.1.5`).
 
 ---
 
@@ -42,15 +42,15 @@ Introduzida na v0.1.4 para instrumentalizar a execução dos protocolos por agen
 * **`decisoes/ADR-002-camada-operacional-prompts.md` (Criado)**: Justificativa da camada de prompts.
 * **`decisoes/README.md` (Atualizado)**: Índice de ADRs do framework.
 
-### 2.2 Instância do Produto Cebus (`cebus/.eos/`)
+### 2.2 Instância de Aplicação do Projeto Alvo (projeto_alvo/.eos/)
 * **`contexto-projeto.md` (Criado/Renomeado)**: Consolida regras operacionais como FEFO, regras de saldo e imutabilidade de logs.
 * **`roadmap-tecnico.md` (Atualizado)**: Incorporou a matriz de riscos pontuada com score de criticidade.
-* **`contexto/snapshot-inicial.md` (Criado na v0.1.5)**: Documento de Fase Zero registrando a stack tecnológica física atual do Cebus ERP e restrições.
-* **Remoção de Arquivos obsoletos**: Expurgados arquivos duplicados e obsoletos da raiz da pasta `.eos/` do Cebus.
+* **`contexto/snapshot-inicial.md` (Criado na v0.1.5)**: Documento de Fase Zero registrando a stack tecnológica física atual do projeto alvo e restrições.
+* **Remoção de Arquivos obsoletos**: Expurgados arquivos duplicados e obsoletos da raiz da pasta `.eos/` do projeto alvo.
 
 ---
 
 ## 3. Conformidade das Alterações
-* [x] Nenhuma alteração efetuada nos arquivos de produção (`cebus/src/`).
+* [x] Nenhuma alteração efetuada nos arquivos de produção (`src/`).
 * [x] Todos os novos arquivos e diretórios seguem a taxonomia e limites do framework.
 * [x] Todos os relatórios de changelogs (`evolucao-eos-v0.1.4.md`, `evolucao-eos-v0.1.5.md`) foram arquivados em `documentação/`.
