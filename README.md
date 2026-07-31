@@ -89,6 +89,8 @@ EOS/
 │   ├── genesis-prompt.md           # Prompt de fundação
 │   └── evolucao-eos-v0.x.x.md      # Histórico de lançamentos da v0.1.2 à v0.5.0+
 │
+├── Age/                            # Agentes de inteligência e skills para auditorias de segurança
+├── .agents/                        # Configurações locais e definições de skills (ex: eos-governance)
 ├── .eos/                           # Configurações globais do framework
 ├── package.json                    # Definição do pacote Node.js
 └── README.md                       # Documentação principal do repositório
@@ -112,6 +114,7 @@ Para adotar o **EOS** em seu projeto de software:
    ```
 
 2. **Execute as análises de governança:**
+   - Certifique-se de que a pasta `Age` esteja presente na raiz (ela é necessária para as auditorias de segurança).
    - Integre o EOS no seu pipeline de CI/CD para rodar os coletores (`collectors`) e gerar os relatórios `auditoria.json` e `auditoria-automatica.md`.
 
 ---
