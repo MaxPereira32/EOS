@@ -30,6 +30,7 @@ O EOS atua como a espinha dorsal de governança arquitetural para projetos moder
 - **Portões de Qualidade (Quality Gates)** impeçam a introdução de dívidas técnicas e antipadrões.
 - **Modelos Analíticos e Métricas** forneçam visibilidade sobre o acoplamento, coesão, segurança e saúde dos artefatos.
 - **Grafo Semântico e de Conhecimento** permita entender a evolução de dependências e a relação entre componentes do sistema.
+- **Ecossistema Agent Swarm** delega análises complexas (como Threat Modeling Avançado e Compliance Legal LGPD/GDPR) para agentes de inteligência artificial autônomos operando em paralelo.
 
 ---
 
@@ -60,7 +61,8 @@ Engineering-Operating-System (EOS)
 
 ### 3. **Engines Especializadas**
 - **Dependency Engine (`v0.8.0`)**: Analisa acoplamentos e violações de fronteiras de domínio.
-- **Security Engine (`v0.8.0`)**: Identifica rotas expostas e pontos de vulnerabilidade arquitetural.
+- **Security Engine (`v2.1.0`)**: Modelagem de ameaças autônoma delegada a agentes de inteligência (Zero Trust, STRIDE).
+- **Compliance Engine (`v2.1.0`)**: Orquestra agentes legais (LGPD/GDPR) para auditar privacidade e rastreabilidade de PII.
 - **Architecture Diff Engine (`v0.9.0`)**: Compara versões da arquitetura para detectar derivações não autorizadas (*architecture drift*).
 - **Rule Engine**: Executa regras declarativas sem uso de expressões inseguras (`eval`).
 
