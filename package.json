@@ -1,6 +1,20 @@
 {
   "name": "engineering-operating-system",
   "private": true,
-  "version": "0.4.0",
-  "type": "commonjs"
+  "version": "2.2.0",
+  "type": "commonjs",
+  "bin": {
+    "eos": "./EOS/bin/eos.ts"
+  },
+  "scripts": {
+    "mcp": "tsx EOS/bin/eos.ts mcp",
+    "audit": "tsx EOS/bin/eos.ts audit",
+    "graph": "tsx EOS/bin/eos.ts graph",
+    "fix": "tsx EOS/bin/eos.ts fix",
+    "report": "tsx EOS/bin/eos.ts report"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.2",
+    "typescript": "^7.0.2"
+  }
 }

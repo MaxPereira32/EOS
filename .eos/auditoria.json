@@ -1,0 +1,22 @@
+{
+  "$schema": "https://eos.architecture/schemas/v2/stage05-trend-knowledge.json",
+  "audit_summary": {
+    "audit_run_id": "AUDIT-2026-07-30-V2",
+    "timestamp": "2026-07-30T22:54:11.406Z",
+    "total_assets_inspected": 1,
+    "total_findings": 1,
+    "composite_risk_score": 91.2,
+    "trend_delta": {
+      "previous_audit_id": "AUDIT-PREVIOUS-RUN",
+      "risk_delta_score": 45.2,
+      "resolved_findings_count": 2
+    }
+  },
+  "knowledge_engine_feedback": [
+    {
+      "rule_id": "SEC-RULE-309-HTTP-TRACE-PREFIX",
+      "feedback_type": "CONFIRM_ACCURACY",
+      "reliability_weight_adjustment": 0.05
+    }
+  ]
+}

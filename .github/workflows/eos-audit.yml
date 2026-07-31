@@ -1,0 +1,46 @@
+name: EOS v2.2 Enterprise Architecture Audit & Security Gate
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  eos-audit:
+    name: EOS Continuous Architecture Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        run: |
+          npm ci || npm install
+
+      - name: Execute EOS 5-Stage Architecture Audit
+        run: |
+          npx tsx EOS/bin/eos.ts audit
+
+      - name: Check Risk Score & Enforce Quality Gate
+        run: |
+          if [ -f ".eos/auditoria.json" ]; then
+            SCORE=$(node -e "console.log(JSON.parse(require('fs').readFileSync('.eos/auditoria.json')).audit_summary.composite_risk_score)")
+            echo "Composite Risk Score: $SCORE"
+            if (( $(echo "$SCORE > 85.0" | bc -l) )); then
+              echo "::error::Quality Gate Failed! Risk score $SCORE exceeds maximum allowed threshold (85.0)."
+              exit 1
+            fi
+          fi
+
+      - name: Upload Audit Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: eos-audit-report
+          path: .eos/
