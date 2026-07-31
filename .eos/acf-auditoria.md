@@ -1,6 +1,6 @@
 # RELATÓRIO DE AUDITORIA DE ARQUITETURA EOS (v2.1 Enterprise)
-**Audit Run ID:** `AUDIT-2026-07-30-V2`
-**Data/Hora:** 2026-07-30T22:54:11.406Z
+**Audit Run ID:** `AUDIT-2026-07-31-V2`
+**Data/Hora:** 2026-07-31T01:27:50.566Z
 
 ---
 

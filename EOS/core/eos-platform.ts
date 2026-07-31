@@ -19,6 +19,7 @@ import { DeepRuntimeTelemetryCollector } from './collectors/runtime-telemetry-co
 import { RiskEngine } from './engines/risk-engine';
 import { RemediationEngine } from './engines/remediation-engine';
 import { KnowledgeTrendEngine } from './engines/knowledge-trend-engine';
+import { ComplianceEngine } from './engines/compliance-engine';
 
 import { Asset, Fact, Threat, Finding } from './domain-graph';
 
@@ -28,14 +29,15 @@ export class EosPlatformV2 {
   private riskEngine = new RiskEngine();
   private remediationEngine = new RemediationEngine();
   private trendEngine = new KnowledgeTrendEngine();
+  private complianceEngine = new ComplianceEngine();
 
-  public runPipeline(): void {
+  public async runPipeline(): Promise<void> {
     console.log('╔══════════════════════════════════════════════════════════════╗');
     console.log('║        EOS Platform v2.1.0 Enterprise Pipeline Start         ║');
     console.log('╚══════════════════════════════════════════════════════════════╝\n');
 
-    // ── ESTÁGIO 01: Ingestão de Ativos & Coleta DTI ───────────────
-    console.log('[Estágio 01] Mapeando Ativos e Executando Inspeção Profunda de Runtime (DTI)...');
+    // ── ESTÁGIO 01: Ingestão de Ativos & Governança via Swarm (Multidisciplinar) ───────────────
+    console.log('[Estágio 01] Mapeando Ativos e Orquestrando Agentes Inteligentes (Swarm)...');
     
     const sampleAsset: Asset = {
       asset_id: 'AST-K8S-INGRESS-01',
@@ -60,6 +62,11 @@ export class EosPlatformV2 {
 
     this.graphEngine.addObservation(dtiResult.observation);
     dtiResult.evidences.forEach(ev => this.graphEngine.addEvidence(ev));
+
+    console.log('  └─ [Swarm] Delegando análise de Legalidade e Privacidade para os agentes da pasta Age...');
+    const complianceResult = await this.complianceEngine.runComplianceAudit([sampleAsset]);
+    complianceResult.facts.forEach(f => this.graphEngine.addFact(f));
+    complianceResult.findings.forEach(f => this.graphEngine.addFinding(f));
 
     // ── ESTÁGIO 02: Consolidação de Fatos & Grafo de Ameaças ──────
     console.log('[Estágio 02] Consolidando Fatos (1:N Evidências) e Construindo Grafo de Ameaças...');
