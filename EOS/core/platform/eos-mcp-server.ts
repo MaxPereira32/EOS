@@ -20,7 +20,6 @@ export class EosMcpServer {
   private graphEngine = new DomainGraphEngine();
   private remediationEngine = new RemediationEngine();
   private patchApplier = new PatchApplierEngine();
-  private ruleCatalog = new RuleCatalog();
 
   constructor() {
     this.seedSampleData();
@@ -300,6 +299,8 @@ export class EosMcpServer {
             taxonomy: {
               owasp_category: 'A05:2021-Security Misconfiguration',
               cwe_id: 'CWE-693',
+              nist_sp_800_53: 'SA-11',
+              mitre_attack_id: 'T1190',
             },
           };
 

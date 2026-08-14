@@ -1,114 +1,63 @@
 #!/usr/bin/env node
 
 /**
- * EOS ENTERPRISE UNIFIED CLI (v2.2.0)
- * 
- * Subcommands:
- *   eos audit   - Executa o pipeline de auditoria em 5 estágios
- *   eos graph   - Exporta a topologia do Grafo de Domínio e análise de Blast Radius
- *   eos fix     - Aplica automaticamente as remediações unificadas no repositório
- *   eos report  - Exporta relatórios de governança arquitetural
+ * EOS ENTERPRISE UNIFIED CLI (v3.0.0)
+ * Verifiable Continuous Architecture Audit CLI
  */
 
-import { EosPlatformV2 } from '../core/eos-platform';
-import { DomainGraphEngine } from '../core/engines/domain-graph-engine';
-import { RemediationEngine } from '../core/engines/remediation-engine';
-import { PatchApplierEngine } from '../core/engines/patch-applier';
-import { RuleCatalog } from '../core/rules/rule-catalog';
-import { Asset, Finding } from '../core/domain-graph';
-import { EosMcpServer } from '../core/platform/eos-mcp-server';
+import { AuditApplicationService } from '../core/services/audit-application-service';
 
 function printBanner() {
   console.log('╔══════════════════════════════════════════════════════════════╗');
-  console.log('║           EOS v2.2 Enterprise Architecture Governance CLI      ║');
+  console.log('║           EOS v3.0 Continuous Architecture Audit CLI         ║');
   console.log('╚══════════════════════════════════════════════════════════════╝\n');
 }
 
 function printUsage() {
   printBanner();
-  console.log('Uso: eos <comando> [opções]\n');
+  console.log('Uso: eos <comando> [caminho_alvo]\n');
   console.log('Comandos disponíveis:');
-  console.log('  audit   - Executa a esteira completa de auditoria (5 estágios)');
-  console.log('  graph   - Analisa o Grafo de Domínio, Caminhos de Ataque e Blast Radius');
-  console.log('  fix     - Aplica remediações em Unified Diff no repositório');
-  console.log('  report  - Exibe o resumo do catálogo de regras e relatórios');
-  console.log('  mcp     - Inicializa o Servidor MCP (Model Context Protocol via stdio)');
-  console.log('\nExemplo: npx tsx EOS/bin/eos.ts mcp\n');
+  console.log('  audit <path>  - Executa a esteira real de auditoria no diretório informado');
+  console.log('  fix           - (DESABILITADO) Remediação autônoma travada por segurança');
+  console.log('\nExemplo: npx tsx EOS/bin/eos.ts audit ./src\n');
 }
 
 async function main() {
   const args = process.argv.slice(2);
   const command = args[0] ? args[0].toLowerCase() : 'help';
+  const targetPath = args[1] || '.';
 
   switch (command) {
-    case 'mcp':
-      const mcpServer = new EosMcpServer();
-      mcpServer.start();
-      break;
-
-    case 'audit':
-      const platform = new EosPlatformV2();
-      platform.runPipeline();
-      break;
-
-    case 'graph':
+    case 'audit': {
       printBanner();
-      console.log('[EOS Graph] Inicializando Grafo de Domínio e Cálculo de Blast Radius...');
-      const graph = new DomainGraphEngine();
+      console.log(`[EOS Audit] Iniciando auditoria em modo AUDIT no caminho: '${targetPath}'...`);
+      const service = new AuditApplicationService();
+      const report = await service.executeAudit(targetPath);
+
+      console.log('\n✔ Auditoria concluída com sucesso!');
+      console.log(`  - Audit Run ID: ${report.audit_run_id}`);
+      console.log(`  - Target ID:    ${report.target.target_id}`);
+      console.log(`  - Arquivos Analisados: ${report.coverage.files_analyzed} / ${report.coverage.files_discovered}`);
+      console.log(`  - Quality Gates Avaliados: ${report.rule_results.length}`);
+      console.log(`  - Achados (Findings): ${report.findings.length}`);
+      console.log('\nRelatórios gerados em:');
+      console.log('  - .eos/auditoria.json');
+      console.log('  - .eos/acf-auditoria.md\n');
       
-      const sampleAsset: Asset = {
-        asset_id: 'AST-K8S-INGRESS-01',
-        name: 'Public Ingress Gateway',
-        type: 'NETWORK',
-        criticality: { availability: 'CRITICAL', integrity: 'HIGH', confidentiality: 'HIGH' },
-        business_impact: { financial: 8.5, legal: 10.0, operational: 9.0, reputation: 9.0 },
-        owner: 'SecOps Team',
-        tags: ['ingress', 'k8s'],
-      };
-      graph.addAsset(sampleAsset);
-
-      const blast = graph.calculateBlastRadius(sampleAsset.asset_id);
-      console.log(`\n✔ Ativo Raiz: ${blast.root_asset_id}`);
-      console.log(`✔ Score de Blast Radius Calculado: ${blast.total_blast_score}`);
-      console.log(`✔ Estatísticas do Grafo:`, graph.getStats());
+      const hasFailures = report.rule_results.some(r => r.status === 'FAIL');
+      if (hasFailures) {
+        process.exitCode = 1;
+      }
       break;
+    }
 
-    case 'fix':
+    case 'fix': {
       printBanner();
-      console.log('[EOS Fix] Gerando e aplicando patches de remediação autônoma...');
-      const remediationEngine = new RemediationEngine();
-      const patchApplier = new PatchApplierEngine();
-
-      const sampleFinding: Finding = {
-        finding_id: 'FND-2026-8801',
-        asset_id: 'AST-K8S-INGRESS-01',
-        fact_ids: ['FCT-501'],
-        rule_id: 'SEC-RULE-309-HTTP-TRACE-PREFIX',
-        title: 'HTTP TRACE Method Enabled',
-        severity: 'HIGH',
-        cvss_v4_score: 7.5,
-        cvss_v4_vector: 'CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:N/VA:N',
-        taxonomy: {
-          owasp_category: 'A05:2021-Security Misconfiguration',
-          cwe_id: 'CWE-693',
-          nist_sp_800_53: 'SC-8',
-          mitre_attack_id: 'T1539',
-        },
-      };
-
-      const rem = remediationEngine.generateRemediation(sampleFinding);
-      const applyResult = patchApplier.applyPatch(rem);
-
-      console.log(`✔ Remediação ${rem.fix_id}: ${applyResult.message}`);
+      console.error('❌ [SEGURANÇA CRÍTICA]: O comando \'eos fix\' foi DESABILITADO nesta versão.');
+      console.error('   Motivo: O motor de remediação precisa de validação atômica de Unified Diff e contenção de Path Traversal antes de efetuar gravações no disco.');
+      process.exit(1);
       break;
-
-    case 'report':
-      printBanner();
-      console.log('[EOS Report] Catálogo de Regras Enterprise Ativas:\n');
-      RuleCatalog.getAllRules().forEach(r => {
-        console.log(` • [${r.rule_id}] ${r.name} (${r.default_severity}) -> ${r.taxonomy.owasp_category}`);
-      });
-      break;
+    }
 
     default:
       printUsage();
@@ -117,6 +66,6 @@ async function main() {
 }
 
 main().catch(err => {
-  console.error('[-] Erro ao executar EOS CLI:', err);
+  console.error('[-] Erro ao executar EOS CLI:', err.message || err);
   process.exit(1);
 });
