@@ -15,9 +15,9 @@
     "test": "tsx --test EOS/tests/**/*.test.ts",
     "self-governance": "tsx EOS/tests/run-self-governance.ts"
   },
-
   "devDependencies": {
     "@types/node": "^26.1.2",
+    "tsx": "^4.23.12",
     "typescript": "^5.7.3"
   }
 }
