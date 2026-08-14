@@ -327,6 +327,7 @@ export class FileFactRepository implements FactRepository {
   }
 
   protected beforeAtomicRenameHook(): void {}
+  protected beforeAtomicRenameMicroscopicHook(): void {}
 
   private verifyOwnershipStrict(token: string): void {
     try {
@@ -354,6 +355,8 @@ export class FileFactRepository implements FactRepository {
       this.beforeAtomicRenameHook();
       
       this.verifyOwnershipStrict(lockToken); // Pre-commit double check (Phase 6.1.4 fix)
+      
+      this.beforeAtomicRenameMicroscopicHook(); // TOCTOU Microscopic Gap
       
       fs.renameSync(tmpPath, this.filePath); // Substituição atômica no diretório (Atomicidade)
     } catch (err: any) {

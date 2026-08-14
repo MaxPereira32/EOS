@@ -72,7 +72,7 @@ async function runPhase612AdversarialTests() {
     // Simulate an active process (we use our own process ID, it is definitely alive)
     // Make the lock extremely old (e.g. 1 hour old) so it exceeds staleTimeoutMs (3000ms)
     const oldTime = Date.now() - 3600000;
-    fs.writeFileSync(lockPath, JSON.stringify({ pid: process.pid, time: oldTime }), 'utf-8');
+    fs.writeFileSync(lockPath, JSON.stringify({ pid: process.pid, time: oldTime, protocol_version: '1.0' }), 'utf-8');
     fs.utimesSync(lockPath, new Date(oldTime), new Date(oldTime));
 
     const repo = new FileFactRepository(storePath);
@@ -91,7 +91,7 @@ async function runPhase612AdversarialTests() {
     // Simulate a dead process (use an arbitrary huge PID or standard unassigned PID)
     // Most likely 999999 is dead.
     const deadPid = 999999;
-    fs.writeFileSync(lockPath, JSON.stringify({ pid: deadPid, time: Date.now() }), 'utf-8');
+    fs.writeFileSync(lockPath, JSON.stringify({ pid: deadPid, time: Date.now(), protocol_version: '1.0' }), 'utf-8');
 
     const repo = new FileFactRepository(storePath);
     // Should NOT throw timeout, it should steal the lock because process is dead.
@@ -110,7 +110,7 @@ async function runPhase612AdversarialTests() {
     fs.writeFileSync(tmpPath, 'incompleto ou invalido', 'utf-8');
     
     // Process also left a stale lock
-    fs.writeFileSync(`${storePath}.lock`, JSON.stringify({ pid: 999999, time: Date.now() }), 'utf-8');
+    fs.writeFileSync(`${storePath}.lock`, JSON.stringify({ pid: 999999, time: Date.now(), protocol_version: '1.0' }), 'utf-8');
 
     const repoRecover = new FileFactRepository(storePath);
     const fact2 = createValidFact({ fact_id: 'FCT-LOCK003-2' });
@@ -128,7 +128,7 @@ async function runPhase612AdversarialTests() {
     repoInit.save(fact1); // This completes the rename
 
     // Simulate process died right after renameSync, but before unlinkSync of lock
-    fs.writeFileSync(`${storePath}.lock`, JSON.stringify({ pid: 999999, time: Date.now() }), 'utf-8');
+    fs.writeFileSync(`${storePath}.lock`, JSON.stringify({ pid: 999999, time: Date.now(), protocol_version: '1.0' }), 'utf-8');
 
     // Next process should steal lock, load the state cleanly, and proceed
     const repoRecover = new FileFactRepository(storePath);
@@ -169,7 +169,7 @@ async function runPhase612AdversarialTests() {
 
     // Add corrupted tmp and stale lock
     fs.writeFileSync(`${storePath}.tmp_xyz`, 'junk', 'utf-8');
-    fs.writeFileSync(`${storePath}.lock`, JSON.stringify({ pid: 999999, time: Date.now() }), 'utf-8');
+    fs.writeFileSync(`${storePath}.lock`, JSON.stringify({ pid: 999999, time: Date.now(), protocol_version: '1.0' }), 'utf-8');
 
     const repoRecover = new FileFactRepository(storePath);
     const facts = repoRecover.getAll();
@@ -192,7 +192,7 @@ async function runPhase612AdversarialTests() {
     const lockPath = `${storePath}.lock`;
 
     const oldTime = Date.now() - 500000;
-    fs.writeFileSync(lockPath, JSON.stringify({ pid: process.pid, time: oldTime }), 'utf-8');
+    fs.writeFileSync(lockPath, JSON.stringify({ pid: process.pid, time: oldTime, protocol_version: '1.0' }), 'utf-8');
     
     const repo = new FileFactRepository(storePath);
     assert.throws(() => repo.save(createValidFact()), FactIntegrityError);
@@ -208,7 +208,7 @@ async function runPhase612AdversarialTests() {
 
     // Clock skew: Lock created '10 years ago' according to clock
     const skewedTime = Date.now() - 10 * 365 * 24 * 3600 * 1000;
-    fs.writeFileSync(lockPath, JSON.stringify({ pid: process.pid, time: skewedTime }), 'utf-8');
+    fs.writeFileSync(lockPath, JSON.stringify({ pid: process.pid, time: skewedTime, protocol_version: '1.0' }), 'utf-8');
     
     const repo = new FileFactRepository(storePath);
     // Should NOT steal because process is still alive.
@@ -225,7 +225,7 @@ async function runPhase612AdversarialTests() {
     
     // Attempt to save, should timeout because the lock is held (and not stale enough or we just wait)
     // To prevent it from stealing, use our own process ID.
-    fs.writeFileSync(lockPath, JSON.stringify({ pid: process.pid, time: Date.now() }), 'utf-8');
+    fs.writeFileSync(lockPath, JSON.stringify({ pid: process.pid, time: Date.now(), protocol_version: '1.0' }), 'utf-8');
     
     assert.throws(() => repo.save(createValidFact()), FactIntegrityError);
 
