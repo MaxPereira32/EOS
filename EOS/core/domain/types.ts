@@ -147,6 +147,65 @@ export interface CoverageMetrics {
   readonly symlinks_skipped: number;
 }
 
+export type EvidenceCategory = 'STATIC' | 'UNIT' | 'SIMULATION' | 'INTEGRATION' | 'RUNTIME' | 'CAUSAL';
+export type RuntimeEnvironmentType = 'NONE' | 'JS_MOCK' | 'FIREBASE_RULES_EMULATOR' | 'HTTP_RUNTIME' | 'DB_RUNTIME';
+export type CausalityVerificationStatus = 'UNVERIFIED' | 'CORRELATED' | 'PROVEN_CAUSAL' | 'CAUSALITY_FAILED';
+export type GatePhaseStatus = 'GREEN' | 'YELLOW' | 'RED' | 'BLOCKED';
+
+export interface ThreatModelVector {
+  readonly vector_id: 'UNAUTHENTICATED_ACCESS' | 'UNAUTHORIZED_MUTATION' | 'PRIVILEGE_ESCALATION' | 'FIELD_INJECTION' | 'FIELD_DELETION' | 'IDENTITY_SWAP' | 'LEGITIMATE_OPERATION';
+  readonly description: string;
+  readonly required: boolean;
+  readonly verified: boolean;
+}
+
+export interface SecurityDataContract {
+  readonly resource_path: string;
+  readonly policy_mode: 'DEFAULT_DENY' | 'WHITELIST' | 'BLACK_LIST';
+  readonly fields: Record<string, {
+    readonly sensitivity: 'SAFE' | 'BUSINESS_SENSITIVE' | 'SECURITY_SENSITIVE' | 'IDENTITY_SENSITIVE';
+    readonly allowed_writers: ('ADMIN' | 'USER' | 'SYSTEM')[];
+    readonly mutability_policy: 'IMMUTABLE' | 'WHITELIST_ONLY' | 'MUTABLE';
+  }>;
+}
+
+export interface CausalityMutationResult {
+  readonly mutation_id: string;
+  readonly target_artifact: string;
+  readonly mutation_description: string;
+  readonly original_status: 'PASS' | 'FAIL';
+  readonly mutated_status: 'PASS' | 'FAIL';
+  readonly causality_proven: boolean;
+  readonly rationale: string;
+}
+
+export interface FormalEvidence {
+  readonly evidence_id: string;
+  readonly category: EvidenceCategory;
+  readonly source_artifact: string;
+  readonly test_artifact?: string;
+  readonly runtime_environment: RuntimeEnvironmentType;
+  readonly causality_status: CausalityVerificationStatus;
+  readonly confidence_score: number;
+  readonly source_reliability: number;
+  readonly reproducible: boolean;
+  readonly is_simulation_only: boolean;
+  readonly payload?: Record<string, any>;
+}
+
+export interface SecurityClaimEvaluation {
+  readonly claim_id: string;
+  readonly claim_type: 'FIRESTORE_RULES' | 'HTTP_ROUTE' | 'AUTHORIZATION' | 'AUTHENTICATION' | 'DATA_MUTABILITY';
+  readonly target_artifact: string;
+  readonly evidence: FormalEvidence;
+  readonly security_contract?: SecurityDataContract;
+  readonly threat_vectors: readonly ThreatModelVector[];
+  readonly mutation_result?: CausalityMutationResult;
+  readonly proven: boolean;
+  readonly phase_status: GatePhaseStatus;
+  readonly blocking_reasons: readonly string[];
+}
+
 export interface AuditReport {
   readonly audit_run_id: string;
   readonly timestamp: string;
@@ -156,7 +215,12 @@ export interface AuditReport {
   readonly rule_results: readonly RuleEvaluationResult[];
   readonly facts?: readonly Fact[];
   readonly evidences?: readonly Evidence[];
+  readonly formal_evidences?: readonly FormalEvidence[];
+  readonly security_claims?: readonly SecurityClaimEvaluation[];
+  readonly overall_phase_status?: GatePhaseStatus;
 }
 
 export * from './fact-repository';
+export * from './universal-contracts';
+
 

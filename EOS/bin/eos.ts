@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 
 /**
- * EOS ENTERPRISE UNIFIED CLI (v3.0.0)
- * Verifiable Continuous Architecture Audit CLI
+ * EOS ENTERPRISE UNIFIED CLI (v4.0.0 — SELF-GOVERNED HARD GATE EDITION)
+ * Verifiable Continuous Architecture & Security Audit CLI
  */
 
 import { AuditApplicationService } from '../core/services/audit-application-service';
 
 function printBanner() {
   console.log('╔══════════════════════════════════════════════════════════════╗');
-  console.log('║           EOS v3.0 Continuous Architecture Audit CLI         ║');
+  console.log('║    EOS v4.0 Self-Governed Continuous Security Audit CLI      ║');
   console.log('╚══════════════════════════════════════════════════════════════╝\n');
 }
 
@@ -34,19 +34,46 @@ async function main() {
       const service = new AuditApplicationService();
       const report = await service.executeAudit(targetPath);
 
-      console.log('\n✔ Auditoria concluída com sucesso!');
-      console.log(`  - Audit Run ID: ${report.audit_run_id}`);
-      console.log(`  - Target ID:    ${report.target.target_id}`);
-      console.log(`  - Arquivos Analisados: ${report.coverage.files_analyzed} / ${report.coverage.files_discovered}`);
-      console.log(`  - Quality Gates Avaliados: ${report.rule_results.length}`);
-      console.log(`  - Achados (Findings): ${report.findings.length}`);
+      console.log('\n======================================================');
+      console.log(`  🔍 EOS GOVERNANCE AUDIT SUMMARY (${report.audit_run_id})`);
+      console.log('======================================================\n');
+      console.log(`  - Target ID:            ${report.target.target_id}`);
+      console.log(`  - Arquivos Analisados:  ${report.coverage.files_analyzed} / ${report.coverage.files_discovered}`);
+      console.log(`  - Quality Gates:        ${report.rule_results.length}`);
+      console.log(`  - Security Claims:       ${report.security_claims?.length || 0}`);
+      console.log(`  - Achados (Findings):   ${report.findings.length}`);
+      console.log(`  - OVERALL PHASE STATUS:  [ ${report.overall_phase_status || 'UNKNOWN'} ]`);
+
+      if (report.security_claims && report.security_claims.length > 0) {
+        console.log('\n--- EVALUATION DE SECURITY CLAIMS & CAUSALIDADE ---');
+        report.security_claims.forEach(c => {
+          console.log(`\n• Claim: ${c.claim_id} (${c.claim_type})`);
+          console.log(`  - Target Artifact:   ${c.target_artifact}`);
+          console.log(`  - Evidence Category: ${c.evidence.category}`);
+          console.log(`  - Is Simulation Only:${c.evidence.is_simulation_only}`);
+          console.log(`  - Causality Status:  ${c.evidence.causality_status}`);
+          console.log(`  - PROVEN:            ${c.proven}`);
+          console.log(`  - Phase Status:      ${c.phase_status}`);
+
+          if (c.blocking_reasons.length > 0) {
+            console.log('  - Blocking Reasons:');
+            c.blocking_reasons.forEach(br => console.log(`    ❌ ${br}`));
+          }
+        });
+      }
+
       console.log('\nRelatórios gerados em:');
       console.log('  - .eos/auditoria.json');
       console.log('  - .eos/acf-auditoria.md\n');
-      
-      const hasFailures = report.rule_results.some(r => r.status === 'FAIL');
-      if (hasFailures) {
+
+      const isBlockedOrRed = report.overall_phase_status === 'BLOCKED' || report.overall_phase_status === 'RED';
+      const hasRuleFailures = report.rule_results.some(r => r.status === 'FAIL');
+
+      if (isBlockedOrRed || hasRuleFailures) {
+        console.error(`💥 AUDITORIA REPROVADA / TRAVADA! Status: ${report.overall_phase_status}`);
         process.exitCode = 1;
+      } else {
+        console.log('✅ AUDITORIA CONCLUÍDA COM SUCESSO: Todos os Hard Gates e Controles Cautelares Aprovados!');
       }
       break;
     }

@@ -1,4 +1,4 @@
-name: EOS v2.2 Enterprise Architecture Audit & Security Gate
+name: EOS v4.1 Enterprise Architecture Audit & Hard Security Gate
 
 on:
   push:
@@ -24,23 +24,31 @@ jobs:
         run: |
           npm ci || npm install
 
-      - name: Execute EOS 5-Stage Architecture Audit
+      - name: Execute EOS Hard Quality Gate Audit
         run: |
           npx tsx EOS/bin/eos.ts audit
 
-      - name: Check Risk Score & Enforce Quality Gate
+      - name: Verify Report Integrity & Fail-Closed Gate Status
         run: |
-          if [ -f ".eos/auditoria.json" ]; then
-            SCORE=$(node -e "console.log(JSON.parse(require('fs').readFileSync('.eos/auditoria.json')).audit_summary.composite_risk_score)")
-            echo "Composite Risk Score: $SCORE"
-            if (( $(echo "$SCORE > 85.0" | bc -l) )); then
-              echo "::error::Quality Gate Failed! Risk score $SCORE exceeds maximum allowed threshold (85.0)."
-              exit 1
-            fi
-          fi
+          node -e '
+            const fs = require("fs");
+            if (!fs.existsSync(".eos/auditoria.json")) {
+              console.error("::error::FAIL-CLOSED BLOCK: .eos/auditoria.json missing!");
+              process.exit(1);
+            }
+            const report = JSON.parse(fs.readFileSync(".eos/auditoria.json"));
+            const status = report.overall_phase_status;
+            console.log("EOS Overall Phase Status:", status);
+            if (status !== "GREEN") {
+              console.error(`::error::FAIL-CLOSED BLOCK: Quality Gate Status is "${status}" (expected "GREEN"). Build aborted.`);
+              process.exit(1);
+            }
+            console.log("✅ CI FAIL-CLOSED GATE PASSED: Status is GREEN.");
+          '
 
       - name: Upload Audit Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: eos-audit-report
           path: .eos/
+
