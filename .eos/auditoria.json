@@ -1,8 +1,8 @@
 {
   "$schema": "https://eos.architecture/schemas/v2/stage05-trend-knowledge.json",
   "audit_summary": {
-    "audit_run_id": "AUDIT-2026-07-31-V2",
-    "timestamp": "2026-07-31T01:27:50.566Z",
+    "audit_run_id": "AUDIT-2026-08-13-V2",
+    "timestamp": "2026-08-13T16:25:29.379Z",
     "total_assets_inspected": 1,
     "total_findings": 1,
     "composite_risk_score": 91.2,
