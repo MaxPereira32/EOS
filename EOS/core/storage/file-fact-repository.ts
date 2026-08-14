@@ -70,9 +70,36 @@ export class FileFactRepository implements FactRepository {
 
     for (let i = 0; i < maxRetries; i++) {
       try {
-        const fd = fs.openSync(this.lockPath, 'wx');
-        fs.writeFileSync(fd, lockDataToWrite, 'utf-8');
-        fs.closeSync(fd);
+        let fd: number | undefined;
+        let lockFileCreated = false;
+        let mainOpError: any = null;
+        try {
+          fd = fs.openSync(this.lockPath, 'wx');
+          lockFileCreated = true;
+          fs.writeFileSync(fd, lockDataToWrite, 'utf-8');
+          fs.fsyncSync(fd);
+        } catch (err: any) {
+          mainOpError = err;
+          if (err.code !== 'EEXIST' && lockFileCreated) {
+            try {
+              const content = fs.readFileSync(this.lockPath, 'utf-8');
+              if (content) {
+                const lockData = JSON.parse(content);
+                if (lockData.pid === process.pid && lockData.token === token) {
+                  fs.unlinkSync(this.lockPath);
+                }
+              }
+            } catch {}
+          }
+        } finally {
+          if (fd !== undefined) {
+            try { fs.closeSync(fd); } catch (closeErr) {
+              if (!mainOpError) mainOpError = closeErr;
+            }
+          }
+        }
+
+        if (mainOpError) throw mainOpError;
         
         // LOCK-OWNERSHIP Posi-Acquisition Double Check (Phase 6.1.3)
         // Eliminates the suspend/preemption race condition.
@@ -180,22 +207,28 @@ export class FileFactRepository implements FactRepository {
       // 1. Integridade: Validação de Invariantes INV-6.1
       this.validateFactIntegrity(fact);
 
-      // 2. Transação Atômica: Carregar estado atual sob trava
+      // 2. Isolamento Estrutural (Boundary de Ownership do Repositório)
+      const isolatedFact = structuredClone(fact);
+
+      // 3. Imutabilização controlada exclusivamente na representação do Repositório
+      const frozenFact = deepFreeze(isolatedFact);
+
+      // 4. Transação Atômica: Carregar estado atual sob trava
       const state = this.loadState();
 
-      // 3. Regra de No-Overwrite (INV-6.1-04) & Imutabilidade Factual (INV-6.1.22)
-      if (state.facts[fact.fact_id]) {
-        const existing = state.facts[fact.fact_id];
-        if (canonicalStringify(existing) === canonicalStringify(fact)) {
+      // 5. Regra de No-Overwrite (INV-6.1-04) & Imutabilidade Factual (INV-6.1.22)
+      if (state.facts[frozenFact.fact_id]) {
+        const existing = state.facts[frozenFact.fact_id];
+        if (canonicalStringify(existing) === canonicalStringify(frozenFact)) {
           // Operação Idempotente
           return;
         }
-        throw new FactOverwriteForbiddenError(fact.fact_id);
+        throw new FactOverwriteForbiddenError(frozenFact.fact_id);
       }
 
-      // 4. Superseding Governance Atômico & State Machine (INV-6.1.18, INV-6.1.19)
+      // 6. Superseding Governance Atômico & State Machine (INV-6.1.18, INV-6.1.19)
       const newFacts = { ...state.facts };
-      const existingFactIds = state.semanticIndex[fact.semantic_hash] || [];
+      const existingFactIds = state.semanticIndex[frozenFact.semantic_hash] || [];
 
       for (const fid of existingFactIds) {
         const prev = newFacts[fid];
@@ -220,8 +253,7 @@ export class FileFactRepository implements FactRepository {
         }
       }
 
-      // 5. Novo Fato congelado e adicionado ao novo estado
-      const frozenFact = deepFreeze({ ...fact });
+      // 7. Novo Fato adicionado ao novo estado
       newFacts[frozenFact.fact_id] = frozenFact;
 
       const newInsertionOrder = [...state.insertionOrder, frozenFact.fact_id];
@@ -246,7 +278,7 @@ export class FileFactRepository implements FactRepository {
         insertionOrder: newInsertionOrder,
       };
 
-      // 6. Escrita Atômica + fsync em Disco (INV-6.1-01, INV-6.1-07, INV-6.1.17)
+      // 8. Escrita Atômica + fsync em Disco (INV-6.1-01, INV-6.1-07, INV-6.1.17)
       this.atomicWriteState(newState, lockToken);
     });
   }
@@ -347,10 +379,22 @@ export class FileFactRepository implements FactRepository {
     const content = canonicalStringify(newState);
 
     try {
-      const fd = fs.openSync(tmpPath, 'w');
-      fs.writeFileSync(fd, content, 'utf-8');
-      fs.fsyncSync(fd); // Força escrita física nos setores do disco (Durabilidade contra crash)
-      fs.closeSync(fd);
+      let fd: number | undefined;
+      let writeError: any = null;
+      try {
+        fd = fs.openSync(tmpPath, 'w');
+        fs.writeFileSync(fd, content, 'utf-8');
+        fs.fsyncSync(fd); // Força escrita física nos setores do disco (Durabilidade contra crash)
+      } catch (err: any) {
+        writeError = err;
+      } finally {
+        if (fd !== undefined) {
+          try { fs.closeSync(fd); } catch (closeErr) {
+            if (!writeError) writeError = closeErr;
+          }
+        }
+      }
+      if (writeError) throw writeError;
       
       this.beforeAtomicRenameHook();
       
