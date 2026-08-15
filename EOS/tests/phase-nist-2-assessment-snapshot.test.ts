@@ -11,20 +11,47 @@ test('EOS Phase 2 — Assessment Snapshot Hardening Suite', async (t) => {
     assert.ok(parseFindingId('FIN-001') === 'FIN-001');
   });
 
+  await t.test('Target Provenance Policy: Rejeita SOURCE_CODE sem git_commit e ARTIFACT sem artifact_hash', () => {
+    assert.throws(() => new AssessmentSnapshot({
+      snapshot_type: 'BASELINE', target_id: 'T-1', evidence_ids: [], fact_ids: [], finding_ids: [],
+      risk_level: 'LOW', verification_status: 'VERIFIED',
+      provenance: { execution_id: 'E-1', executed_at: '2026-08-01T10:00:00Z', eos_version: '1', tool_or_collector: 'T', target_type: 'SOURCE_CODE' } // Missing git_commit
+    }), /git_commit is REQUIRED for SOURCE_CODE targets/);
+
+    assert.throws(() => new AssessmentSnapshot({
+      snapshot_type: 'BASELINE', target_id: 'T-1', evidence_ids: [], fact_ids: [], finding_ids: [],
+      risk_level: 'LOW', verification_status: 'VERIFIED',
+      provenance: { execution_id: 'E-1', executed_at: '2026-08-01T10:00:00Z', eos_version: '1', tool_or_collector: 'T', target_type: 'SOURCE_CODE', git_commit: '   ' } // Empty git_commit
+    }), /git_commit is REQUIRED for SOURCE_CODE targets/);
+
+    assert.throws(() => new AssessmentSnapshot({
+      snapshot_type: 'BASELINE', target_id: 'T-1', evidence_ids: [], fact_ids: [], finding_ids: [],
+      risk_level: 'LOW', verification_status: 'VERIFIED',
+      provenance: { execution_id: 'E-1', executed_at: '2026-08-01T10:00:00Z', eos_version: '1', tool_or_collector: 'T', target_type: 'ARTIFACT' } // Missing artifact_hash
+    }), /artifact_hash is REQUIRED for ARTIFACT targets/);
+
+    // Deve aceitar UNKNOWN sem commit ou hash
+    assert.doesNotThrow(() => new AssessmentSnapshot({
+      snapshot_type: 'BASELINE', target_id: 'T-1', evidence_ids: [], fact_ids: [], finding_ids: [],
+      risk_level: 'LOW', verification_status: 'VERIFIED',
+      provenance: { execution_id: 'E-1', executed_at: '2026-08-01T10:00:00Z', eos_version: '1', tool_or_collector: 'T', target_type: 'UNKNOWN' }
+    }));
+  });
+
   await t.test('Target Invariant: Rejeita target_id distinto na comparação', () => {
     const before = new AssessmentSnapshot({
       snapshot_type: 'BEFORE_REMEDIATION',
       target_id: 'TARGET-A',
       evidence_ids: ['EVI-1'], fact_ids: [], finding_ids: ['FIN-1'],
       risk_level: 'HIGH', verification_status: 'VERIFIED',
-      provenance: { execution_id: 'EXEC-1', executed_at: '2026-08-01T10:00:00Z', eos_version: '2.0.0', tool_or_collector: 'TEST' }
+      provenance: { execution_id: 'EXEC-1', executed_at: '2026-08-01T10:00:00Z', eos_version: '2.0.0', tool_or_collector: 'TEST', target_type: 'UNKNOWN' }
     });
     const after = new AssessmentSnapshot({
       snapshot_type: 'AFTER_REMEDIATION',
       target_id: 'TARGET-B', // DIVERGENTE
       evidence_ids: ['EVI-2'], fact_ids: [], finding_ids: [],
       risk_level: 'LOW', verification_status: 'VERIFIED',
-      provenance: { execution_id: 'EXEC-2', executed_at: '2026-08-01T11:00:00Z', eos_version: '2.0.0', tool_or_collector: 'TEST' }
+      provenance: { execution_id: 'EXEC-2', executed_at: '2026-08-01T11:00:00Z', eos_version: '2.0.0', tool_or_collector: 'TEST', target_type: 'UNKNOWN' }
     });
 
     assert.throws(() => AssessmentSnapshot.compare(before, after, [parseFindingId('FIN-1')]), /TARGET_MISMATCH/);
@@ -34,18 +61,18 @@ test('EOS Phase 2 — Assessment Snapshot Hardening Suite', async (t) => {
     assert.throws(() => new AssessmentSnapshot({
       snapshot_type: 'BASELINE', target_id: 'T-1', evidence_ids: [], fact_ids: [], finding_ids: [],
       risk_level: 'LOW', verification_status: 'VERIFIED',
-      provenance: { execution_id: 'E-1', executed_at: 'DATA_INVALIDA', eos_version: '1', tool_or_collector: 'T' }
+      provenance: { execution_id: 'E-1', executed_at: 'DATA_INVALIDA', eos_version: '1', tool_or_collector: 'T', target_type: 'UNKNOWN' }
     }), /ISO-8601/);
 
     const before = new AssessmentSnapshot({
       snapshot_type: 'BEFORE_REMEDIATION', target_id: 'TARGET-A', evidence_ids: [], fact_ids: [], finding_ids: ['FIN-1'],
       risk_level: 'HIGH', verification_status: 'VERIFIED',
-      provenance: { execution_id: 'EXEC-1', executed_at: '2026-08-01T10:00:00Z', eos_version: '2.0.0', tool_or_collector: 'TEST' }
+      provenance: { execution_id: 'EXEC-1', executed_at: '2026-08-01T10:00:00Z', eos_version: '2.0.0', tool_or_collector: 'TEST', target_type: 'UNKNOWN' }
     });
     const afterTimeTravel = new AssessmentSnapshot({
       snapshot_type: 'AFTER_REMEDIATION', target_id: 'TARGET-A', evidence_ids: [], fact_ids: [], finding_ids: [],
       risk_level: 'LOW', verification_status: 'VERIFIED',
-      provenance: { execution_id: 'EXEC-2', executed_at: '2026-08-01T09:00:00Z', eos_version: '2.0.0', tool_or_collector: 'TEST' } // ANTERIOR
+      provenance: { execution_id: 'EXEC-2', executed_at: '2026-08-01T09:00:00Z', eos_version: '2.0.0', tool_or_collector: 'TEST', target_type: 'UNKNOWN' } // ANTERIOR
     });
 
     assert.throws(() => AssessmentSnapshot.compare(before, afterTimeTravel, [parseFindingId('FIN-1')]), /INVALID_TEMPORAL_ORDER/);
@@ -55,12 +82,12 @@ test('EOS Phase 2 — Assessment Snapshot Hardening Suite', async (t) => {
     const before = new AssessmentSnapshot({
       snapshot_type: 'BEFORE_REMEDIATION', target_id: 'TARGET-A', evidence_ids: [], fact_ids: [], finding_ids: ['FIN-1'],
       risk_level: 'HIGH', verification_status: 'VERIFIED',
-      provenance: { execution_id: 'EXEC-1', executed_at: '2026-08-01T10:00:00Z', eos_version: '2.0.0', tool_or_collector: 'TEST' }
+      provenance: { execution_id: 'EXEC-1', executed_at: '2026-08-01T10:00:00Z', eos_version: '2.0.0', tool_or_collector: 'TEST', target_type: 'UNKNOWN' }
     });
     const after = new AssessmentSnapshot({
       snapshot_type: 'AFTER_REMEDIATION', target_id: 'TARGET-A', evidence_ids: [], fact_ids: [], finding_ids: [],
       risk_level: 'LOW', verification_status: 'VERIFIED',
-      provenance: { execution_id: 'EXEC-1', executed_at: '2026-08-01T11:00:00Z', eos_version: '2.0.0', tool_or_collector: 'TEST' } // MESMO EXEC
+      provenance: { execution_id: 'EXEC-1', executed_at: '2026-08-01T11:00:00Z', eos_version: '2.0.0', tool_or_collector: 'TEST', target_type: 'UNKNOWN' } // MESMO EXEC
     });
 
     assert.throws(() => AssessmentSnapshot.compare(before, after, [parseFindingId('FIN-1')]), /INVALID_EXECUTION_STATE/);
@@ -70,12 +97,12 @@ test('EOS Phase 2 — Assessment Snapshot Hardening Suite', async (t) => {
     const before = new AssessmentSnapshot({
       snapshot_type: 'BEFORE_REMEDIATION', target_id: 'TARGET-A', evidence_ids: [], fact_ids: [], finding_ids: ['FIN-1'],
       risk_level: 'HIGH', verification_status: 'VERIFIED',
-      provenance: { execution_id: 'EXEC-1', executed_at: '2026-08-01T10:00:00Z', eos_version: '2.0.0', tool_or_collector: 'TEST' }
+      provenance: { execution_id: 'EXEC-1', executed_at: '2026-08-01T10:00:00Z', eos_version: '2.0.0', tool_or_collector: 'TEST', target_type: 'UNKNOWN' }
     });
     const after = new AssessmentSnapshot({
       snapshot_type: 'AFTER_REMEDIATION', target_id: 'TARGET-A', evidence_ids: ['EVI-2'], fact_ids: [], finding_ids: [],
       risk_level: 'LOW', verification_status: 'VERIFIED',
-      provenance: { execution_id: 'EXEC-2', executed_at: '2026-08-01T11:00:00Z', eos_version: '2.0.0', tool_or_collector: 'TEST' }
+      provenance: { execution_id: 'EXEC-2', executed_at: '2026-08-01T11:00:00Z', eos_version: '2.0.0', tool_or_collector: 'TEST', target_type: 'UNKNOWN' }
     });
 
     assert.throws(() => AssessmentSnapshot.compare(before, after, []), /Escopo de remediação ausente/);
@@ -86,14 +113,14 @@ test('EOS Phase 2 — Assessment Snapshot Hardening Suite', async (t) => {
     const before = new AssessmentSnapshot({
       snapshot_type: 'BEFORE_REMEDIATION', target_id: 'TARGET-A', evidence_ids: ['EVI-1'], fact_ids: [], finding_ids: ['FIN-1', 'FIN-2', 'FIN-3'],
       risk_level: 'HIGH', verification_status: 'VERIFIED',
-      provenance: { execution_id: 'EXEC-1', executed_at: '2026-08-01T10:00:00Z', eos_version: '2.0.0', tool_or_collector: 'TEST' }
+      provenance: { execution_id: 'EXEC-1', executed_at: '2026-08-01T10:00:00Z', eos_version: '2.0.0', tool_or_collector: 'TEST', target_type: 'UNKNOWN' }
     });
     
     const after = new AssessmentSnapshot({
       snapshot_type: 'AFTER_REMEDIATION', target_id: 'TARGET-A', evidence_ids: ['EVI-2'], fact_ids: [], 
       finding_ids: ['FIN-2', 'FIN-99'], // 1 resolvido (FIN-1), 1 persistiu (FIN-2), 1 irrelevante intocado (FIN-3 ignorado pq alvo é 1 e 2), 1 novo (FIN-99)
       risk_level: 'LOW', verification_status: 'VERIFIED',
-      provenance: { execution_id: 'EXEC-2', executed_at: '2026-08-01T11:00:00Z', eos_version: '2.0.0', tool_or_collector: 'TEST' }
+      provenance: { execution_id: 'EXEC-2', executed_at: '2026-08-01T11:00:00Z', eos_version: '2.0.0', tool_or_collector: 'TEST', target_type: 'UNKNOWN' }
     });
 
     const result = AssessmentSnapshot.compare(before, after, [parseFindingId('FIN-1'), parseFindingId('FIN-2')]);
@@ -108,12 +135,12 @@ test('EOS Phase 2 — Assessment Snapshot Hardening Suite', async (t) => {
     const before = new AssessmentSnapshot({
       snapshot_type: 'BEFORE_REMEDIATION', target_id: 'TARGET-A', evidence_ids: ['EVI-SHARED'], fact_ids: [], finding_ids: ['FIN-1'],
       risk_level: 'HIGH', verification_status: 'VERIFIED',
-      provenance: { execution_id: 'EXEC-1', executed_at: '2026-08-01T10:00:00Z', eos_version: '2.0.0', tool_or_collector: 'TEST' }
+      provenance: { execution_id: 'EXEC-1', executed_at: '2026-08-01T10:00:00Z', eos_version: '2.0.0', tool_or_collector: 'TEST', target_type: 'UNKNOWN' }
     });
     const after = new AssessmentSnapshot({
       snapshot_type: 'AFTER_REMEDIATION', target_id: 'TARGET-A', evidence_ids: ['EVI-SHARED'], fact_ids: [], finding_ids: [],
       risk_level: 'LOW', verification_status: 'VERIFIED',
-      provenance: { execution_id: 'EXEC-2', executed_at: '2026-08-01T11:00:00Z', eos_version: '2.0.0', tool_or_collector: 'TEST' }
+      provenance: { execution_id: 'EXEC-2', executed_at: '2026-08-01T11:00:00Z', eos_version: '2.0.0', tool_or_collector: 'TEST', target_type: 'UNKNOWN' }
     });
 
     const result = AssessmentSnapshot.compare(before, after, [parseFindingId('FIN-1')]);
@@ -125,7 +152,7 @@ test('EOS Phase 2 — Assessment Snapshot Hardening Suite', async (t) => {
     const snap = new AssessmentSnapshot({
       snapshot_type: 'BASELINE', target_id: 'TARGET-A', evidence_ids: ['EVI-1'], fact_ids: [], finding_ids: [],
       risk_level: 'LOW', verification_status: 'VERIFIED',
-      provenance: { execution_id: 'EXEC-1', executed_at: '2026-08-01T10:00:00Z', eos_version: '2.0.0', tool_or_collector: 'TEST' }
+      provenance: { execution_id: 'EXEC-1', executed_at: '2026-08-01T10:00:00Z', eos_version: '2.0.0', tool_or_collector: 'TEST', target_type: 'UNKNOWN' }
     });
 
     assert.throws(() => { (snap as any).target_id = 'HACK'; }, TypeError);

@@ -21,14 +21,17 @@ import {
 
 export type VerificationStatus = 'VERIFIED' | 'NOT_VERIFIED' | 'PARTIALLY_VERIFIED' | 'NON_COMPLIANT' | 'NOT_APPLICABLE' | 'UNKNOWN';
 
+export type TargetType = 'SOURCE_CODE' | 'ARTIFACT' | 'RUNTIME' | 'UNKNOWN';
+
 export interface SnapshotProvenance {
   readonly execution_id: ExecutionId;
   readonly executed_at: string; // ISO-8601
   readonly eos_version: string;
   readonly tool_or_collector: string;
-  readonly git_commit?: string; // Required for code targets
+  readonly target_type: TargetType;
+  readonly git_commit?: string; // Obrigatório para SOURCE_CODE
   readonly target_version?: string;
-  readonly artifact_hash?: string; // e.g., 'NOT_APPLICABLE' or actual hash
+  readonly artifact_hash?: string; // Obrigatório para ARTIFACT
 }
 
 export interface SnapshotComparisonResult {
@@ -72,6 +75,7 @@ export class AssessmentSnapshot {
       executed_at: string;
       eos_version: string;
       tool_or_collector: string;
+      target_type: TargetType;
       git_commit?: string;
       target_version?: string;
       artifact_hash?: string;
@@ -91,11 +95,20 @@ export class AssessmentSnapshot {
       throw new Error('AssessmentSnapshot Error: executed_at deve ser uma data ISO-8601 válida.');
     }
 
+    // Target Provenance Policy
+    if (data.provenance.target_type === 'SOURCE_CODE' && (!data.provenance.git_commit || data.provenance.git_commit.trim() === '')) {
+      throw new Error('AssessmentSnapshot Error: git_commit is REQUIRED for SOURCE_CODE targets.');
+    }
+    if (data.provenance.target_type === 'ARTIFACT' && (!data.provenance.artifact_hash || data.provenance.artifact_hash.trim() === '')) {
+      throw new Error('AssessmentSnapshot Error: artifact_hash is REQUIRED for ARTIFACT targets.');
+    }
+
     this.provenance = Object.freeze({
       execution_id: parseExecutionId(data.provenance.execution_id),
       executed_at: date.toISOString(),
       eos_version: data.provenance.eos_version,
       tool_or_collector: data.provenance.tool_or_collector,
+      target_type: data.provenance.target_type,
       git_commit: data.provenance.git_commit,
       target_version: data.provenance.target_version,
       artifact_hash: data.provenance.artifact_hash
@@ -120,6 +133,7 @@ export class AssessmentSnapshot {
       this.provenance.executed_at,
       this.provenance.eos_version,
       this.provenance.tool_or_collector,
+      this.provenance.target_type,
       this.provenance.git_commit || '',
       this.provenance.target_version || '',
       this.provenance.artifact_hash || ''
