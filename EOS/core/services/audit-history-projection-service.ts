@@ -1,16 +1,15 @@
 /**
  * EOS CORE SERVICES — AUDIT HISTORY PROJECTION SERVICE
- * Pure Read Model projection converting REAL materialized domain artifacts from disk into immutable DTOs.
- * ZERO MOCK POLICY: Projects ONLY persistent artifacts saved on disk (.eos/audits/).
+ * Pure Read Model projection deriving CausalRemediationAuditProjection DTOs
+ * dynamically from primary AuditArtifact domain entities on disk.
+ * ZERO MOCK POLICY: Projects ONLY persistent artifacts saved on disk (.eos/projects/{projectId}/audits/).
  * MULTI-PROJECT ISOLATION: All projections are strictly bound to a target projectId.
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { CausalRemediationAuditProjection, SourceSnapshot } from '../domain/causal-pipeline-contracts';
-import { Finding, Evidence, Fact } from '../domain/types';
-import { ActionPlan } from '../domain/action-plan';
-import { ApprovalRecord } from '../domain/approval-record';
+import { CausalRemediationAuditProjection } from '../domain/causal-pipeline-contracts';
+import { AuditHistoryRepository, AuditArtifact } from '../storage/audit-history-repository';
 
 export interface AuditHistorySummaryDTO {
   readonly auditRunId: string;
@@ -24,108 +23,82 @@ export interface AuditHistorySummaryDTO {
   readonly totalRevalidated: number;
   readonly remainingFindingsCount: number;
   readonly repositoryTreeHash: string;
+  readonly artifactHash: string;
 }
 
 export class AuditHistoryProjectionService {
-  private readonly eosDir: string;
-  private readonly auditsDir: string;
+  private readonly repository: AuditHistoryRepository;
 
   constructor(customEosDir?: string) {
-    this.eosDir = customEosDir || path.join(process.cwd(), '.eos');
-    this.auditsDir = path.join(this.eosDir, 'audits');
-
-    if (!fs.existsSync(this.auditsDir)) {
-      fs.mkdirSync(this.auditsDir, { recursive: true });
-    }
+    this.repository = new AuditHistoryRepository(customEosDir);
   }
 
   /**
-   * Persiste uma projeção real de auditoria no disco (.eos/audits/{auditRunId}.json).
+   * Persiste uma projeção de auditoria real criando um AuditArtifact soberano no disco.
    */
   public persistAuditRun(projection: CausalRemediationAuditProjection, projectId = 'project-alpha'): string {
     const auditRunId = projection.revalidationProof?.auditRunId || `AUD-${Date.now()}`;
-    const projectAuditsDir = path.join(this.auditsDir, projectId);
-
-    if (!fs.existsSync(projectAuditsDir)) {
-      fs.mkdirSync(projectAuditsDir, { recursive: true });
-    }
-
-    const filePath = path.join(projectAuditsDir, `${auditRunId}.json`);
-    const envelope = {
-      projectId,
+    this.repository.saveAuditArtifact(
       auditRunId,
-      executedAt: projection.revalidationProof?.verifiedAt || new Date().toISOString(),
-      projection
-    };
-
-    const content = JSON.stringify(envelope, null, 2);
-    const fd = fs.openSync(filePath, 'w');
-    try {
-      fs.writeFileSync(fd, content, 'utf8');
-      fs.fsyncSync(fd);
-    } finally {
-      fs.closeSync(fd);
-    }
-
+      projectId,
+      projection.sourceSnapshot,
+      projection.evidences,
+      projection.facts,
+      projection.finding,
+      projection.proposedActionPlan,
+      projection.approvalRecord,
+      projection.afterSourceSnapshot,
+      projection.revalidationProof
+    );
     return auditRunId;
   }
 
   /**
-   * Projeta a lista de resumos de histórico de auditoria LENDO EXCLUSIVAMENTE ARQUIVOS REAIS DO DISCO.
-   * Se não houver arquivos gravados, retorna []. ZERO DADOS SINTÉTICOS HARDCODED.
+   * Converte um AuditArtifact em uma projeção Read Model (CausalRemediationAuditProjection).
    */
-  public getAuditHistorySummaries(projectId?: string): AuditHistorySummaryDTO[] {
+  public projectArtifactToCausalView(artifact: AuditArtifact): CausalRemediationAuditProjection {
+    return {
+      remediationId: artifact.proposedActionPlan?.planId || artifact.artifactId,
+      sourceSnapshot: artifact.sourceSnapshot,
+      evidences: artifact.evidences,
+      facts: artifact.facts,
+      finding: artifact.finding,
+      proposedActionPlan: artifact.proposedActionPlan,
+      approvalRecord: artifact.approvalRecord,
+      afterSourceSnapshot: artifact.afterSourceSnapshot,
+      revalidationProof: artifact.revalidationProof
+    };
+  }
+
+  /**
+   * Projeta a lista de resumos de histórico de auditoria LENDO EXCLUSIVAMENTE ARQUIVOS REAIS DO DISCO.
+   */
+  public getAuditHistorySummaries(projectId = 'project-alpha'): AuditHistorySummaryDTO[] {
+    const artifacts = this.repository.listAuditArtifacts(projectId);
     const summaries: AuditHistorySummaryDTO[] = [];
 
-    if (!fs.existsSync(this.auditsDir)) {
-      return summaries;
-    }
+    for (const artifact of artifacts) {
+      const isResolved = artifact.revalidationProof?.isResolved ?? false;
+      const totalFindings = artifact.finding ? 1 : 0;
+      const totalActionsProposed = artifact.proposedActionPlan ? 1 : 0;
+      const totalActionsExecuted = artifact.approvalRecord?.decision === 'APPROVED' ? 1 : 0;
+      const totalRevalidated = artifact.revalidationProof ? 1 : 0;
+      const remaining = isResolved ? 0 : totalFindings;
 
-    const projectFolders = fs.readdirSync(this.auditsDir);
-
-    for (const folderName of projectFolders) {
-      const folderPath = path.join(this.auditsDir, folderName);
-      if (!fs.statSync(folderPath).isDirectory()) continue;
-
-      if (projectId && projectId !== 'ALL' && folderName !== projectId) {
-        continue;
-      }
-
-      const files = fs.readdirSync(folderPath);
-      for (const file of files) {
-        if (!file.endsWith('.json')) continue;
-
-        try {
-          const content = fs.readFileSync(path.join(folderPath, file), 'utf8');
-          const envelope = JSON.parse(content);
-          const proj: CausalRemediationAuditProjection = envelope.projection;
-
-          if (!proj) continue;
-
-          const isResolved = proj.revalidationProof?.isResolved ?? false;
-          const totalFindings = proj.finding ? 1 : 0;
-          const totalActionsProposed = proj.proposedActionPlan ? 1 : 0;
-          const totalActionsExecuted = proj.approvalRecord?.decision === 'APPROVED' ? 1 : 0;
-          const totalRevalidated = proj.revalidationProof ? 1 : 0;
-          const remaining = isResolved ? 0 : totalFindings;
-
-          summaries.push({
-            auditRunId: envelope.auditRunId || proj.revalidationProof?.auditRunId || path.basename(file, '.json'),
-            projectId: envelope.projectId || folderName,
-            targetPath: folderName,
-            executedAt: envelope.executedAt || proj.sourceSnapshot.observedAt,
-            status: isResolved ? 'RESOLVED' : 'BLOCKED',
-            totalFindings,
-            totalActionsProposed,
-            totalActionsExecuted,
-            totalRevalidated,
-            remainingFindingsCount: remaining,
-            repositoryTreeHash: proj.sourceSnapshot.treeHash
-          });
-        } catch {
-          // Ignora arquivos corrompidos na varredura da projeção
-        }
-      }
+      summaries.push({
+        auditRunId: artifact.auditRunId,
+        projectId: artifact.projectId,
+        targetPath: artifact.projectId,
+        executedAt: artifact.createdAt,
+        status: isResolved ? 'RESOLVED' : 'BLOCKED',
+        totalFindings,
+        totalActionsProposed,
+        totalActionsExecuted,
+        totalRevalidated,
+        remainingFindingsCount: remaining,
+        repositoryTreeHash: artifact.sourceSnapshot?.treeHash || 'tree-hash-unknown',
+        artifactHash: artifact.artifactHash
+      });
     }
 
     return summaries.sort((a, b) => new Date(b.executedAt).getTime() - new Date(a.executedAt).getTime());
@@ -135,43 +108,29 @@ export class AuditHistoryProjectionService {
    * Projeta o detalhe completo da timeline causal LENDO DIRETO DO DISCO,
    * aplicando validação estrita de isolamento por projectId (Defesa IDOR).
    */
-  public getAuditTimelineDetail(auditRunId: string, projectId?: string): CausalRemediationAuditProjection | null {
-    if (!fs.existsSync(this.auditsDir)) {
-      return null;
-    }
+  public getAuditTimelineDetail(auditRunId: string, projectId = 'project-alpha'): CausalRemediationAuditProjection | null {
+    let artifact = this.repository.getAuditArtifact(projectId, auditRunId);
 
-    const projectFolders = fs.readdirSync(this.auditsDir);
-
-    for (const folderName of projectFolders) {
-      const folderPath = path.join(this.auditsDir, folderName);
-      if (!fs.statSync(folderPath).isDirectory()) continue;
-
-      const files = fs.readdirSync(folderPath);
-      for (const file of files) {
-        if (!file.endsWith('.json')) continue;
-
-        if (file.includes(auditRunId) || file === `${auditRunId}.json`) {
-          try {
-            const content = fs.readFileSync(path.join(folderPath, file), 'utf8');
-            const envelope = JSON.parse(content);
-
-            const fileProjectId = envelope.projectId || folderName;
-
-            // DEFESA ESTRUTURAL IDOR: Validação no Servidor
-            if (projectId && projectId !== 'ALL' && fileProjectId !== projectId) {
-              throw new Error(`SECURITY_VIOLATION_PROJECT_ISOLATION: O AuditRun '${auditRunId}' pertence ao projeto '${fileProjectId}', acesso negado para '${projectId}'.`);
-            }
-
-            return envelope.projection as CausalRemediationAuditProjection;
-          } catch (err: any) {
-            if (err.message?.includes('SECURITY_VIOLATION_PROJECT_ISOLATION')) {
-              throw err;
-            }
+    if (!artifact) {
+      // Scan all project folders to detect cross-project unauthorized access (IDOR Defense)
+      const projectsDir = path.join((this.repository as any).baseDir || path.join(process.cwd(), '.eos'), 'projects');
+      if (fs.existsSync(projectsDir)) {
+        const projectFolders = fs.readdirSync(projectsDir);
+        for (const folder of projectFolders) {
+          if (folder === projectId) continue;
+          const otherArtifact = this.repository.getAuditArtifact(folder, auditRunId);
+          if (otherArtifact) {
+            throw new Error(`SECURITY_VIOLATION_PROJECT_ISOLATION: O AuditRun '${auditRunId}' pertence ao projeto '${otherArtifact.projectId}', acesso negado para '${projectId}'.`);
           }
         }
       }
+      return null;
     }
 
-    return null;
+    if (projectId && projectId !== 'ALL' && artifact.projectId !== projectId) {
+      throw new Error(`SECURITY_VIOLATION_PROJECT_ISOLATION: O AuditRun '${auditRunId}' pertence ao projeto '${artifact.projectId}', acesso negado para '${projectId}'.`);
+    }
+
+    return this.projectArtifactToCausalView(artifact);
   }
 }

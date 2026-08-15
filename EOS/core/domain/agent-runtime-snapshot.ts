@@ -20,12 +20,14 @@ export interface PluginProvenance {
   readonly permissionSetHash?: string;
   readonly permissions: readonly string[];
   readonly toolsProvided: readonly string[];
+  readonly actualToolsUsed?: readonly string[];
 }
 
 export interface McpServerProvenance {
   readonly serverId: string;
   readonly version: string;
   readonly toolsProvided: readonly string[];
+  readonly actualToolsUsed?: readonly string[];
   readonly resourcesProvided: readonly string[];
   readonly authenticated: boolean;
 }
@@ -38,11 +40,18 @@ export interface AgentRuntimeSnapshot {
   readonly agentVersion: string;
   readonly agentCommitHash?: string;
   
-  // Proveniência Expandida de IA e Contexto (Item #5)
+  // Proveniência Expandida de IA, Modelo e Contexto (Itens 5 & 9)
   readonly promptVersion: string;
   readonly promptHash: string;
   readonly contextPolicyHash: string;
   readonly modelConfigurationHash: string;
+
+  // Parâmetros de Inferência e Raciocínio (Item 9)
+  readonly temperature?: number;
+  readonly maxTokens?: number;
+  readonly responseFormat?: string;
+  readonly reasoningMode?: string;
+  readonly toolConfigurationHash?: string;
 
   readonly skills: readonly SkillProvenance[];
   readonly plugins: readonly PluginProvenance[];

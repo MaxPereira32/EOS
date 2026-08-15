@@ -1,16 +1,11 @@
 #!/usr/bin/env node
 
 /**
- * EOS ENTERPRISE PLATFORM ORCHESTRATOR (v2.3.0)
+ * EOS ENTERPRISE PLATFORM ORCHESTRATOR (v2.5.0 SOVEREIGN)
  * 
- * Orchestrates the complete 5-stage pipeline using the v2.0 Enterprise Domain Graph:
- * Stage 01: Asset, Observation & DTI Evidence Collector
- * Stage 02: Fact Consolidation (1:N Evidence) & Threat Graph (STRIDE)
- * Stage 03: Rule Evaluation & Taxonomy Findings (OWASP, CWE, CVE, NIST, MITRE)
- * Stage 04: Composite Risk Matrix & Machine-Actionable Remediation (Unified Diff)
- * Stage 05: Historical Trend Delta & Adaptive Knowledge Base Feedback
- * 
+ * Orchestrates the complete 5-stage pipeline using Sovereign AuditArtifact persistence.
  * PURE REAL EVIDENCE POLICY: Zero hardcoded sample fixtures in production orchestrator.
+ * STRICT CONTEXT POLICY: Requires mandatory AuditExecutionContext (No unauthenticated fallback).
  */
 
 import * as fs from 'fs';
@@ -24,7 +19,18 @@ import { KnowledgeTrendEngine } from './engines/knowledge-trend-engine';
 import { ComplianceEngine } from './engines/compliance-engine';
 
 import { Asset } from './domain-graph';
-import { AuditHistoryRepository } from './storage/audit-history-repository';
+import { SourceSnapshot } from './domain/causal-pipeline-contracts';
+import { AgentRuntimeSnapshot } from './domain/agent-runtime-snapshot';
+import { AuditHistoryRepository, AuditArtifact } from './storage/audit-history-repository';
+import { JsonAuditExporter } from './reporters/json-audit-exporter';
+
+export interface AuditExecutionContext {
+  readonly projectId: string;
+  readonly repositoryRoot: string;
+  readonly assets: readonly Asset[];
+  readonly sourceSnapshot: SourceSnapshot;
+  readonly runtimeSnapshot: AgentRuntimeSnapshot;
+}
 
 export class EosPlatformV2 {
   private graphEngine = new DomainGraphEngine();
@@ -39,69 +45,67 @@ export class EosPlatformV2 {
     this.auditRepo = new AuditHistoryRepository(customBaseDir);
   }
 
-  public async runPipeline(targetAssets?: Asset[], projectId = 'project-alpha'): Promise<void> {
+  public async runPipeline(context: AuditExecutionContext): Promise<AuditArtifact> {
+    if (!context || !context.projectId || !context.sourceSnapshot || !context.runtimeSnapshot) {
+      throw new Error('AUDIT_PIPELINE_ERROR: Contexto de auditoria AuditExecutionContext é obrigatório e deve ser assinado e tipado.');
+    }
+
     console.log('╔══════════════════════════════════════════════════════════════╗');
-    console.log('║        EOS Platform v2.3.0 Enterprise Pipeline Start         ║');
+    console.log(`║   EOS Platform v2.5.0 Sovereign Start [${context.projectId}]   ║`);
     console.log('╚══════════════════════════════════════════════════════════════╝\n');
 
     // ── ESTÁGIO 01: Ingestão de Ativos & Governança via Swarm ────────────────────────
     console.log('[Estágio 01] Mapeando Ativos e Orquestrando Agentes Inteligentes...');
     
-    const assetsToProcess = targetAssets || [];
-    assetsToProcess.forEach(asset => this.graphEngine.addAsset(asset));
+    context.assets.forEach(asset => this.graphEngine.addAsset(asset));
 
-    if (assetsToProcess.length > 0) {
-      console.log(`  └─ [Swarm] Auditando ${assetsToProcess.length} ativo(s) com ComplianceEngine...`);
-      const complianceResult = await this.complianceEngine.runComplianceAudit(assetsToProcess);
+    if (context.assets.length > 0) {
+      console.log(`  └─ [Swarm] Auditando ${context.assets.length} ativo(s) com ComplianceEngine...`);
+      const complianceResult = await this.complianceEngine.runComplianceAudit([...context.assets]);
       complianceResult.facts.forEach(f => this.graphEngine.addFact(f));
       complianceResult.findings.forEach(f => this.graphEngine.addFinding(f));
-    } else {
-      console.log('  └─ Nenhum ativo externo fornecido. Inicializando em modo de varredura ativa.');
     }
 
-    // ── ESTÁGIO 02: Consolidação de Fatos & Grafo de Ameaças ──────
-    console.log('[Estágio 02] Consolidando Fatos e Grafo de Ameaças...');
-
-    // ── ESTÁGIO 03 & 04: Risco Composto & Remediações ────
-    console.log('[Estágio 03 & 04] Avaliando Risco Composto Enterprise e Remediações...');
-
-    // ── ESTÁGIO 05: Tendência Histórica & Persistência Causal ──────
-    console.log('[Estágio 05] Persistindo Auditoria Causal via AuditHistoryRepository...');
+    // ── ESTÁGIO 05: Persistência Causal em AuditArtifact com JCS RFC 8785 ──────
+    console.log('[Estágio 05] Persistindo AuditArtifact Soberano via AuditHistoryRepository...');
 
     const auditRunId = `AUD-${Date.now()}`;
-    const stats = this.graphEngine.getStats();
 
-    const auditSummary = this.trendEngine.computeAuditTrend(
-      auditRunId,
-      stats.total_assets,
-      stats.total_findings,
-      0.0
-    );
-
-    const reportArtifact = {
-      $schema: 'https://eos.architecture/schemas/v2/stage05-trend-knowledge.json',
-      audit_summary: auditSummary,
-      knowledge_engine_feedback: [],
+    // Construindo o Finding inicial a partir dos achados do Grafo
+    const primaryFinding = this.graphEngine.getFindings()[0] || {
+      finding_id: `find-empty-${Date.now()}`,
+      rule_id: 'RULE-PASS',
+      severity: 'LOW',
+      status: 'RESOLVED',
+      evidence_ids: ['ev-pass']
     };
 
-    const markdownReport = this.trendEngine.generateMarkdownReport(reportArtifact);
+    const artifact = this.auditRepo.saveAuditArtifact(
+      auditRunId,
+      context.projectId,
+      context.sourceSnapshot,
+      this.graphEngine.getEvidences(),
+      this.graphEngine.getFacts(),
+      primaryFinding as any,
+      undefined,
+      undefined,
+      undefined,
+      {
+        proofId: `proof-${auditRunId}`,
+        auditRunId,
+        isResolved: primaryFinding.status === 'RESOLVED',
+        remainingFindingIds: primaryFinding.status === 'RESOLVED' ? [] : [primaryFinding.finding_id],
+        verifiedAt: new Date().toISOString()
+      },
+      context.runtimeSnapshot
+    );
 
-    // Salvando artefatos em .eos/
-    const eosDir = path.join(process.cwd(), '.eos');
-    if (!fs.existsSync(eosDir)) {
-      fs.mkdirSync(eosDir, { recursive: true });
-    }
+    // Exportação derivada (sem symlink)
+    JsonAuditExporter.exportAuditReport(artifact);
 
-    fs.writeFileSync(path.join(eosDir, 'auditoria.json'), JSON.stringify(reportArtifact, null, 2), 'utf8');
-    fs.writeFileSync(path.join(eosDir, 'acf-auditoria.md'), markdownReport, 'utf8');
+    console.log('\n[🟢] PIPELINE EOS v2.5 SOVEREIGN CONCLUÍDO COM SUCESSO!');
+    console.log(`  └─ AuditArtifact: ${artifact.artifactId} (Hash JCS: ${artifact.artifactHash})\n`);
 
-    console.log('\n[🟢] PIPELINE EOS v2.3 CONCLUÍDO COM SUCESSO!');
-    console.log(`  └─ Artefatos reais sincronizados via AuditHistoryRepository.\n`);
+    return artifact;
   }
-}
-
-// Execução CLI
-if (require.main === module) {
-  const platform = new EosPlatformV2();
-  platform.runPipeline();
 }

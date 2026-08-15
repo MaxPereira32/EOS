@@ -2,15 +2,18 @@
  * EOS CORE STORAGE — AUDIT HISTORY REPOSITORY
  * Materializes and retrieves real AuditArtifact objects from disk
  * (.eos/projects/{projectId}/audits/{auditRunId}.json).
- * Computes deterministic artifactHash (SHA-256) for audit integrity.
- * ZERO MOCK POLICY: Pure disk persistence.
+ * Computes deterministic artifactHash using JCS RFC 8785 canonical hash.
+ * ZERO MOCK POLICY: Sovereign disk persistence of primary domain entities.
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
-import * as crypto from 'crypto';
-import { CausalRemediationAuditProjection } from '../domain/causal-pipeline-contracts';
+import { SourceSnapshot } from '../domain/causal-pipeline-contracts';
+import { Finding, Evidence, Fact } from '../domain/types';
+import { ActionPlan } from '../domain/action-plan';
+import { ApprovalRecord } from '../domain/approval-record';
 import { AgentRuntimeSnapshot } from '../domain/agent-runtime-snapshot';
+import { canonicalHash } from '../utils/canonical-json';
 
 export interface AuditArtifact {
   readonly artifactId: string;
@@ -19,9 +22,25 @@ export interface AuditArtifact {
   readonly projectId: string;
   readonly createdAt: string;
   readonly sourceSnapshotHash: string;
-  readonly artifactHash: string;
+  readonly artifactHash: string; // JCS RFC 8785 SHA-256 Digest
   readonly parentArtifactId?: string;
-  readonly projection: CausalRemediationAuditProjection;
+  readonly parentArtifactHash?: string;
+  
+  // Entidades Primárias do Domínio (Fonte Soberana de Verdade)
+  readonly sourceSnapshot: SourceSnapshot;
+  readonly evidences: readonly Evidence[];
+  readonly facts: readonly Fact[];
+  readonly finding: Finding;
+  readonly proposedActionPlan?: ActionPlan;
+  readonly approvalRecord?: ApprovalRecord;
+  readonly afterSourceSnapshot?: SourceSnapshot;
+  readonly revalidationProof?: {
+    readonly proofId: string;
+    readonly auditRunId: string;
+    readonly isResolved: boolean;
+    readonly remainingFindingIds: readonly string[];
+    readonly verifiedAt: string;
+  };
   readonly runtimeSnapshot?: AgentRuntimeSnapshot;
 }
 
@@ -44,9 +63,17 @@ export class AuditHistoryRepository {
   public saveAuditArtifact(
     auditRunId: string,
     projectId: string,
-    projection: CausalRemediationAuditProjection,
+    sourceSnapshot: SourceSnapshot,
+    evidences: readonly Evidence[],
+    facts: readonly Fact[],
+    finding: Finding,
+    proposedActionPlan?: ActionPlan,
+    approvalRecord?: ApprovalRecord,
+    afterSourceSnapshot?: SourceSnapshot,
+    revalidationProof?: { proofId: string; auditRunId: string; isResolved: boolean; remainingFindingIds: readonly string[]; verifiedAt: string },
     runtimeSnapshot?: AgentRuntimeSnapshot,
-    parentArtifactId?: string
+    parentArtifactId?: string,
+    parentArtifactHash?: string
   ): AuditArtifact {
     if (!auditRunId || !projectId) {
       throw new Error('AUDIT_REPOSITORY_ERROR: auditRunId e projectId são obrigatórios.');
@@ -54,36 +81,47 @@ export class AuditHistoryRepository {
 
     const artifactId = `art-${auditRunId}-${Date.now()}`;
     const createdAt = new Date().toISOString();
-    const sourceSnapshotHash = projection.sourceSnapshot?.snapshotId || 'unknown-snapshot';
+    const sourceSnapshotHash = sourceSnapshot.snapshotId || 'unknown-snapshot';
 
-    // Content payload without hash to derive artifactHash
-    const contentPayload = {
+    // Content payload without artifactHash for deterministic JCS canonicalization
+    const payloadToCanonicalize = {
       artifactId,
       schemaVersion: 1,
       auditRunId,
       projectId,
       createdAt,
       sourceSnapshotHash,
-      parentArtifactId,
-      projection,
-      runtimeSnapshot
+      parentArtifactId: parentArtifactId || null,
+      parentArtifactHash: parentArtifactHash || null,
+      sourceSnapshot,
+      evidences,
+      facts,
+      finding,
+      proposedActionPlan: proposedActionPlan || null,
+      approvalRecord: approvalRecord || null,
+      afterSourceSnapshot: afterSourceSnapshot || null,
+      revalidationProof: revalidationProof || null,
+      runtimeSnapshot: runtimeSnapshot || null
     };
 
-    const artifactHash = crypto
-      .createHash('sha256')
-      .update(JSON.stringify(contentPayload))
-      .digest('hex');
+    const artifactHash = canonicalHash(payloadToCanonicalize);
 
     const artifact: AuditArtifact = {
-      ...contentPayload,
+      ...payloadToCanonicalize,
+      parentArtifactId: parentArtifactId || undefined,
+      parentArtifactHash: parentArtifactHash || undefined,
+      proposedActionPlan: proposedActionPlan || undefined,
+      approvalRecord: approvalRecord || undefined,
+      afterSourceSnapshot: afterSourceSnapshot || undefined,
+      revalidationProof: revalidationProof || undefined,
+      runtimeSnapshot: runtimeSnapshot || undefined,
       artifactHash
     };
 
     const dir = this.getProjectAuditDir(projectId);
     const filePath = path.join(dir, `${auditRunId}.json`);
 
-    const payload = JSON.stringify(artifact, null, 2);
-    fs.writeFileSync(filePath, payload, 'utf8');
+    fs.writeFileSync(filePath, JSON.stringify(artifact, null, 2), 'utf8');
 
     // Ensure fsync for storage durability
     const fd = fs.openSync(filePath, 'r+');
@@ -109,12 +147,31 @@ export class AuditHistoryRepository {
       const content = fs.readFileSync(filePath, 'utf8');
       const artifact = JSON.parse(content) as AuditArtifact;
       
-      // Verify artifactHash integrity
+      // Verify JCS RFC 8785 artifactHash integrity
       if (artifact && artifact.artifactHash) {
-        const { artifactHash, ...payload } = artifact as any;
-        const recomputed = crypto.createHash('sha256').update(JSON.stringify(payload)).digest('hex');
-        if (recomputed !== artifactHash) {
-          throw new Error(`AUDIT_STORAGE_INTEGRITY_VIOLATION: O artefato de auditoria '${auditRunId}' teve o hash corrompido ou adulterado no disco!`);
+        const payloadToVerify = {
+          artifactId: artifact.artifactId,
+          schemaVersion: artifact.schemaVersion,
+          auditRunId: artifact.auditRunId,
+          projectId: artifact.projectId,
+          createdAt: artifact.createdAt,
+          sourceSnapshotHash: artifact.sourceSnapshotHash,
+          parentArtifactId: artifact.parentArtifactId || null,
+          parentArtifactHash: artifact.parentArtifactHash || null,
+          sourceSnapshot: artifact.sourceSnapshot,
+          evidences: artifact.evidences,
+          facts: artifact.facts,
+          finding: artifact.finding,
+          proposedActionPlan: artifact.proposedActionPlan || null,
+          approvalRecord: artifact.approvalRecord || null,
+          afterSourceSnapshot: artifact.afterSourceSnapshot || null,
+          revalidationProof: artifact.revalidationProof || null,
+          runtimeSnapshot: artifact.runtimeSnapshot || null
+        };
+
+        const recomputed = canonicalHash(payloadToVerify);
+        if (recomputed !== artifact.artifactHash) {
+          throw new Error(`AUDIT_STORAGE_INTEGRITY_VIOLATION: O hash canônico JCS do artefato '${auditRunId}' teve seu conteúdo adulterado no disco! (Esperado ${artifact.artifactHash}, calculado ${recomputed})`);
         }
       }
 
