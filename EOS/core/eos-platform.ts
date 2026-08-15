@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
 /**
- * EOS ENTERPRISE PLATFORM ORCHESTRATOR (v3.0.0 SOVEREIGN)
+ * EOS ENTERPRISE PLATFORM ORCHESTRATOR (v3.1.0 SOVEREIGN)
  * 
  * Orchestrates the complete 5-stage pipeline using Sovereign AuditArtifact persistence.
- * PURE REAL EVIDENCE POLICY: Zero hardcoded sample fixtures in production orchestrator.
+ * PURE REAL EVIDENCE POLICY: Zero synthetic ev-pass or RULE-PASS findings. Real observations only.
  * STRICT CONTEXT POLICY: Requires mandatory AuditExecutionContext (No unauthenticated fallback).
  * BOUNDARY VALIDATION: Enforces RepositoryIdentity mapping between projectId and repositoryRoot.
  */
@@ -25,6 +25,7 @@ import { AgentRuntimeSnapshot } from './domain/agent-runtime-snapshot';
 import { Finding as CanonicalFinding } from './domain/types';
 import { AuditHistoryRepository, AuditArtifact } from './storage/audit-history-repository';
 import { JsonAuditExporter } from './reporters/json-audit-exporter';
+import { RepositoryIdentityRegistry } from './services/repository-identity-registry';
 
 export interface AuditExecutionContext {
   readonly contextId: string;
@@ -62,13 +63,16 @@ export class EosPlatformV2 {
     if (normalizedRepo !== normalizedSnapshotRoot) {
       throw new Error(`SECURITY_VIOLATION_CONTEXT_MISMATCH: O repositoryRoot do contexto ('${normalizedRepo}') difere do repositoryRoot do SourceSnapshot ('${normalizedSnapshotRoot}').`);
     }
+
+    // Validação contra o registro de identidade do projeto (RepositoryIdentity)
+    RepositoryIdentityRegistry.validateProjectRepository(context.projectId, context.repositoryRoot);
   }
 
   public async runPipeline(context: AuditExecutionContext): Promise<AuditArtifact> {
     this.validateContextBoundary(context);
 
     console.log('╔══════════════════════════════════════════════════════════════╗');
-    console.log(`║   EOS Platform v3.0.0 Sovereign Start [${context.projectId}]   ║`);
+    console.log(`║   EOS Platform v3.1.0 Sovereign Start [${context.projectId}]   ║`);
     console.log('╚══════════════════════════════════════════════════════════════╝\n');
 
     // ── ESTÁGIO 01: Ingestão de Ativos & Governança via Swarm ────────────────────────
@@ -87,14 +91,15 @@ export class EosPlatformV2 {
     console.log('[Estágio 05] Persistindo AuditArtifact Soberano via AuditHistoryRepository...');
 
     const auditRunId = `AUD-${Date.now()}`;
-    const rawFinding = this.graphEngine.getFindings()[0];
+    const rawFindings = this.graphEngine.getFindings();
 
-    const primaryFinding: CanonicalFinding = rawFinding ? {
-      finding_id: rawFinding.finding_id,
-      rule_id: rawFinding.rule_id,
-      rule_version: '3.0.0',
-      fact_ids: rawFinding.fact_ids || [],
-      evidence_ids: ['ev-pass'],
+    // PURE REAL EVIDENCE POLICY: Zero fabricação de ev-pass ou RULE-PASS!
+    const realFindings: CanonicalFinding[] = rawFindings.map(f => ({
+      finding_id: f.finding_id,
+      rule_id: f.rule_id,
+      rule_version: '3.1.0',
+      fact_ids: f.fact_ids || [],
+      evidence_ids: (f as any).evidence_ids || [],
       target_id: context.projectId,
       location: 'EOS/core/eos-platform.ts:1',
       title: 'Domain Graph Finding',
@@ -103,21 +108,9 @@ export class EosPlatformV2 {
       confidence: 1.0,
       status: 'OPEN',
       timestamp: new Date().toISOString()
-    } : {
-      finding_id: `find-empty-${Date.now()}`,
-      rule_id: 'RULE-PASS',
-      rule_version: '3.0.0',
-      fact_ids: [],
-      evidence_ids: ['ev-pass'],
-      target_id: context.projectId,
-      location: 'EOS/core/eos-platform.ts:1',
-      title: 'Rule Pass',
-      description: 'Nenhuma vulnerabilidade ou desvio detectado no pipeline',
-      severity: 'LOW',
-      confidence: 1.0,
-      status: 'OPEN',
-      timestamp: new Date().toISOString()
-    };
+    }));
+
+    const isCleanRun = realFindings.length === 0;
 
     const artifact = this.auditRepo.saveAuditArtifact(
       auditRunId,
@@ -125,15 +118,15 @@ export class EosPlatformV2 {
       context.sourceSnapshot,
       [],
       [],
-      primaryFinding,
+      realFindings, // Findings puras ou []
       undefined,
       undefined,
       undefined,
       {
         proofId: `proof-${auditRunId}`,
         auditRunId,
-        isResolved: primaryFinding.status === 'MITIGATED',
-        remainingFindingIds: primaryFinding.status === 'MITIGATED' ? [] : [primaryFinding.finding_id],
+        isResolved: isCleanRun,
+        remainingFindingIds: isCleanRun ? [] : realFindings.map(f => f.finding_id),
         verifiedAt: new Date().toISOString()
       },
       context.runtimeSnapshot
@@ -142,7 +135,7 @@ export class EosPlatformV2 {
     // Exportação derivada (sem symlink)
     JsonAuditExporter.exportAuditReport(artifact);
 
-    console.log('\n[🟢] PIPELINE EOS v3.0 SOVEREIGN CONCLUÍDO COM SUCESSO!');
+    console.log('\n[🟢] PIPELINE EOS v3.1 SOVEREIGN CONCLUÍDO COM SUCESSO!');
     console.log(`  └─ AuditArtifact: ${artifact.artifactId} (Hash JCS: ${artifact.artifactHash})\n`);
 
     return artifact;

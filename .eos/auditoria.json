@@ -1,22 +1,23 @@
 {
-  "$schema": "https://eos.architecture/schemas/v2/stage05-trend-knowledge.json",
-  "exporterVersion": "2.5.0",
-  "exportedAt": "2026-08-15T19:28:53.346Z",
-  "artifactId": "art-AUD-1786822133339-1786822133339",
-  "artifactHash": "76d96a9c046cdccb8061b79224979249ee17aa50837901e35923e0cd964203b3",
-  "auditRunId": "AUD-1786822133339",
+  "$schema": "https://eos.architecture/schemas/v3/stage05-trend-knowledge.json",
+  "exporterVersion": "3.1.0",
+  "artifactId": "art-AUD-1786823484971-1786823484971",
+  "artifactHash": "cb13c0dc105ca894ff46108150298bf950e14334a34314bbac7e32cbb940309e",
+  "auditRunId": "AUD-1786823484971",
   "projectId": "proj-omega",
+  "createdAt": "2026-08-15T19:51:24.971Z",
+  "sourceSnapshotHash": "snap-clean-1",
   "summary": {
     "sourceSnapshot": {
-      "snapshotId": "snap-ctx-1",
+      "snapshotId": "snap-clean-1",
       "repositoryRoot": "C:\\Users\\Max\\Desktop\\Projeto\\EOS",
       "commitHash": "head",
       "branchName": "main",
-      "observedAt": "2026-08-15T19:28:53.338Z",
-      "treeHash": "tree-ctx-1"
+      "observedAt": "2026-08-15T19:51:24.967Z",
+      "treeHash": "tree-clean-1"
     },
-    "findingCount": 1,
+    "findingCount": 0,
     "evidenceCount": 0,
-    "status": "OBSERVED"
+    "status": "RESOLVED"
   }
 }

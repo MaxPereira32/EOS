@@ -1,7 +1,7 @@
-# Relatório Exportado de Auditoria EOS v2.5.0
+# Relatório Exportado de Auditoria EOS v3.1.0
 
-- **Audit Run ID:** `AUD-1786822133339`
+- **Audit Run ID:** `AUD-1786823484971`
 - **Projeto:** `proj-omega`
-- **Artifact Hash:** `76d96a9c046cdccb8061b79224979249ee17aa50837901e35923e0cd964203b3`
-- **Status:** `OBSERVED`
-- **Timestamp:** `2026-08-15T19:28:53.339Z`
+- **Artifact Hash:** `cb13c0dc105ca894ff46108150298bf950e14334a34314bbac7e32cbb940309e`
+- **Status:** `RESOLVED`
+- **Timestamp de Criação:** `2026-08-15T19:51:24.971Z`

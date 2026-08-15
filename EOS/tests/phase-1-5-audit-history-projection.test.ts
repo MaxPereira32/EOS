@@ -43,7 +43,7 @@ describe('EOS Phase 1.5 — Audit History Projection & Zero-Knowledge Isolation 
       composite_confidence: 1.0,
       created_at: new Date().toISOString()
     }],
-    finding: {
+    findings: [{
       finding_id: 'FND-SEC-019',
       rule_id: 'SEC-RULE-SECRET-LEAK',
       rule_version: '2.1.0',
@@ -57,7 +57,7 @@ describe('EOS Phase 1.5 — Audit History Projection & Zero-Knowledge Isolation 
       confidence: 1.0,
       status: 'MITIGATED',
       timestamp: new Date().toISOString()
-    },
+    }],
     userIntentContext: 'Remediar vulnerabilidade de segredo exposto',
     proposedActionPlan: {
       planId: 'PLAN-019',
@@ -129,8 +129,8 @@ describe('EOS Phase 1.5 — Audit History Projection & Zero-Knowledge Isolation 
 
       assert.ok(detail);
       assert.ok(detail.evidences.length > 0);
-      assert.strictEqual(detail.finding.evidence_ids.includes('EV-101'), true);
-      assert.strictEqual(detail.proposedActionPlan?.findingId, detail.finding.finding_id);
+      assert.strictEqual(detail.findings[0].evidence_ids.includes('EV-101'), true);
+      assert.strictEqual(detail.proposedActionPlan?.findingId, detail.findings[0].finding_id);
       assert.strictEqual(detail.approvalRecord?.approvedPlanHash, detail.proposedActionPlan?.planHash);
       assert.strictEqual(detail.revalidationProof?.isResolved, true);
     } finally {

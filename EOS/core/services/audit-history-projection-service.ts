@@ -1,9 +1,10 @@
 /**
- * EOS CORE SERVICES — AUDIT HISTORY PROJECTION SERVICE
+ * EOS CORE SERVICES — AUDIT HISTORY PROJECTION SERVICE (v3.1.0 SOVEREIGN)
  * Pure Read Model projection deriving CausalRemediationAuditProjection DTOs
  * dynamically from primary AuditArtifact domain entities on disk.
  * ZERO MOCK POLICY: Projects ONLY persistent artifacts saved on disk (.eos/projects/{projectId}/audits/).
- * MULTI-PROJECT ISOLATION: All projections are strictly bound to a target projectId.
+ * MULTI-PROJECT ISOLATION: All projections are strictly bound to an explicit target projectId.
+ * EXECUTION SEPARATION: totalActionsExecuted ONLY increments when a valid ExecutionJournal is present.
  */
 
 import * as fs from 'fs';
@@ -36,19 +37,27 @@ export class AuditHistoryProjectionService {
   /**
    * Persiste uma projeção de auditoria real criando um AuditArtifact soberano no disco.
    */
-  public persistAuditRun(projection: CausalRemediationAuditProjection, projectId = 'project-alpha'): string {
+  public persistAuditRun(projection: CausalRemediationAuditProjection, projectId: string): string {
+    if (!projectId) {
+      throw new Error('AUDIT_SERVICE_ERROR: projectId é obrigatório.');
+    }
     const auditRunId = projection.revalidationProof?.auditRunId || `AUD-${Date.now()}`;
+    const findingsArray = projection.findings || (projection.finding ? [projection.finding] : []);
     this.repository.saveAuditArtifact(
       auditRunId,
       projectId,
       projection.sourceSnapshot,
       projection.evidences,
       projection.facts,
-      projection.finding,
+      findingsArray,
       projection.proposedActionPlan,
       projection.approvalRecord,
       projection.afterSourceSnapshot,
-      projection.revalidationProof
+      projection.revalidationProof,
+      undefined,
+      undefined,
+      undefined,
+      projection.executionJournal
     );
     return auditRunId;
   }
@@ -57,14 +66,16 @@ export class AuditHistoryProjectionService {
    * Converte um AuditArtifact em uma projeção Read Model (CausalRemediationAuditProjection).
    */
   public projectArtifactToCausalView(artifact: AuditArtifact): CausalRemediationAuditProjection {
+    const findingsArray = artifact.findings || ((artifact as any).finding ? [(artifact as any).finding] : []);
     return {
       remediationId: artifact.proposedActionPlan?.planId || artifact.artifactId,
       sourceSnapshot: artifact.sourceSnapshot,
       evidences: artifact.evidences,
       facts: artifact.facts,
-      finding: artifact.finding,
+      findings: findingsArray,
       proposedActionPlan: artifact.proposedActionPlan,
       approvalRecord: artifact.approvalRecord,
+      executionJournal: artifact.executionJournal,
       afterSourceSnapshot: artifact.afterSourceSnapshot,
       revalidationProof: artifact.revalidationProof
     };
@@ -73,15 +84,23 @@ export class AuditHistoryProjectionService {
   /**
    * Projeta a lista de resumos de histórico de auditoria LENDO EXCLUSIVAMENTE ARQUIVOS REAIS DO DISCO.
    */
-  public getAuditHistorySummaries(projectId = 'project-alpha'): AuditHistorySummaryDTO[] {
-    const artifacts = this.repository.listAuditArtifacts(projectId);
+  public getAuditHistorySummaries(projectId: string): AuditHistorySummaryDTO[] {
+    if (!projectId) {
+      throw new Error('AUDIT_SERVICE_ERROR: projectId é obrigatório e deve ser especificado explicitamente.');
+    }
+
+    const queryResult = this.repository.listAuditArtifacts(projectId);
     const summaries: AuditHistorySummaryDTO[] = [];
 
-    for (const artifact of artifacts) {
+    for (const artifact of queryResult.artifacts) {
       const isResolved = artifact.revalidationProof?.isResolved ?? false;
-      const totalFindings = artifact.finding ? 1 : 0;
+      const findingsList = artifact.findings || ((artifact as any).finding ? [(artifact as any).finding] : []);
+      const totalFindings = findingsList.length;
       const totalActionsProposed = artifact.proposedActionPlan ? 1 : 0;
-      const totalActionsExecuted = artifact.approvalRecord?.decision === 'APPROVED' ? 1 : 0;
+      
+      // SEPARAÇÃO RIGOROSA: totalActionsExecuted SÓ INCREMENTA COM EXECUTION JOURNAL (Aprovação NÃO É Execução!)
+      const totalActionsExecuted = artifact.executionJournal?.status === 'SUCCESS' ? 1 : 0;
+      
       const totalRevalidated = artifact.revalidationProof ? 1 : 0;
       const remaining = isResolved ? 0 : totalFindings;
 
@@ -108,11 +127,15 @@ export class AuditHistoryProjectionService {
    * Projeta o detalhe completo da timeline causal LENDO DIRETO DO DISCO,
    * aplicando validação estrita de isolamento por projectId (Defesa IDOR).
    */
-  public getAuditTimelineDetail(auditRunId: string, projectId = 'project-alpha'): CausalRemediationAuditProjection | null {
+  public getAuditTimelineDetail(auditRunId: string, projectId: string): CausalRemediationAuditProjection | null {
+    if (!auditRunId || !projectId) {
+      throw new Error('AUDIT_SERVICE_ERROR: auditRunId e projectId são obrigatórios.');
+    }
+
     let artifact = this.repository.getAuditArtifact(projectId, auditRunId);
 
     if (!artifact) {
-      // Scan all project folders to detect cross-project unauthorized access (IDOR Defense)
+      // Scan todos os diretórios de projetos para detectar acesso não autorizado cross-project (Defesa IDOR)
       const projectsDir = path.join((this.repository as any).baseDir || path.join(process.cwd(), '.eos'), 'projects');
       if (fs.existsSync(projectsDir)) {
         const projectFolders = fs.readdirSync(projectsDir);

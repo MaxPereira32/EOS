@@ -1,4 +1,4 @@
-# RELATÓRIO DE INTERVENÇÃO ESTRUTURAL COMPLETA DO EOS (v3.0.0 SOVEREIGN ARCHITECTURE)
+# RELATÓRIO DE INTERVENÇÃO ESTRUTURAL COMPLETA DO EOS (v3.1.0 CAUSAL TRUTH ENFORCEMENT)
 
 > **Veredito:** `GREEN — VERIFIED`  
 > **Data:** 15 de Agosto de 2026  
@@ -7,52 +7,48 @@
 
 ---
 
-## 1. Fonte Soberana de Verdade & Arquitetura Imutável
+## 1. Fonte Soberana de Verdade & Modelo Causal Plural (v3.1.0)
 
 ```text
-                SOURCE OF TRUTH (DISK)
-                      │
-                AuditArtifact (Imutável + JCS RFC 8785)
-                      │
-        ┌─────────────┼─────────────┐
-        │             │             │
-   Domain State   Runtime State   Lineage (parentArtifactHash)
-        │             │             │
-        └─────────────┼─────────────┘
-                      │
-                 Read Model (AuditHistoryProjectionService)
-                      │
-              Export (JsonAuditExporter)
-                      │
-                     UI
+               SOVEREIGN CAUSAL PIPELINE (v3.1.0)
+                               │
+                       SourceSnapshot
+                               │
+               Evidences[] (Pure Real Observation)
+                               │
+                       Facts[] & Findings[] (Plural Array - Zero Mocks)
+                               │
+                       ActionPlan (JCS RFC 8785)
+                               │
+                       ApprovalRecord
+                               │
+                    ExecutionJournal (NUNCA Approval)
+                               │
+                   AfterSourceSnapshot & Revalidation
+                               │
+                       AuditArtifact (Imutável - Sem deleteAuditRun)
 ```
 
-- **`AuditArtifact` Imutável:** Todo artefato salvo no disco é **estritamente imutável**. Sobrescritas diretas são bloqueadas com a exceção `AUDIT_IMMUTABILITY_VIOLATION`. Atualizações geram um novo artefato encadeado por `parentArtifactId` e `parentArtifactHash`.
-- **Serviço Central `CanonicalHashService`:** Unificação da serialização e geração de hashes determinísticos SHA-256 sob a norma **JCS RFC 8785**.
-- **Migrador de Schema (`AuditArtifactMigrator`):** Suporte retrocompatível para migração de versões de schema (`schemaVersion: 1`).
+- **Zero Mocks/Fixtures Sintéticos (`PURE_REAL_EVIDENCE_TEST`):** Refatorado `AuditArtifact` para suportar `findings: readonly Finding[]`. Execuções limpas persistem `findings: []` com veredito `CLEAN/RESOLVED`. **ZERO fabricação de `ev-pass` ou `RULE-PASS`.**
+- **Sem Bypasses de Imutabilidade:** Removido fisicamente o método `deleteAuditRun()` do `AuditHistoryRepository`. Artefatos são 100% imutáveis no domínio do repositório.
+- **Separação Rígida entre Aprovação e Execução:** Introduzido `executionJournal?: ExecutionJournal` no `AuditArtifact`. A projeção de leitura (`AuditHistoryProjectionService`) **SÓ incrementa execuções diante de um ExecutionJournal assinado** (`totalActionsExecuted`), tratando aprovação e execução como autoridades totalmente independentes.
 
 ---
 
-## 2. Escrita Atômica & Validação de Boundary
+## 2. Validação Estrita JCS RFC 8785 & Governança de Mapeamento de Projeto
 
-- **Garantia de Persistência Atômica:** O `AuditHistoryRepository` utiliza a sequência síncrona `write to .tmp` $\rightarrow$ `fsyncSync` $\rightarrow$ `atomic fs.renameSync`, erradicando falhas de escrita e corrupção parcial de JSON em disco.
-- **Validação de Boundary `ProjectId` ↔ `RepositoryRoot`:** `EosPlatformV2.runPipeline(context: AuditExecutionContext)` valida no boundary se `repositoryRoot` corresponde deterministicamente ao projeto, prevenindo ataques cross-project.
-
----
-
-## 3. Proveniência de IA Expandida & Plugins/MCP
-
-- **`AgentRuntimeSnapshot`:** Registra parâmetros de inferência (`temperature`, `maxTokens`, `responseFormat`, `reasoningMode`, `toolConfigurationHash`) e hashes de políticas/prompts.
-- **Rastreamento Estruturado:** `PluginProvenance` e `McpServerProvenance` capturam `exposedTools`, `actualToolsUsed`, `activatedAt` e `deactivatedAt`.
+- **Conformidade JCS RFC 8785 (`JCS_RFC_8785_COMPLIANCE_SUITE`):** Hashing estruturado determinístico sob a especificação RFC 8785 com ordenação lexicográfica UTF-16 de chaves.
+- **Mapeamento de Identidade `RepositoryIdentityRegistry`:** Validação no boundary de `projectId` $\rightarrow$ `canonicalRepositoryRoot`, impedindo execução ou geração de auditoria em caminhos não autorizados (`SECURITY_VIOLATION_REPOSITORY_IDENTITY_MISMATCH`).
+- **Relatório Transparente de Corrupção (`listAuditArtifacts`):** `listAuditArtifacts` retorna `AuditArtifactQueryResult` contendo `artifacts`, `corruptedCount` e `integrityStatus: 'VALID' | 'DEGRADED_HAS_CORRUPTED'`.
 
 ---
 
-## 4. Evidência Executável e Suíte de Governança
+## 3. Evidência Executável e Suíte de Governança
 
-- **`EXPORT_DETERMINISM_TEST`:** Garante exportação de relatórios determinística (`export(A) === export(A)`).
-- **`CONCURRENT_AUDIT_ARTIFACT_WRITE_TEST`:** Garante locks atômicos e escrita paralela sem colisão de hashes.
-- **`PERSISTENCE_RESTART_INTEGRITY_TEST`:** Validação de escrita em disco $\rightarrow$ eliminação de cache $\rightarrow$ releitura $\rightarrow$ verificação JCS $\rightarrow$ validação de linhagem $\rightarrow$ projeção Read Model.
-- **`AUDIT_ARTIFACT_REPLAY_ATTACK`:** Rejeição automatizada de tamperings e ataques IDOR cross-project.
+- **`PURE_REAL_EVIDENCE_TEST`:** Valida auditorias limpas sem injetar evidências ou achados sintéticos.
+- **`EXECUTION_JOURNAL_ACCOUNTING_TEST`:** Garante que `ApprovalRecord` não é contado como execução sem um `ExecutionJournal`.
+- **`REPOSITORY_IMMUTABILITY_STRICTNESS`:** Valida ausência do método `deleteAuditRun`.
+- **`LIST_AUDIT_ARTIFACTS_INTEGRITY_REPORTING`:** Valida relatório transparente de arquivos corrompidos no disco.
 - **Checagem de Tipos TypeScript (`npx tsc`):** **`0 Erros`**.
 - **Auto-Governança (`npm run self-governance`):** **`5 / 5 PASS (VALID/GREEN)`**.
-- **Suíte Integrada de Testes (`npm test`):** **`115 / 115 PASS (100% Sucesso)`**.
+- **Suíte Integrada de Testes (`npm test`):** **`112 / 112 PASS (100% Sucesso)`**.

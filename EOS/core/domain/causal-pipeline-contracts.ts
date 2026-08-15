@@ -1,6 +1,6 @@
 /**
- * EOS CORE DOMAIN — CAUSAL PIPELINE & LINEAGE CONTRACTS
- * Strict transition validators and lineage provenance models for Fases 1.2–1.5.
+ * EOS CORE DOMAIN — CAUSAL PIPELINE & LINEAGE CONTRACTS (v3.1.0 SOVEREIGN)
+ * Strict transition validators and lineage provenance models for Fases 1.2–3.1.
  */
 
 import { Finding, Evidence, Fact } from './types';
@@ -20,22 +20,36 @@ export interface SourceSnapshot {
 }
 
 /**
- * Projeção de Leitura (Read Model / Audit Projection) da Remédiação Causal.
- * NÃO É UM GOD AGGREGATE. É uma visão pura de auditoria gerada por projeção.
+ * Registro de Execução Causal Autêntica (ExecutionJournal).
+ * Aprovação NÃO É Execução. Execuções exigem ExecutionJournal assinado.
+ */
+export interface ExecutionJournal {
+  readonly executionId: string;
+  readonly planId: string;
+  readonly executedAt: string;
+  readonly executedBy: string;
+  readonly status: 'SUCCESS' | 'FAILED' | 'ROLLED_BACK';
+  readonly executionHash: string;
+}
+
+/**
+ * Projeção de Leitura (Read Model / Audit Projection) da Remediação Causal.
+ * Visão pura de auditoria gerada por projeção de AuditArtifacts soberanos.
  */
 export interface CausalRemediationAuditProjection {
   readonly remediationId: string;
   readonly sourceSnapshot: SourceSnapshot;
   readonly evidences: readonly Evidence[];
   readonly facts: readonly Fact[];
-  readonly finding: Finding;
-  readonly userIntentContext?: string; // Intenção humana (apenas contexto, sem autoridade)
+  readonly findings: readonly Finding[];
+  readonly userIntentContext?: string;
   readonly proposedActionPlan?: ActionPlan;
   readonly approvalRecord?: ApprovalRecord;
+  readonly executionJournal?: ExecutionJournal;
   readonly afterSourceSnapshot?: SourceSnapshot;
   readonly revalidationProof?: {
     readonly proofId: string;
-    readonly auditRunId: string; // DEVE SER UM NOVO AuditRun!
+    readonly auditRunId: string;
     readonly isResolved: boolean;
     readonly remainingFindingIds: readonly string[];
     readonly verifiedAt: string;

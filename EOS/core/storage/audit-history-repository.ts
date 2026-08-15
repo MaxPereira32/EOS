@@ -1,17 +1,18 @@
 /**
- * EOS CORE STORAGE — AUDIT HISTORY REPOSITORY (v3.0.0 SOVEREIGN)
+ * EOS CORE STORAGE — AUDIT HISTORY REPOSITORY (v3.1.0 SOVEREIGN)
  * Materializes and retrieves real AuditArtifact objects from disk
  * (.eos/projects/{projectId}/audits/{auditRunId}.json).
  * 
  * ATOMIC WRITE POLICY: Write to .tmp -> fsyncSync -> atomic fs.renameSync
  * CANONICAL HASH: Uses CanonicalHashService (JCS RFC 8785 SHA-256).
  * STRICT LINEAGE: Enforces parentArtifactHash matching parent artifact on disk.
- * IMMUTABLE POLICY: Rejects overwriting existing artifacts; updates produce new linked artifacts.
+ * STRICT IMMUTABILITY: Rejects overwriting existing artifacts AND excludes deletion methods (No deleteAuditRun).
+ * TRANSPARENT INTEGRITY: Querying artifacts exposes corrupted files explicitly (listAuditArtifacts).
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { SourceSnapshot } from '../domain/causal-pipeline-contracts';
+import { SourceSnapshot, ExecutionJournal } from '../domain/causal-pipeline-contracts';
 import { Finding, Evidence, Fact } from '../domain/types';
 import { ActionPlan } from '../domain/action-plan';
 import { ApprovalRecord } from '../domain/approval-record';
@@ -30,13 +31,14 @@ export interface AuditArtifact {
   readonly parentArtifactId?: string;
   readonly parentArtifactHash?: string;
   
-  // Entidades Primárias do Domínio (Fonte Soberana de Verdade)
+  // Entidades Primárias do Domínio (Fonte Soberana de Verdade com Findings Plurais)
   readonly sourceSnapshot: SourceSnapshot;
   readonly evidences: readonly Evidence[];
   readonly facts: readonly Fact[];
-  readonly finding: Finding;
+  readonly findings: readonly Finding[]; // Array Plural (Zero Mocks Sintéticos)
   readonly proposedActionPlan?: ActionPlan;
   readonly approvalRecord?: ApprovalRecord;
+  readonly executionJournal?: ExecutionJournal; // Distinção Causal entre Aprovação e Execução
   readonly afterSourceSnapshot?: SourceSnapshot;
   readonly revalidationProof?: {
     readonly proofId: string;
@@ -48,6 +50,13 @@ export interface AuditArtifact {
   readonly runtimeSnapshot?: AgentRuntimeSnapshot;
 }
 
+export interface AuditArtifactQueryResult {
+  readonly artifacts: readonly AuditArtifact[];
+  readonly corruptedCount: number;
+  readonly corruptedArtifacts: readonly string[];
+  readonly integrityStatus: 'VALID' | 'DEGRADED_HAS_CORRUPTED';
+}
+
 export class AuditHistoryRepository {
   private baseDir: string;
 
@@ -56,6 +65,9 @@ export class AuditHistoryRepository {
   }
 
   private getProjectAuditDir(projectId: string): string {
+    if (!projectId) {
+      throw new Error('AUDIT_REPOSITORY_ERROR: projectId é obrigatório.');
+    }
     const safeProjectId = path.basename(projectId);
     const dir = path.join(this.baseDir, 'projects', safeProjectId, 'audits');
     if (!fs.existsSync(dir)) {
@@ -70,14 +82,15 @@ export class AuditHistoryRepository {
     sourceSnapshot: SourceSnapshot,
     evidences: readonly Evidence[],
     facts: readonly Fact[],
-    finding: Finding,
+    findings: readonly Finding[], // Array Plural
     proposedActionPlan?: ActionPlan,
     approvalRecord?: ApprovalRecord,
     afterSourceSnapshot?: SourceSnapshot,
     revalidationProof?: { proofId: string; auditRunId: string; isResolved: boolean; remainingFindingIds: readonly string[]; verifiedAt: string },
     runtimeSnapshot?: AgentRuntimeSnapshot,
     parentArtifactId?: string,
-    parentArtifactHash?: string
+    parentArtifactHash?: string,
+    executionJournal?: ExecutionJournal
   ): AuditArtifact {
     if (!auditRunId || !projectId) {
       throw new Error('AUDIT_REPOSITORY_ERROR: auditRunId e projectId são obrigatórios.');
@@ -115,9 +128,10 @@ export class AuditHistoryRepository {
       sourceSnapshot,
       evidences,
       facts,
-      finding,
+      findings: findings || [],
       proposedActionPlan: proposedActionPlan || null,
       approvalRecord: approvalRecord || null,
+      executionJournal: executionJournal || null,
       afterSourceSnapshot: afterSourceSnapshot || null,
       revalidationProof: revalidationProof || null,
       runtimeSnapshot: runtimeSnapshot || null
@@ -131,6 +145,7 @@ export class AuditHistoryRepository {
       parentArtifactHash: parentArtifactHash || undefined,
       proposedActionPlan: proposedActionPlan || undefined,
       approvalRecord: approvalRecord || undefined,
+      executionJournal: executionJournal || undefined,
       afterSourceSnapshot: afterSourceSnapshot || undefined,
       revalidationProof: revalidationProof || undefined,
       runtimeSnapshot: runtimeSnapshot || undefined,
@@ -161,6 +176,9 @@ export class AuditHistoryRepository {
   }
 
   public getAuditArtifact(projectId: string, auditRunOrArtifactId: string): AuditArtifact | null {
+    if (!projectId || !auditRunOrArtifactId) {
+      throw new Error('AUDIT_REPOSITORY_ERROR: projectId e auditRunOrArtifactId são obrigatórios.');
+    }
     const safeProjectId = path.basename(projectId);
     const safeId = path.basename(auditRunOrArtifactId);
     let filePath = path.join(this.baseDir, 'projects', safeProjectId, 'audits', `${safeId}.json`);
@@ -207,9 +225,10 @@ export class AuditHistoryRepository {
           sourceSnapshot: artifact.sourceSnapshot,
           evidences: artifact.evidences,
           facts: artifact.facts,
-          finding: artifact.finding,
+          findings: artifact.findings ? artifact.findings : ((artifact as any).finding ? [(artifact as any).finding] : []),
           proposedActionPlan: artifact.proposedActionPlan || null,
           approvalRecord: artifact.approvalRecord || null,
+          executionJournal: artifact.executionJournal || null,
           afterSourceSnapshot: artifact.afterSourceSnapshot || null,
           revalidationProof: artifact.revalidationProof || null,
           runtimeSnapshot: artifact.runtimeSnapshot || null
@@ -230,42 +249,74 @@ export class AuditHistoryRepository {
     }
   }
 
-  public listAuditArtifacts(projectId: string): readonly AuditArtifact[] {
+  public listAuditArtifacts(projectId: string): AuditArtifactQueryResult {
+    if (!projectId) {
+      throw new Error('AUDIT_REPOSITORY_ERROR: projectId é obrigatório.');
+    }
     const safeProjectId = path.basename(projectId);
     const dir = path.join(this.baseDir, 'projects', safeProjectId, 'audits');
 
     if (!fs.existsSync(dir)) {
-      return [];
+      return {
+        artifacts: [],
+        corruptedCount: 0,
+        corruptedArtifacts: [],
+        integrityStatus: 'VALID'
+      };
     }
 
     const files = fs.readdirSync(dir).filter(f => f.endsWith('.json'));
     const artifacts: AuditArtifact[] = [];
+    const corruptedArtifacts: string[] = [];
 
     for (const file of files) {
+      const fullPath = path.join(dir, file);
       try {
-        const content = fs.readFileSync(path.join(dir, file), 'utf8');
+        const content = fs.readFileSync(fullPath, 'utf8');
         const raw = JSON.parse(content);
         const artifact = AuditArtifactMigrator.migrate(raw);
-        if (artifact && artifact.auditRunId) {
-          artifacts.push(artifact);
+
+        // Valida hash canônico
+        const payloadToVerify = {
+          artifactId: artifact.artifactId,
+          schemaVersion: artifact.schemaVersion,
+          auditRunId: artifact.auditRunId,
+          projectId: artifact.projectId,
+          createdAt: artifact.createdAt,
+          sourceSnapshotHash: artifact.sourceSnapshotHash,
+          parentArtifactId: artifact.parentArtifactId || null,
+          parentArtifactHash: artifact.parentArtifactHash || null,
+          sourceSnapshot: artifact.sourceSnapshot,
+          evidences: artifact.evidences,
+          facts: artifact.facts,
+          findings: artifact.findings ? artifact.findings : ((artifact as any).finding ? [(artifact as any).finding] : []),
+          proposedActionPlan: artifact.proposedActionPlan || null,
+          approvalRecord: artifact.approvalRecord || null,
+          executionJournal: artifact.executionJournal || null,
+          afterSourceSnapshot: artifact.afterSourceSnapshot || null,
+          revalidationProof: artifact.revalidationProof || null,
+          runtimeSnapshot: artifact.runtimeSnapshot || null
+        };
+
+        const recomputed = CanonicalHashService.hash(payloadToVerify);
+        if (recomputed !== artifact.artifactHash) {
+          corruptedArtifacts.push(file);
+          continue;
         }
+
+        artifacts.push(artifact);
       } catch {
-        // Skip corrupted entries
+        corruptedArtifacts.push(file);
       }
     }
 
-    return artifacts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }
+    const sorted = artifacts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-  public deleteAuditRun(projectId: string, auditRunId: string): boolean {
-    const safeProjectId = path.basename(projectId);
-    const safeAuditRunId = path.basename(auditRunId);
-    const filePath = path.join(this.baseDir, 'projects', safeProjectId, 'audits', `${safeAuditRunId}.json`);
-
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-      return true;
-    }
-    return false;
+    return {
+      artifacts: sorted,
+      corruptedCount: corruptedArtifacts.length,
+      corruptedArtifacts,
+      integrityStatus: corruptedArtifacts.length > 0 ? 'DEGRADED_HAS_CORRUPTED' : 'VALID'
+    };
   }
 }
