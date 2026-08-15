@@ -1,4 +1,4 @@
-# RELATÓRIO DE INTERVENÇÃO ESTRUTURAL COMPLETA DO EOS (v2.3.0)
+# RELATÓRIO DE INTERVENÇÃO ESTRUTURAL COMPLETA DO EOS (v2.4.0 HARDENED)
 
 > **Veredito:** `GREEN — VERIFIED`  
 > **Data:** 15 de Agosto de 2026  
@@ -7,73 +7,42 @@
 
 ---
 
-## 1. Repositório e Saneamento Estrutural
+## 1. Saneamento Arquitetural & Purga de Fixtures
 
-### 1.1 Arquivos Removidos (Código Morto / Legado v0.x JS)
-- `EOS/core/eos-collector.js`
-- `EOS/core/eos-validator.js`
-- `EOS/core/eos-platform.js`
-- `EOS/core/metrics-engine.js`
-- `EOS/core/normalizer.js`
-- `EOS/core/quality-gate-engine.js`
-- `EOS/core/reporter.js`
-- `EOS/core/rule-engine.js`
-- `EOS/core/event-bus.js`
-- `EOS/core/acf/adapter-registry.js`
+### 1.1 Código Morto Removido (v0.x JS)
+- Removidos 10 arquivos legados JavaScript obsoletos em `EOS/core/*.js` (`eos-collector.js`, `eos-validator.js`, `eos-platform.js`, `metrics-engine.js`, `normalizer.js`, `quality-gate-engine.js`, `reporter.js`, `rule-engine.js`, `event-bus.js`, `acf/adapter-registry.js`).
+- Análise estática e suíte de testes confirmam **0 referências ativas** ou dependências quebradas.
 
-*Justificativa:* Módulos legados da versão v0.x em JavaScript puro que já possuíam substitutos canônicos em TypeScript na v2.2+. 100% testados sem regressão.
-
-### 1.2 Mapeamento e Vinculação de Submódulo
-- Adicionado arquivo `.gitmodules` fixando e governando formalmente o submódulo `Age` como dependência externa versionada.
+### 1.2 Purga de Fixtures no Runtime Produtivo (`eos-platform.ts`)
+- Purga completa dos fixtures demonstrativos hardcoded (`sampleAsset`, `AST-K8S-INGRESS-01`, `FCT-501`, `TRT-801`, `FND-2026-8801`) de [`EOS/core/eos-platform.ts`](file:///c:/Users/Max/Desktop/Projeto/EOS/EOS/core/eos-platform.ts).
+- Migração dos dados de demonstração para [`EOS/tests/fixtures/sample-pipeline-fixtures.ts`](file:///c:/Users/Max/Desktop/Projeto/EOS/EOS/tests/fixtures/sample-pipeline-fixtures.ts).
+- Adicionado o teste de análise estática `PRODUCTION_FIXTURE_CONTAMINATION_TEST` para garantir contaminação zero por dados de teste no `core/`.
 
 ---
 
-## 2. Governança de Runtime & Proveniência (`AgentRuntimeSnapshot`)
+## 2. Reconciliação do Submódulo `Age`
 
-Foi implementado o contrato estrito `AgentRuntimeSnapshot` em [`EOS/core/domain/agent-runtime-snapshot.ts`](file:///c:/Users/Max/Desktop/Projeto/EOS/EOS/core/domain/agent-runtime-snapshot.ts):
-
-- **Agentes Governados:** `Implementation Engineer`, `Adversarial Reviewer`, `Evidence Auditor`, `Orchestrator`.
-- **Skills Rastreáveis:** Registro obrigatório de `skillId`, `version`, `contentHash` e `origin`.
-- **Plugins & MCP Servers:** Validação de integridade atômica via [`McpPluginRegistry`](file:///c:/Users/Max/Desktop/Projeto/EOS/EOS/core/domain/mcp-plugin-registry.ts) emitindo exceções estritas (`PLUGIN_RUNTIME_INTEGRITY_VIOLATION` e `MCP_RUNTIME_INTEGRITY_VIOLATION`) em caso de divergência ou adulteração.
+- **Gitlink Auditado:** Registrado o gitlink real do repositório no commit **`5b86cf57d2204571453ee44264688a4135c79420`** (obtido via `git ls-tree HEAD Age`).
+- Criado e reconciliado o manifesto [`.gitmodules`](file:///c:/Users/Max/Desktop/Projeto/EOS/.gitmodules).
 
 ---
 
-## 3. Persistência e Projeção Real (Zero Mocks)
+## 3. Fonte Única de Verdade da Persistência de Auditoria (`AuditArtifact`)
 
-- **AuditHistoryRepository:** Criada a camada de infraestrutura [`AuditHistoryRepository`](file:///c:/Users/Max/Desktop/Projeto/EOS/EOS/core/storage/audit-history-repository.ts) responsável por salvar e ler artefatos reais do disco em `.eos/projects/{projectId}/audits/{auditRunId}.json` com garantia de `fsyncSync`.
-- **Zero Mock Policy:** O serviço de projeção `AuditHistoryProjectionService` lê **exclusivamente arquivos reais do disco**. Não existem fallbacks ou dados sintéticos de auditoria em ambiente produtivo.
-
----
-
-## 4. Evidência Executável e Suíte de Testes
-
-- **`phase-2-3-runtime-provenance-and-anti-mock.test.ts`:** Criada a nova suíte com 5 testes de verificação estática anti-mock, persistência em repositório de auditoria, integridade de plugins/MCP e teste de adulteração em cadeia.
-- **Checagem de Tipos (`npx tsc`):** **0 Erros**.
-- **Auto-Governança (`npm run self-governance`):** **5 / 5 PASS**.
-- **Suíte Integrada de Testes (`npm test`):** **109 / 109 PASS (100% Sucesso)**.
+- Implementada a camada [`AuditHistoryRepository`](file:///c:/Users/Max/Desktop/Projeto/EOS/EOS/core/storage/audit-history-repository.ts) persistindo artefatos em formato `AuditArtifact` com verificação determinística de hash **SHA-256** (`artifactHash`).
+- **Zero-Mock Policy:** A projeção `AuditHistoryProjectionService` consulta exclusivamente arquivos reais do disco (`.eos/projects/{projectId}/audits/{auditRunId}.json`).
 
 ---
 
-## 5. Respostas às 21 Perguntas de Governança (Seção 54)
+## 4. Proveniência de IA Expandida (`AgentRuntimeSnapshot`) & Plugins/MCP
 
-1. **Qual projeto foi auditado?** `ProjectId` canônico informado e isolado na busca.
-2. **Qual estado foi observado?** `SourceSnapshot` com SHA-256 e `treeHash`.
-3. **Qual Evidence foi produzida?** Evidências tipadas com payload estruturado e timestamp.
-4. **Qual Rule criou o Finding?** `rule_id` do motor de regras do EOS.
-5. **Qual ActionPlan foi produzido?** `ActionPlan` com `planHash` e patches unificados.
-6. **Qual Agent participou?** `agentDefinitionId` registrado em `AgentRuntimeSnapshot`.
-7. **Qual versão do Agent?** `agentVersion` capturado no snapshot.
-8. **Qual Skill?** `skillId` capturada com proveniência.
-9. **Qual versão/hash da Skill?** `version` e `contentHash` verificados.
-10. **Qual Plugin?** `pluginId` registrado e verificado pelo `McpPluginRegistry`.
-11. **Qual MCP?** `serverId` e lista de `toolsProvided` validadas.
-12. **Qual modelo?** `modelName` (ex: `gpt-4o`, `claude-3-5-sonnet`).
-13. **Qual provider?** `modelProvider` (ex: `OPENAI`, `ANTHROPIC`).
-14. **Qual estado do runtime?** `AgentRuntimeSnapshot` imutável.
-15. **Quem aprovou?** `approvedBy` no `ApprovalRecord`.
-16. **Qual planHash foi aprovado?** `approvedPlanHash === planHash`.
-17. **O que foi executado?** Gravação persistente pelo `FileExecutionJournalService`.
-18. **Qual estado AFTER foi observado?** `afterSourceSnapshot` com novo `treeHash`.
-19. **Qual novo AuditRun comprovou o resultado?** `revalidationAuditRunId` exclusivo (não-stale).
-20. **Qual RevalidationProof foi produzida?** `proofId` com veredito cego `isResolved`.
-21. **Qual foi o Verdict?** `GREEN — VERIFIED`.
+- **`AgentRuntimeSnapshot`:** Registra a proveniência dos Agentes, `promptVersion`, `promptHash`, `contextPolicyHash`, `modelConfigurationHash`, Skills (`skillId`, `version`, `contentHash`), Plugins e Servidores MCP.
+- **`McpPluginRegistry`:** Verificação estrita de `contentHash`, `configHash` e `permissionSetHash`, disparando exceções estritas (`PLUGIN_RUNTIME_INTEGRITY_VIOLATION` e `MCP_RUNTIME_INTEGRITY_VIOLATION`) em caso de divergência.
+
+---
+
+## 5. Evidência Executável e Suíte de Testes
+
+- **Checagem de Tipos TypeScript (`npx tsc`):** **`0 Erros`**.
+- **Auto-Governança (`npm run self-governance`):** **`5 / 5 PASS (VALID/GREEN)`**.
+- **Suíte Integrada de Testes (`npm test`):** **`110 / 110 PASS (100% Sucesso)`**.

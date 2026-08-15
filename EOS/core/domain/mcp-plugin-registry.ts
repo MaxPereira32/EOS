@@ -1,6 +1,7 @@
 /**
  * EOS CORE DOMAIN — MCP & PLUGIN GOVERNANCE REGISTRY
- * Enforces explicit classification, permissions and integrity verification for Plugins and MCP Servers.
+ * Enforces explicit classification, permissions, configuration hashes and integrity verification
+ * for Plugins and MCP Servers.
  */
 
 import { PluginProvenance, McpServerProvenance } from './agent-runtime-snapshot';
@@ -23,13 +24,24 @@ export class McpPluginRegistry {
     this.registeredMcpServers.set(server.serverId, server);
   }
 
-  public static verifyPluginIntegrity(pluginId: string, expectedHash: string): void {
+  public static verifyPluginIntegrity(
+    pluginId: string,
+    expectedContentHash: string,
+    expectedConfigHash?: string,
+    expectedPermissionHash?: string
+  ): void {
     const registered = this.registeredPlugins.get(pluginId);
     if (!registered) {
       throw new Error(`PLUGIN_RUNTIME_INTEGRITY_VIOLATION: Plugin '${pluginId}' não está registrado na governança.`);
     }
-    if (registered.contentHash !== expectedHash) {
-      throw new Error(`PLUGIN_RUNTIME_INTEGRITY_VIOLATION: Adulteração detectada no plugin '${pluginId}'. Hash esperado ${expectedHash}, obtido ${registered.contentHash}.`);
+    if (registered.contentHash !== expectedContentHash) {
+      throw new Error(`PLUGIN_RUNTIME_INTEGRITY_VIOLATION: Adulteração de conteúdo detectada no plugin '${pluginId}'. Hash esperado ${expectedContentHash}, obtido ${registered.contentHash}.`);
+    }
+    if (expectedConfigHash && registered.configHash !== expectedConfigHash) {
+      throw new Error(`PLUGIN_RUNTIME_INTEGRITY_VIOLATION: Configuração alterada no plugin '${pluginId}'. ConfigHash esperado ${expectedConfigHash}, obtido ${registered.configHash}.`);
+    }
+    if (expectedPermissionHash && registered.permissionSetHash !== expectedPermissionHash) {
+      throw new Error(`PLUGIN_RUNTIME_INTEGRITY_VIOLATION: Permissões alteradas no plugin '${pluginId}'. PermissionHash esperado ${expectedPermissionHash}, obtido ${registered.permissionSetHash}.`);
     }
   }
 

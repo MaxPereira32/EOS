@@ -1,7 +1,7 @@
 /**
  * EOS CORE DOMAIN — AGENT RUNTIME SNAPSHOT CONTRACT
- * Captures exact immutable provenance of Agents, Skills, Plugins, MCP Servers and LLM models
- * participating in an audit execution or ActionPlan generation.
+ * Captures exact immutable provenance of Agents, Prompts, Context Policies,
+ * Model Configurations, Skills, Plugins, MCP Servers and LLM models participating in execution.
  */
 
 export interface SkillProvenance {
@@ -16,6 +16,8 @@ export interface PluginProvenance {
   readonly name: string;
   readonly version: string;
   readonly contentHash: string;
+  readonly configHash?: string;
+  readonly permissionSetHash?: string;
   readonly permissions: readonly string[];
   readonly toolsProvided: readonly string[];
 }
@@ -35,6 +37,13 @@ export interface AgentRuntimeSnapshot {
   readonly agentRole: 'Implementation Engineer' | 'Adversarial Reviewer' | 'Evidence Auditor' | 'Orchestrator';
   readonly agentVersion: string;
   readonly agentCommitHash?: string;
+  
+  // Proveniência Expandida de IA e Contexto (Item #5)
+  readonly promptVersion: string;
+  readonly promptHash: string;
+  readonly contextPolicyHash: string;
+  readonly modelConfigurationHash: string;
+
   readonly skills: readonly SkillProvenance[];
   readonly plugins: readonly PluginProvenance[];
   readonly mcpServers: readonly McpServerProvenance[];

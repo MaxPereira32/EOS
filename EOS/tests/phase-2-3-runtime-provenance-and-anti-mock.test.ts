@@ -35,13 +35,32 @@ test('EOS Phase 2.3 — Runtime Provenance & Anti-Mock Verification Suite', asyn
     );
   });
 
-  await t.test('2. AuditHistoryRepository — Saves and Retrieves Real Audit Runs from Disk', () => {
+  await t.test('2. PRODUCTION_FIXTURE_CONTAMINATION_TEST — Verify EOS/core Contains No Hardcoded Test Fixtures', () => {
+    const platformSource = fs.readFileSync(
+      path.join(process.cwd(), 'EOS/core/eos-platform.ts'),
+      'utf8'
+    );
+    const forbiddenPatterns = ['AST-K8S-INGRESS-01', 'FCT-501', 'TRT-801', 'FND-2026-8801', 'https://api.eos.architecture/v1/auth'];
+    for (const pattern of forbiddenPatterns) {
+      assert.strictEqual(
+        platformSource.includes(pattern),
+        false,
+        `PROD_FIXTURE_CONTAMINATION_VIOLATION: O padrão de fixture '${pattern}' foi detectado dentro de EOS/core/eos-platform.ts!`
+      );
+    }
+  });
+
+  await t.test('3. AuditHistoryRepository — Saves and Retrieves Real AuditArtifacts with SHA-256 Hash Verification', () => {
     const mockSnapshot: AgentRuntimeSnapshot = {
       runtimeSnapshotId: 'snap-001',
       timestamp: new Date().toISOString(),
       agentDefinitionId: 'agent-impl-01',
       agentRole: 'Implementation Engineer',
-      agentVersion: '2.3.0',
+      agentVersion: '2.4.0',
+      promptVersion: '1.0.0',
+      promptHash: 'hash-prompt-123',
+      contextPolicyHash: 'hash-context-456',
+      modelConfigurationHash: 'hash-model-cfg-789',
       skills: [
         {
           skillId: 'eos-governance',
@@ -54,7 +73,7 @@ test('EOS Phase 2.3 — Runtime Provenance & Anti-Mock Verification Suite', asyn
       mcpServers: [
         {
           serverId: 'eos-mcp-server',
-          version: '2.3.0',
+          version: '2.4.0',
           toolsProvided: ['eos_run_audit', 'eos_query_graph'],
           resourcesProvided: [],
           authenticated: true
@@ -69,7 +88,7 @@ test('EOS Phase 2.3 — Runtime Provenance & Anti-Mock Verification Suite', asyn
       sourceSnapshot: {
         snapshotId: 'snap-src-111',
         repositoryRoot: process.cwd(),
-        commitHash: 'e95c8f5',
+        commitHash: '5b86cf57d2204571453ee44264688a4135c79420',
         branchName: 'main',
         observedAt: new Date().toISOString(),
         treeHash: 'tree-hash-999'
@@ -100,27 +119,32 @@ test('EOS Phase 2.3 — Runtime Provenance & Anti-Mock Verification Suite', asyn
       }
     };
 
-    repository.saveAuditRun({
-      auditRunId: 'AUD-REAL-999',
-      projectId: 'proj-omega',
-      timestamp: new Date().toISOString(),
-      projection: mockProjection,
-      runtimeSnapshot: mockSnapshot
-    });
+    const savedArtifact = repository.saveAuditArtifact(
+      'AUD-REAL-999',
+      'proj-omega',
+      mockProjection,
+      mockSnapshot
+    );
 
-    const retrieved = repository.getAuditRun('proj-omega', 'AUD-REAL-999');
+    assert.ok(savedArtifact.artifactHash);
+    assert.strictEqual(typeof savedArtifact.artifactHash, 'string');
+
+    const retrieved = repository.getAuditArtifact('proj-omega', 'AUD-REAL-999');
     assert.ok(retrieved);
     assert.strictEqual(retrieved?.auditRunId, 'AUD-REAL-999');
     assert.strictEqual(retrieved?.runtimeSnapshot?.agentRole, 'Implementation Engineer');
+    assert.strictEqual(retrieved?.runtimeSnapshot?.promptVersion, '1.0.0');
     assert.strictEqual(retrieved?.runtimeSnapshot?.skills[0].skillId, 'eos-governance');
   });
 
-  await t.test('3. McpPluginRegistry — Verifies Plugin & MCP Server Integrity and Detects Tampering', () => {
+  await t.test('4. McpPluginRegistry — Verifies Plugin & MCP Server Integrity, ConfigHash and Detects Tampering', () => {
     McpPluginRegistry.registerPlugin({
       pluginId: 'chrome-devtools-plugin',
       name: 'Chrome DevTools Plugin',
       version: '1.0.0',
       contentHash: 'hash-correct-123',
+      configHash: 'hash-cfg-456',
+      permissionSetHash: 'hash-perm-789',
       permissions: ['DOM_READ', 'NETWORK_INSPECT'],
       toolsProvided: ['inspect_element']
     });
@@ -135,13 +159,13 @@ test('EOS Phase 2.3 — Runtime Provenance & Anti-Mock Verification Suite', asyn
 
     // Valid integrity checks must pass without throwing
     assert.doesNotThrow(() => {
-      McpPluginRegistry.verifyPluginIntegrity('chrome-devtools-plugin', 'hash-correct-123');
+      McpPluginRegistry.verifyPluginIntegrity('chrome-devtools-plugin', 'hash-correct-123', 'hash-cfg-456', 'hash-perm-789');
       McpPluginRegistry.verifyMcpServerIntegrity('firebase-mcp-server', ['firebase_deploy']);
     });
 
-    // Tampered hash must throw PLUGIN_RUNTIME_INTEGRITY_VIOLATION
+    // Tampered configHash must throw PLUGIN_RUNTIME_INTEGRITY_VIOLATION
     assert.throws(
-      () => McpPluginRegistry.verifyPluginIntegrity('chrome-devtools-plugin', 'hash-TAMPERED-456'),
+      () => McpPluginRegistry.verifyPluginIntegrity('chrome-devtools-plugin', 'hash-correct-123', 'hash-TAMPERED-CFG', 'hash-perm-789'),
       /PLUGIN_RUNTIME_INTEGRITY_VIOLATION/
     );
 
@@ -152,12 +176,11 @@ test('EOS Phase 2.3 — Runtime Provenance & Anti-Mock Verification Suite', asyn
     );
   });
 
-  await t.test('4. Anti-Tampering Chain Test — Deleting a Materialized Artifact Results in Empty / Incomplete Chain', () => {
-    repository.saveAuditRun({
-      auditRunId: 'AUD-TO-DELETE-1',
-      projectId: 'proj-omega',
-      timestamp: new Date().toISOString(),
-      projection: {
+  await t.test('5. Anti-Tampering Chain Test — Deleting a Materialized Artifact Results in Empty / Incomplete Chain', () => {
+    repository.saveAuditArtifact(
+      'AUD-TO-DELETE-1',
+      'proj-omega',
+      {
         remediationId: 'rem-del',
         sourceSnapshot: {
           snapshotId: 'src-del',
@@ -177,14 +200,14 @@ test('EOS Phase 2.3 — Runtime Provenance & Anti-Mock Verification Suite', asyn
           evidence_ids: ['ev-del']
         }
       }
-    });
+    );
 
     // Deleting the real file from disk
     const deleted = repository.deleteAuditRun('proj-omega', 'AUD-TO-DELETE-1');
     assert.strictEqual(deleted, true);
 
     // Retrieving after deletion must return null, proving no fallback mock reconstructs it
-    const afterDelete = repository.getAuditRun('proj-omega', 'AUD-TO-DELETE-1');
+    const afterDelete = repository.getAuditArtifact('proj-omega', 'AUD-TO-DELETE-1');
     assert.strictEqual(afterDelete, null);
   });
 });
