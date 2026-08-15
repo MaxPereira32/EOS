@@ -1,0 +1,55 @@
+{
+  "experiment_id": "EOS-EXPERIMENT-0001",
+  "status": "EOS OPERATIONAL PROOF — VERIFIED",
+  "baseline": {
+    "commit": "257cb8c874fe9b34177ff75fdbb23f8b2c397692",
+    "status": "GREEN",
+    "audit_id": "RUN-233b9f5b3ad4"
+  },
+  "fault_injection": {
+    "target": "EOS/core/domain/system-context.ts",
+    "class": "DOMAIN_INVARIANT",
+    "commit": "168aac69403a5ca47f6ad0d96ae6b598ea1c0263"
+  },
+  "detection": {
+    "type": "TEST_ONLY_DETECTED",
+    "finding": "Missing expected exception for system_id emptiness",
+    "root_cause": "Removal of the guard block in constructor"
+  },
+  "cycle_1": {
+    "fix_type": "INTENTIONALLY_INCOMPLETE_REMEDIATION",
+    "commit": "2d40dec3f8ff6a4f02a75ac709680cb431dc57ea",
+    "attack": {
+      "vector": "Whitespaces ('   ')",
+      "result": "BYPASS SUCCESSFUL",
+      "test_status": "FAIL",
+      "verdict": "FALSE_GREEN_BLOCKED"
+    }
+  },
+  "cycle_2": {
+    "fix_type": "EFFECTIVENESS_REMEDIATION",
+    "commit": "95925f8d52ed9f616e973b3ba7f0d5b23a6a70e6",
+    "attack": {
+      "vector": "Whitespaces and Mixed Types",
+      "result": "ATTACK FAILED",
+      "test_status": "PASS",
+      "verdict": "REMEDIATION VERIFIED"
+    }
+  },
+  "after": {
+    "commit": "95925f8d52ed9f616e973b3ba7f0d5b23a6a70e6",
+    "audit_id": "RUN-684ed60946e7",
+    "regression": "None detected"
+  },
+  "evidence_matrix": [
+    {
+      "property": "system_id is string and non-empty",
+      "before": "Violation present (Guard removed)",
+      "remediation": "trim() check and type check restored",
+      "after": "Violation absent (Guard effective)",
+      "validation_tool": "npm run test",
+      "evidence": "44 tests passed",
+      "status": "VERIFIED"
+    }
+  ]
+}
