@@ -1,12 +1,13 @@
 /**
- * EOS CORE STORAGE — AUDIT HISTORY REPOSITORY (v3.1.0 SOVEREIGN)
+ * EOS CORE STORAGE — AUDIT HISTORY REPOSITORY (v3.1.1 SOVEREIGN)
  * Materializes and retrieves real AuditArtifact objects from disk
  * (.eos/projects/{projectId}/audits/{auditRunId}.json).
  * 
- * ATOMIC WRITE POLICY: Write to .tmp -> fsyncSync -> atomic fs.renameSync
+ * OS KERNEL ATOMIC IMMUTABILITY POLICY: Uses fs.openSync(finalFilePath, 'wx') for atomic OS lock.
  * CANONICAL HASH: Uses CanonicalHashService (JCS RFC 8785 SHA-256).
  * STRICT LINEAGE: Enforces parentArtifactHash matching parent artifact on disk.
  * STRICT IMMUTABILITY: Rejects overwriting existing artifacts AND excludes deletion methods (No deleteAuditRun).
+ * STRICT SCHEMA: Demands plural findings: readonly Finding[]. Legacy migration isolated in AuditArtifactMigrator.
  * TRANSPARENT INTEGRITY: Querying artifacts exposes corrupted files explicitly (listAuditArtifacts).
  */
 
@@ -35,7 +36,7 @@ export interface AuditArtifact {
   readonly sourceSnapshot: SourceSnapshot;
   readonly evidences: readonly Evidence[];
   readonly facts: readonly Fact[];
-  readonly findings: readonly Finding[]; // Array Plural (Zero Mocks Sintéticos)
+  readonly findings: readonly Finding[]; // Array Plural Estrito (Zero Mocks Sintéticos e Sem Fallbacks Implícitos)
   readonly proposedActionPlan?: ActionPlan;
   readonly approvalRecord?: ApprovalRecord;
   readonly executionJournal?: ExecutionJournal; // Distinção Causal entre Aprovação e Execução
@@ -82,7 +83,7 @@ export class AuditHistoryRepository {
     sourceSnapshot: SourceSnapshot,
     evidences: readonly Evidence[],
     facts: readonly Fact[],
-    findings: readonly Finding[], // Array Plural
+    findings: readonly Finding[], // Array Plural Estrito
     proposedActionPlan?: ActionPlan,
     approvalRecord?: ApprovalRecord,
     afterSourceSnapshot?: SourceSnapshot,
@@ -94,6 +95,10 @@ export class AuditHistoryRepository {
   ): AuditArtifact {
     if (!auditRunId || !projectId) {
       throw new Error('AUDIT_REPOSITORY_ERROR: auditRunId e projectId são obrigatórios.');
+    }
+
+    if (!Array.isArray(findings)) {
+      throw new Error('AUDIT_REPOSITORY_ERROR: findings deve ser um array plural de Finding (findings: readonly Finding[]).');
     }
 
     // Validação estrita de linhagem causal: parentArtifactHash é OBRIGATÓRIO se parentArtifactId estiver presente
@@ -118,7 +123,7 @@ export class AuditHistoryRepository {
     // Payload sem artifactHash para canonicalização determinística JCS RFC 8785
     const payloadToCanonicalize = {
       artifactId,
-      schemaVersion: 1,
+      schemaVersion: 2,
       auditRunId,
       projectId,
       createdAt,
@@ -128,7 +133,7 @@ export class AuditHistoryRepository {
       sourceSnapshot,
       evidences,
       facts,
-      findings: findings || [],
+      findings,
       proposedActionPlan: proposedActionPlan || null,
       approvalRecord: approvalRecord || null,
       executionJournal: executionJournal || null,
@@ -154,23 +159,26 @@ export class AuditHistoryRepository {
 
     const dir = this.getProjectAuditDir(projectId);
     const finalFilePath = path.join(dir, `${auditRunId}.json`);
-    const tempFilePath = path.join(dir, `${auditRunId}.tmp.${Date.now()}`);
 
-    // POLÍTICA DE IMUTABILIDADE: Rejeita sobrescrita direta de artefatos existentes
-    if (fs.existsSync(finalFilePath)) {
-      throw new Error(`AUDIT_IMMUTABILITY_VIOLATION: O AuditArtifact '${auditRunId}' já existe e é imutável! Crie um novo AuditArtifact encadeado por parentArtifactId.`);
+    // TRAVAMENTO ATÔMICO NO KERNEL DO SO (O_CREAT | O_EXCL / 'wx'):
+    // Impede TOCTOU e garante concorrência segura entre múltiplos processos Node independentes.
+    let fd: number;
+    try {
+      fd = fs.openSync(finalFilePath, 'wx');
+    } catch (err: any) {
+      if (err.code === 'EEXIST' || fs.existsSync(finalFilePath)) {
+        throw new Error(`AUDIT_IMMUTABILITY_VIOLATION: O AuditArtifact '${auditRunId}' já existe no disco e é imutável! Crie um novo AuditArtifact encadeado por parentArtifactId.`);
+      }
+      throw err;
     }
 
-    // ESCRITA ATÔMICA: Temp File -> Fsync -> Atomic Rename
-    fs.writeFileSync(tempFilePath, JSON.stringify(artifact, null, 2), 'utf8');
-    const fd = fs.openSync(tempFilePath, 'r+');
     try {
+      const content = JSON.stringify(artifact, null, 2);
+      fs.writeFileSync(fd, content, 'utf8');
       fs.fsyncSync(fd);
     } finally {
       fs.closeSync(fd);
     }
-
-    fs.renameSync(tempFilePath, finalFilePath);
 
     return artifact;
   }
@@ -208,10 +216,10 @@ export class AuditHistoryRepository {
       const content = fs.readFileSync(filePath, 'utf8');
       const raw = JSON.parse(content);
       
-      // Aplicar Migração de Schema se necessário
+      // Aplicar Migração de Schema de forma isolada
       const artifact = AuditArtifactMigrator.migrate(raw);
 
-      // Validação de Integridade do Hash Canônico JCS RFC 8785
+      // Validação de Integridade do Hash Canônico JCS RFC 8785 (estritamente sobre findings)
       if (artifact && artifact.artifactHash) {
         const payloadToVerify = {
           artifactId: artifact.artifactId,
@@ -225,7 +233,7 @@ export class AuditHistoryRepository {
           sourceSnapshot: artifact.sourceSnapshot,
           evidences: artifact.evidences,
           facts: artifact.facts,
-          findings: artifact.findings ? artifact.findings : ((artifact as any).finding ? [(artifact as any).finding] : []),
+          findings: artifact.findings,
           proposedActionPlan: artifact.proposedActionPlan || null,
           approvalRecord: artifact.approvalRecord || null,
           executionJournal: artifact.executionJournal || null,
@@ -289,7 +297,7 @@ export class AuditHistoryRepository {
           sourceSnapshot: artifact.sourceSnapshot,
           evidences: artifact.evidences,
           facts: artifact.facts,
-          findings: artifact.findings ? artifact.findings : ((artifact as any).finding ? [(artifact as any).finding] : []),
+          findings: artifact.findings,
           proposedActionPlan: artifact.proposedActionPlan || null,
           approvalRecord: artifact.approvalRecord || null,
           executionJournal: artifact.executionJournal || null,

@@ -1,6 +1,7 @@
 /**
- * EOS CORE SERVICES — REPOSITORY IDENTITY REGISTRY
+ * EOS CORE SERVICES — REPOSITORY IDENTITY REGISTRY (v3.1.1 DENY-BY-DEFAULT)
  * Maps ProjectId to canonical RepositoryRoot on disk.
+ * DENY-BY-DEFAULT SECURITY POLICY: Unregistered projects are STRICTLY REJECTED.
  * Prevents arbitrary unauthenticated or cross-project path injection attacks.
  */
 
@@ -16,37 +17,12 @@ export class RepositoryIdentityRegistry {
   private static registeredProjects: Map<string, RepositoryIdentity> = new Map();
 
   static {
-    // Default fallback mappings for workspace projects
+    // Registra a identidade soberana do repositório workspace atual
     const root = process.cwd();
     this.registerProject({
       projectId: 'project-alpha',
       repositoryRoot: root,
-      canonicalName: 'EOS Master Repository'
-    });
-    this.registerProject({
-      projectId: 'proj-omega',
-      repositoryRoot: root,
-      canonicalName: 'Project Omega Repository'
-    });
-    this.registerProject({
-      projectId: 'proj-restart',
-      repositoryRoot: root,
-      canonicalName: 'Project Restart Repository'
-    });
-    this.registerProject({
-      projectId: 'proj-export',
-      repositoryRoot: root,
-      canonicalName: 'Project Export Repository'
-    });
-    this.registerProject({
-      projectId: 'proj-conc',
-      repositoryRoot: root,
-      canonicalName: 'Project Concurrent Repository'
-    });
-    this.registerProject({
-      projectId: 'proj-legacy',
-      repositoryRoot: root,
-      canonicalName: 'Project Legacy Repository'
+      canonicalName: 'EOS Sovereign Repository'
     });
   }
 
@@ -61,21 +37,51 @@ export class RepositoryIdentityRegistry {
     });
   }
 
+  /**
+   * DENY-BY-DEFAULT VALIDATION POLICY:
+   * 1. projectId não fornecido -> REJECT
+   * 2. projectId não registrado -> REJECT (SECURITY_VIOLATION_UNREGISTERED_PROJECT)
+   * 3. repositoryRoot não coincide -> REJECT (SECURITY_VIOLATION_REPOSITORY_IDENTITY_MISMATCH)
+   * 4. Apenas projetos cadastrados com raízes válidas -> ALLOW
+   */
   public static validateProjectRepository(projectId: string, candidateRoot: string): void {
     if (!projectId) {
       throw new Error('SECURITY_VIOLATION_INVALID_PROJECT_ID: O projectId é obrigatório.');
     }
 
+    if (!candidateRoot) {
+      throw new Error('SECURITY_VIOLATION_INVALID_REPOSITORY_ROOT: O repositoryRoot é obrigatório.');
+    }
+
     const registered = this.registeredProjects.get(projectId);
+
+    // DENY-BY-DEFAULT: Projetos não registrados são BLOQUEADOS imediatamente
+    if (!registered) {
+      throw new Error(`SECURITY_VIOLATION_UNREGISTERED_PROJECT: O projeto '${projectId}' não está registrado no RepositoryIdentityRegistry (Deny-By-Default).`);
+    }
+
     const normalizedCandidate = path.normalize(candidateRoot).toLowerCase();
 
-    // Se o projeto estiver cadastrado na identidade do repositório, valida obrigatoriamente a raiz
-    if (registered && registered.repositoryRoot !== normalizedCandidate) {
+    if (registered.repositoryRoot !== normalizedCandidate) {
       throw new Error(`SECURITY_VIOLATION_REPOSITORY_IDENTITY_MISMATCH: O projeto '${projectId}' está vinculado ao repositório '${registered.repositoryRoot}', mas a tentativa de execução apontou para '${normalizedCandidate}'.`);
     }
   }
 
   public static getRegisteredIdentity(projectId: string): RepositoryIdentity | null {
     return this.registeredProjects.get(projectId) || null;
+  }
+
+  public static unregisterProject(projectId: string): boolean {
+    return this.registeredProjects.delete(projectId);
+  }
+
+  public static reset(): void {
+    this.registeredProjects.clear();
+    const root = process.cwd();
+    this.registerProject({
+      projectId: 'project-alpha',
+      repositoryRoot: root,
+      canonicalName: 'EOS Sovereign Repository'
+    });
   }
 }

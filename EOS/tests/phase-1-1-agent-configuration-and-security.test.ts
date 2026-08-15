@@ -34,7 +34,8 @@ describe('EOS Phase 1.1 — Hardened AI Agent Configuration & Security Suite', (
 
     const storePath = path.join(process.cwd(), '.eos', 'credentials.enc.json');
     const content = JSON.parse(fs.readFileSync(storePath, 'utf8'));
-    content.credentials['ANTHROPIC'].encryptedData = 'a' + content.credentials['ANTHROPIC'].encryptedData.slice(1);
+    const orig = content.credentials['ANTHROPIC'].encryptedData;
+    content.credentials['ANTHROPIC'].encryptedData = (orig.startsWith('a') ? 'b' : 'a') + orig.slice(1);
     fs.writeFileSync(storePath, JSON.stringify(content), 'utf8');
 
     assert.throws(

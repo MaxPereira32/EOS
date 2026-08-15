@@ -1,5 +1,5 @@
 /**
- * EOS CORE REPORTERS — JSON AUDIT EXPORTER (v3.1.0 SOVEREIGN)
+ * EOS CORE REPORTERS — JSON AUDIT EXPORTER (v3.1.1 SOVEREIGN)
  * Pure, side-effect free exporter deriving clean JSON and Markdown reports from AuditArtifacts.
  * NO SYMLINKS POLICY: Explicit exporter view for backward compatibility.
  * DETERMINISTIC EXPORT POLICY: Repeat exports over the exact same AuditArtifact produce identical bytes.
@@ -15,10 +15,9 @@ export class JsonAuditExporter {
    * Converte um AuditArtifact em uma estrutura de exportação determinística.
    */
   public static generateExportPayload(artifact: AuditArtifact): any {
-    const findingsList = artifact.findings || ((artifact as any).finding ? [(artifact as any).finding] : []);
     return {
       $schema: 'https://eos.architecture/schemas/v3/stage05-trend-knowledge.json',
-      exporterVersion: '3.1.0',
+      exporterVersion: '3.1.1',
       artifactId: artifact.artifactId,
       artifactHash: artifact.artifactHash,
       auditRunId: artifact.auditRunId,
@@ -27,7 +26,7 @@ export class JsonAuditExporter {
       sourceSnapshotHash: artifact.sourceSnapshotHash,
       summary: {
         sourceSnapshot: artifact.sourceSnapshot,
-        findingCount: findingsList.length,
+        findingCount: artifact.findings.length,
         evidenceCount: artifact.evidences?.length || 0,
         status: artifact.revalidationProof?.isResolved ? 'RESOLVED' : 'OBSERVED'
       }
@@ -48,7 +47,7 @@ export class JsonAuditExporter {
 
     fs.writeFileSync(jsonPath, JSON.stringify(payload, null, 2), 'utf8');
 
-    const markdownContent = `# Relatório Exportado de Auditoria EOS v3.1.0
+    const markdownContent = `# Relatório Exportado de Auditoria EOS v3.1.1
 
 - **Audit Run ID:** \`${artifact.auditRunId}\`
 - **Projeto:** \`${artifact.projectId}\`
