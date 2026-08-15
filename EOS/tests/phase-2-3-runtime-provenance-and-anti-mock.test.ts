@@ -7,7 +7,7 @@ import { AuditHistoryProjectionService } from '../core/services/audit-history-pr
 import { AgentRuntimeSnapshot } from '../core/domain/agent-runtime-snapshot';
 import { McpPluginRegistry } from '../core/domain/mcp-plugin-registry';
 import { EosPlatformV2, AuditExecutionContext } from '../core/eos-platform';
-import { canonicalHash } from '../core/utils/canonical-json';
+import { Evidence, Finding } from '../core/domain/types';
 
 test('EOS Phase 2.3 — Sovereign Runtime Provenance & Anti-Mock Verification Suite (v2.5.0)', async (t) => {
   const tmpDir = fs.mkdtempSync(path.join(process.cwd(), '.tmp_anti_mock_v25_'));
@@ -17,6 +17,35 @@ test('EOS Phase 2.3 — Sovereign Runtime Provenance & Anti-Mock Verification Su
   t.after(() => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
     McpPluginRegistry.reset();
+  });
+
+  const createCanonicalEvidence = (id: string): Evidence => ({
+    evidence_id: id,
+    observation_id: `obs-${id}`,
+    collector_id: 'NIST Engine',
+    source_reference: 'src/main.ts',
+    locator: { relative_path: 'src/main.ts', line: 10 },
+    source_hash: 'hash-src-123',
+    content_hash: 'hash-content-456',
+    snippet: 'const pass = true;',
+    confidence: 1.0,
+    provenance: { target_id: 'proj-omega', collector_version: '2.5.0' }
+  });
+
+  const createCanonicalFinding = (id: string, severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' = 'HIGH'): Finding => ({
+    finding_id: id,
+    rule_id: 'RULE-01',
+    rule_version: '2.5.0',
+    fact_ids: ['fct-01'],
+    evidence_ids: ['ev-1'],
+    target_id: 'proj-omega',
+    location: 'src/main.ts:10',
+    title: 'Security Finding',
+    description: 'Security Finding Description',
+    severity,
+    confidence: 1.0,
+    status: 'OPEN',
+    timestamp: new Date().toISOString()
   });
 
   await t.test('1. Static Code Analysis Anti-Mock Test — Verify Production Code Contains No Hardcoded Fallback Mocks', () => {
@@ -98,20 +127,14 @@ test('EOS Phase 2.3 — Sovereign Runtime Provenance & Anti-Mock Verification Su
       treeHash: 'tree-hash-999'
     };
 
-    const finding = {
-      finding_id: 'find-1',
-      rule_id: 'RULE-01',
-      severity: 'HIGH' as const,
-      status: 'OPEN' as const,
-      evidence_ids: ['ev-1']
-    };
+    const finding = createCanonicalFinding('find-1', 'HIGH');
 
     // Save parent artifact
     const parentArtifact = repository.saveAuditArtifact(
       'AUD-PARENT-01',
       'proj-omega',
       sourceSnapshot,
-      [],
+      [createCanonicalEvidence('ev-1')],
       [],
       finding,
       undefined,
@@ -129,7 +152,7 @@ test('EOS Phase 2.3 — Sovereign Runtime Provenance & Anti-Mock Verification Su
       'AUD-CHILD-02',
       'proj-omega',
       sourceSnapshot,
-      [],
+      [createCanonicalEvidence('ev-1')],
       [],
       finding,
       undefined,
@@ -155,19 +178,13 @@ test('EOS Phase 2.3 — Sovereign Runtime Provenance & Anti-Mock Verification Su
       treeHash: 'tree-hash-restart'
     };
 
-    const finding = {
-      finding_id: 'find-restart',
-      rule_id: 'R-RESTART',
-      severity: 'CRITICAL' as const,
-      status: 'OPEN' as const,
-      evidence_ids: ['ev-restart']
-    };
+    const finding = createCanonicalFinding('find-restart', 'CRITICAL');
 
     repository.saveAuditArtifact(
       'AUD-RESTART-01',
       'proj-restart',
       sourceSnapshot,
-      [],
+      [createCanonicalEvidence('ev-restart')],
       [],
       finding
     );
@@ -200,21 +217,15 @@ test('EOS Phase 2.3 — Sovereign Runtime Provenance & Anti-Mock Verification Su
       'AUD-REPLAY-01',
       'proj-omega',
       sourceSnapshot,
+      [createCanonicalEvidence('ev-replay')],
       [],
-      [],
-      {
-        finding_id: 'find-replay',
-        rule_id: 'R-REPLAY',
-        severity: 'LOW',
-        status: 'OPEN',
-        evidence_ids: ['ev-replay']
-      }
+      createCanonicalFinding('find-replay', 'LOW')
     );
 
     // Tamper with the raw JSON on disk to alter finding severity without updating artifactHash
     const filePath = path.join(tmpDir, 'projects', 'proj-omega', 'audits', 'AUD-REPLAY-01.json');
     const content = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    content.finding.severity = 'TAMPERED_CRITICAL';
+    content.finding.severity = 'CRITICAL';
     fs.writeFileSync(filePath, JSON.stringify(content, null, 2), 'utf8');
 
     // Re-instantiate repository and attempt to read tampered file

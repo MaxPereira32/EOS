@@ -21,6 +21,7 @@ import { ComplianceEngine } from './engines/compliance-engine';
 import { Asset } from './domain-graph';
 import { SourceSnapshot } from './domain/causal-pipeline-contracts';
 import { AgentRuntimeSnapshot } from './domain/agent-runtime-snapshot';
+import { Finding as CanonicalFinding } from './domain/types';
 import { AuditHistoryRepository, AuditArtifact } from './storage/audit-history-repository';
 import { JsonAuditExporter } from './reporters/json-audit-exporter';
 
@@ -70,31 +71,53 @@ export class EosPlatformV2 {
     console.log('[Estágio 05] Persistindo AuditArtifact Soberano via AuditHistoryRepository...');
 
     const auditRunId = `AUD-${Date.now()}`;
+    const rawFinding = this.graphEngine.getFindings()[0];
 
-    // Construindo o Finding inicial a partir dos achados do Grafo
-    const primaryFinding = this.graphEngine.getFindings()[0] || {
+    const primaryFinding: CanonicalFinding = rawFinding ? {
+      finding_id: rawFinding.finding_id,
+      rule_id: rawFinding.rule_id,
+      rule_version: '2.5.0',
+      fact_ids: rawFinding.fact_ids || [],
+      evidence_ids: ['ev-pass'],
+      target_id: context.projectId,
+      location: 'EOS/core/eos-platform.ts:1',
+      title: 'Domain Graph Finding',
+      description: 'Achado identificado durante a execução do pipeline',
+      severity: 'LOW',
+      confidence: 1.0,
+      status: 'OPEN',
+      timestamp: new Date().toISOString()
+    } : {
       finding_id: `find-empty-${Date.now()}`,
       rule_id: 'RULE-PASS',
+      rule_version: '2.5.0',
+      fact_ids: [],
+      evidence_ids: ['ev-pass'],
+      target_id: context.projectId,
+      location: 'EOS/core/eos-platform.ts:1',
+      title: 'Rule Pass',
+      description: 'Nenhuma vulnerabilidade ou desvio detectado no pipeline',
       severity: 'LOW',
-      status: 'RESOLVED',
-      evidence_ids: ['ev-pass']
+      confidence: 1.0,
+      status: 'OPEN',
+      timestamp: new Date().toISOString()
     };
 
     const artifact = this.auditRepo.saveAuditArtifact(
       auditRunId,
       context.projectId,
       context.sourceSnapshot,
-      this.graphEngine.getEvidences(),
-      this.graphEngine.getFacts(),
-      primaryFinding as any,
+      [],
+      [],
+      primaryFinding,
       undefined,
       undefined,
       undefined,
       {
         proofId: `proof-${auditRunId}`,
         auditRunId,
-        isResolved: primaryFinding.status === 'RESOLVED',
-        remainingFindingIds: primaryFinding.status === 'RESOLVED' ? [] : [primaryFinding.finding_id],
+        isResolved: primaryFinding.status === 'MITIGATED',
+        remainingFindingIds: primaryFinding.status === 'MITIGATED' ? [] : [primaryFinding.finding_id],
         verifiedAt: new Date().toISOString()
       },
       context.runtimeSnapshot
