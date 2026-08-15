@@ -1,0 +1,92 @@
+{
+  "run_id": "ORC-1786759322952",
+  "finding_id": "FND-SYSCTX-01",
+  "target_id": "TGT-SYS",
+  "created_at": "2026-08-15T02:02:02.952Z",
+  "eos_version": "2.2.0",
+  "state": "VERIFIED",
+  "agent_runs": [
+    {
+      "run_id": "ORC-1786759322952",
+      "agent_id": "mock-agent-1786759322954",
+      "role": "IMPLEMENTER",
+      "status": "SUCCESS",
+      "verdict_claim": "VERIFIED",
+      "artifacts": [],
+      "evidence_ids": [
+        "EVIDENCE-MOCK"
+      ]
+    },
+    {
+      "run_id": "ORC-1786759322952",
+      "agent_id": "mock-agent-1786759322954",
+      "role": "REVIEWER",
+      "status": "SUCCESS",
+      "verdict_claim": "VERIFIED",
+      "artifacts": [],
+      "evidence_ids": [
+        "EVIDENCE-MOCK"
+      ]
+    },
+    {
+      "run_id": "ORC-1786759322952",
+      "agent_id": "mock-agent-1786759322954",
+      "role": "EVIDENCE_AUDITOR",
+      "status": "SUCCESS",
+      "verdict_claim": "VERIFIED",
+      "artifacts": [],
+      "evidence_ids": [
+        "EVIDENCE-MOCK"
+      ]
+    }
+  ],
+  "transitions": [
+    {
+      "timestamp": "2026-08-15T02:02:02.954Z",
+      "from_state": "CREATED",
+      "to_state": "ANALYZING",
+      "trigger": "Start Analysis"
+    },
+    {
+      "timestamp": "2026-08-15T02:02:02.954Z",
+      "from_state": "ANALYZING",
+      "to_state": "PLANNING",
+      "trigger": "Start Planning"
+    },
+    {
+      "timestamp": "2026-08-15T02:02:02.954Z",
+      "from_state": "PLANNING",
+      "to_state": "IMPLEMENTING",
+      "trigger": "Dispatch Implementer"
+    },
+    {
+      "timestamp": "2026-08-15T02:02:02.954Z",
+      "from_state": "IMPLEMENTING",
+      "to_state": "REVIEWING",
+      "trigger": "Dispatch Reviewer"
+    },
+    {
+      "timestamp": "2026-08-15T02:02:02.954Z",
+      "from_state": "REVIEWING",
+      "to_state": "EVIDENCE_AUDIT",
+      "trigger": "Dispatch Evidence Auditor"
+    },
+    {
+      "timestamp": "2026-08-15T02:02:02.954Z",
+      "from_state": "EVIDENCE_AUDIT",
+      "to_state": "RECONCILING",
+      "trigger": "Reconciliation Engine Started"
+    },
+    {
+      "timestamp": "2026-08-15T02:02:02.954Z",
+      "from_state": "RECONCILING",
+      "to_state": "VERIFIED",
+      "trigger": "All Agents SUCCEEDED and Evidence Validated"
+    }
+  ],
+  "verdict": {
+    "status": "VERIFIED",
+    "rationale": "EOS ORCHESTRATION VERIFIED",
+    "final_state": "VERIFIED"
+  }
+}

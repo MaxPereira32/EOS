@@ -78,6 +78,54 @@ async function main() {
       break;
     }
 
+    case 'orchestrate': {
+      printBanner();
+      const findingId = args[1];
+      if (!findingId) {
+        console.error('[-] Uso: eos orchestrate <finding_id>');
+        process.exitCode = 1;
+        break;
+      }
+      console.log(`[EOS Orchestrator] Iniciando Native Multi-Agent Protocol para o Finding: '${findingId}'...`);
+      
+      // Carregamento dinâmico local para evitar acoplamento se não chamado
+      const { MultiAgentOrchestrationEngine } = require('../core/engines/multi-agent-orchestration-engine');
+      const { MockAgentExecutor } = require('../core/orchestration/agent-executors');
+
+      // Setup do Mock determinístico (apenas para o EXPERIMENT-0002)
+      const mockExecutor = new MockAgentExecutor();
+      
+      const engine = new MultiAgentOrchestrationEngine(findingId, 'TGT-SYS', mockExecutor);
+      
+      const verdict = await engine.executeFullPipeline();
+      const trace = engine.getRunState();
+
+      console.log('\n======================================================');
+      console.log(`  🤖 EOS ORCHESTRATION RESULT (${trace.run_id})`);
+      console.log('======================================================\n');
+      console.log(`  - Finding ID:       ${trace.finding_id}`);
+      console.log(`  - Final State:      ${verdict.final_state}`);
+      console.log(`  - Transitions:      ${trace.transitions.length}`);
+      console.log(`  - Agent Runs:       ${trace.agent_runs.length}`);
+      console.log(`  - Rationale:        ${verdict.rationale}`);
+      console.log(`  - VERDICT:          [ ${verdict.status} ]`);
+
+      if (verdict.status === 'VERIFIED') {
+        console.log('\n✅ ORQUESTRAÇÃO CONCLUÍDA COM SUCESSO: O EOS atestou a restauração da propriedade.');
+      } else {
+        console.error(`\n💥 ORQUESTRAÇÃO BLOQUEADA OU REJEITADA! Status Final: ${verdict.status}`);
+        process.exitCode = 1;
+      }
+      
+      // Dump trace for EXPERIMENT-0002
+      const fs = require('fs');
+      const path = require('path');
+      fs.writeFileSync(path.join(process.cwd(), 'EOS-EXPERIMENT-0002-EXECUTION-TRACE.json'), JSON.stringify(trace, null, 2));
+      console.log('📄 Trace gerado em: EOS-EXPERIMENT-0002-EXECUTION-TRACE.json');
+
+      break;
+    }
+
     case 'fix': {
       printBanner();
       console.error('❌ [SEGURANÇA CRÍTICA]: O comando \'eos fix\' foi DESABILITADO nesta versão.');
