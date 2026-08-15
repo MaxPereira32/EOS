@@ -86,8 +86,8 @@ describe('EOS Phase 1.1 — Hardened AI Agent Configuration & Security Suite', (
     const entries = service.getRegistryEntries();
     const anthropicEntry = entries.find(e => e.providerId === 'ANTHROPIC');
     assert.ok(anthropicEntry);
-    assert.strictEqual(anthropicEntry.isConfigured, true);
-    assert.strictEqual(typeof anthropicEntry.maskedKey, 'string');
+    assert.strictEqual(anthropicEntry.status, 'CONFIGURED');
+    assert.strictEqual(typeof anthropicEntry.keyFingerprint, 'string');
     assert.strictEqual((anthropicEntry as any).apiKey, undefined);
   });
 

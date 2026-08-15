@@ -193,12 +193,17 @@ export class SecretStoreService {
         isConfigured = false;
       }
 
+      const providerIdClean = (['OPENAI', 'ANTHROPIC', 'GEMINI', 'CUSTOM_PROXY'].includes(env.providerId.toUpperCase())
+        ? env.providerId.toUpperCase()
+        : 'CUSTOM_PROXY') as 'OPENAI' | 'ANTHROPIC' | 'GEMINI' | 'CUSTOM_PROXY';
+
       return {
-        providerId: env.providerId,
-        displayName: `${env.providerId} Agent Provider`,
-        isConfigured,
-        maskedKey: env.keyFingerprint,
-        lastUpdated: env.updatedAt
+        agentDefinitionId: `def-${env.providerId.toLowerCase()}`,
+        providerId: providerIdClean,
+        modelName: env.providerId === 'OPENAI' ? 'gpt-4o' : env.providerId === 'ANTHROPIC' ? 'claude-3-5-sonnet' : 'gemini-1.5-pro',
+        status: isConfigured ? 'CONFIGURED' : 'UNCONFIGURED',
+        keyFingerprint: env.keyFingerprint,
+        configuredAt: env.updatedAt
       };
     });
   }
