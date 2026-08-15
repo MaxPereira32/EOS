@@ -26,12 +26,18 @@ test('EOS Phase 2 — Assessment Snapshot Hardening Suite', async (t) => {
       provenance: { execution_id: 'E-1', executed_at: '2026-08-01T10:00:00Z', eos_version: '1', tool_or_collector: 'T', target_type: 'ARTIFACT' } 
     }), /artifact_hash is REQUIRED for ARTIFACT targets/);
 
-    // UNKNOWN target type + VERIFIED -> reject
-    assert.throws(() => new AssessmentSnapshot({
-      snapshot_type: 'BASELINE', target_id: 'T-1', evidence_ids: [], fact_ids: [], finding_ids: [],
-      risk_level: 'LOW', verification_status: 'VERIFIED', // VERIFIED is not allowed for UNKNOWN
-      provenance: { execution_id: 'E-1', executed_at: '2026-08-01T10:00:00Z', eos_version: '1', tool_or_collector: 'T', target_type: 'UNKNOWN' }
-    }), /UNKNOWN target_type can only have NOT_VERIFIED status/);
+    // UNKNOWN target type + Any status other than NOT_VERIFIED -> reject
+    const invalidStatuses: ('VERIFIED' | 'PARTIALLY_VERIFIED' | 'NON_COMPLIANT' | 'NOT_APPLICABLE' | 'UNKNOWN')[] = [
+      'VERIFIED', 'PARTIALLY_VERIFIED', 'NON_COMPLIANT', 'NOT_APPLICABLE', 'UNKNOWN'
+    ];
+
+    for (const status of invalidStatuses) {
+      assert.throws(() => new AssessmentSnapshot({
+        snapshot_type: 'BASELINE', target_id: 'T-1', evidence_ids: [], fact_ids: [], finding_ids: [],
+        risk_level: 'LOW', verification_status: status as any,
+        provenance: { execution_id: 'E-1', executed_at: '2026-08-01T10:00:00Z', eos_version: '1', tool_or_collector: 'T', target_type: 'UNKNOWN' }
+      }), /UNKNOWN target_type can only have NOT_VERIFIED status/);
+    }
 
     // UNKNOWN + NOT_VERIFIED -> accept
     assert.doesNotThrow(() => new AssessmentSnapshot({

@@ -1,19 +1,20 @@
 {
-  "finding": "Residual risks involving optional git_commit, artifact_hash, permissive UNKNOWN target types, absent formal reports on the repository and overconfident terminology.",
-  "root_cause": "AssessmentSnapshot lacked strict Domain invariant enforcement based on explicit TargetTypes.",
-  "method": "TargetProvenancePolicy (Native TargetType constraint and Error throwing at runtime).",
+  "finding": "Semantic truth of target_type is NOT VERIFIED. Commit/hash semantic validity is NOT VERIFIED. UNKNOWN allowed undocumented invalid sub-statuses.",
+  "root_cause": "The generic nature of the snapshot limits its ability to enforce cryptographic authenticity of origins, causing structural compliance to be mistaken for semantic validation.",
+  "method": "Formal documentation separating STRUCTURAL TARGET CLASSIFICATION from SEMANTIC TARGET TRUTH. Exhaustive status rejection tests for UNKNOWN targets.",
   "files_changed": [
-    "EOS/core/domain/assessment-snapshot.ts",
     "EOS/tests/phase-nist-2-assessment-snapshot.test.ts",
     "NIST_PHASE_2_FINAL_VERIFICATION_REPORT.md",
     "NIST_PHASE_2_FINAL_VERIFICATION_EVIDENCE.json"
   ],
   "tests": {
     "total_run": 44,
-    "negative_tests_added": [
-      "SOURCE_CODE sem git_commit",
-      "ARTIFACT sem artifact_hash",
-      "UNKNOWN target com VERIFIED status"
+    "UNKNOWN_rejection_coverage": [
+      "VERIFIED",
+      "PARTIALLY_VERIFIED",
+      "NON_COMPLIANT",
+      "NOT_APPLICABLE",
+      "UNKNOWN"
     ]
   },
   "commands": [
@@ -22,9 +23,9 @@
     "npx dependency-cruiser --no-config EOS/core/domain",
     "npm run self-governance"
   ],
-  "evidence_before": "Constructors and metadata tracking allowed silent omission of crucial provenance details.",
-  "evidence_after": "Runtime throws blocking Exceptions (git_commit is REQUIRED, artifact_hash is REQUIRED) avoiding generation of false snapshot proofs.",
-  "reassessment": "Validated via 44 comprehensive tests. Negative tests successfully verified that structural invariants reject illegitimate states.",
-  "residual_risk": "Assessment Engine components integrating with the Snapshot must accurately classify TargetType for strict boundaries to correctly apply.",
-  "final_verdict": "GREEN — VERIFIED"
+  "evidence_before": "Exaggerated claims of ZERO residual risk masked the semantic truth delegation. Tests covered only one restricted status for UNKNOWN targets.",
+  "evidence_after": "All restricted statuses are formally rejected for UNKNOWN types. Delegated risks are clearly stated and documented. Fail-closed stale evidence policy is documented.",
+  "reassessment": "Reassessment Confirmed. The Domain strictly performs PRESENCE VALIDATION and isolates structural integrity, successfully rejecting falsified boundary instances.",
+  "residual_risk": "LOW. Semantic validity of target_type, git_commit and artifact_hash originates from external collectors. The Snapshot consumes them as syntactically-valid tokens without cross-referencing external cryptographic truth.",
+  "final_verdict": "YELLOW — VERIFIED WITH RESIDUAL RISK"
 }

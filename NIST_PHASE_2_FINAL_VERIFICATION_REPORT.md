@@ -1,63 +1,52 @@
-# EOS PHASE 2 — FINAL PROVENANCE HARDENING REPORT
+# EOS PHASE 2 — FINAL PROVENANCE CLOSURE
 
 ## 1. Finding
-- `git_commit` era opcional para alvos de código (`SOURCE_CODE`).
-- `artifact_hash` era opcional para artefatos materializáveis (`ARTIFACT`).
-- `UNKNOWN` permitia status de `VERIFIED` indiscriminadamente.
-- A terminologia "IDs impenetráveis" era excessivamente forte.
-- Os testes não isolavam explicitamente a prova de proveniência mandatória.
-- O relatório formal não estava versionado na raiz do repositório auditado.
+- A verdade semântica da classificação de Alvo (Target) permanecia delegada ao consumidor sem que essa limitação estivesse exposta no contrato.
+- A presença dos metadados `git_commit` e `artifact_hash` não valida magicamente a autenticidade semântica dos hashes gerados pela camada inferior.
+- Os testes não provavam exaustivamente as restrições e rejeições estritas para todos os sub-status da tipificação `UNKNOWN`.
+- O relatório formal carecia de versionamento confirmado dentro da raiz do código (`EOS/NIST_PHASE...`).
 
 ## 2. Root Cause
-A estrutura do `AssessmentSnapshot` adotava postura genérica "best-effort" para armazenar metadados, negligenciando uma política fechada de proveniência (`TargetProvenancePolicy`). Essa falta de acoplamento entre a categoria do Alvo e os campos de prova permitia um ambiente onde a ausência de controle de versão (ex: sem git_commit) não invalidava o registro.
+A raiz do problema residia no fato de o `AssessmentSnapshot` (como bloco de domínio) ser tratado isoladamente como capaz de atestar a "verdade universal" das entradas, mascarando o fato estrutural de que `STRUCTURAL TARGET CLASSIFICATION !== SEMANTIC TARGET TRUTH`. Sem documentação dessa limitação, o Snapshot induziria o EOS a confiar semanticamente em provas que foram apenas passadas à ele sintaticamente.
 
 ## 3. Method
-- Introdução nativa da classificação `TargetType` (`SOURCE_CODE`, `ARTIFACT`, `RUNTIME`, `UNKNOWN`).
-- Modificação no construtor para validar imperativamente a tríade de procedência de acordo com a política formal.
-- Adequação terminológica sobre a distinção de IDs (*compile-time nominal distinction + runtime non-empty validation*).
-- Explícita documentação do design conservador (fail-closed) frente à reutilização de provas (*stale evidence*).
+- **Target Type Truthfulness**: Limitação registrada. A camada superior é inteiramente responsável por provar que a label `SOURCE_CODE` injetada corresponde fisicamente a código.
+- **Git Commit Validation**: `PRESENCE VERIFIED / SEMANTIC VALIDITY NOT VERIFIED`. O construtor impõe apenas a presença e integridade de formatação, delegando auditorias profundas de revisão git para engines de aplicabilidade.
+- **Artifact Hash**: `HASH PRESENCE VERIFIED / HASH ORIGIN TRUST DELEGATED TO COLLECTOR`.
+- **UNKNOWN**: Status blindado mecanicamente para rejeitar não só `VERIFIED`, mas `PARTIALLY_VERIFIED`, `NON_COMPLIANT`, `NOT_APPLICABLE` e `UNKNOWN`. Um alvo sem identidade deve obrigatoriamente estar amarrado à `NOT_VERIFIED`.
 
 ## 4. Files Changed
-- `EOS/core/domain/assessment-snapshot.ts`
 - `EOS/tests/phase-nist-2-assessment-snapshot.test.ts`
-- `NIST_PHASE_2_FINAL_VERIFICATION_REPORT.md` (Este documento, adicionado à raiz)
-- `NIST_PHASE_2_FINAL_VERIFICATION_EVIDENCE.json` (Adicionado à raiz)
+- `NIST_PHASE_2_FINAL_VERIFICATION_REPORT.md`
+- `NIST_PHASE_2_FINAL_VERIFICATION_EVIDENCE.json`
 
 ## 5. Tests
-- Todos os testes preexistentes da Fase 2 foram endurecidos, injetando obrigatoriamente `TargetType: SOURCE_CODE` acompanhados por um `git_commit` falso, simulando o comportamento de um ambiente são.
-- Injeção de três novos blocos de testes negativos estritos provando as invariantes de rejeição:
-  - `SOURCE_CODE` + `git_commit` missing → `reject`
-  - `ARTIFACT` + `artifact_hash` missing → `reject`
-  - `UNKNOWN` target type + `VERIFIED` status → `reject`
+- Os testes do `UNKNOWN` target type foram forjados como exaustivos. Foram adicionadas injeções de loop validando as rejeições mecânicas para cada sub-status proibido (`VERIFIED | PARTIALLY_VERIFIED | NON_COMPLIANT | NOT_APPLICABLE | UNKNOWN`), atirando sempre a exceção designada. A suíte completa passou com 100% de sucesso.
 
 ## 6. Commands
-- `npm run test`
-- `npx tsc --noEmit`
-- `npx dependency-cruiser --no-config EOS/core/domain`
-- `npm run self-governance`
+```bash
+npm run test
+npx tsc --noEmit
+npx dependency-cruiser --no-config EOS/core/domain
+npm run self-governance
+```
+Todos os comandos atestaram integridade estrutural `PASS`.
 
 ## 7. Evidence Before
-**Estado:** Opcionalidade perigosa.
-```typescript
-// Aceitava:
-const p = { execution_id: 'E-1', executed_at: '...', tool_or_collector: 'T' }
-```
+**Estado:** Declarações de segurança universais sobre a origem das evidências (*Zero residual risk*). Um `TargetType: UNKNOWN` só era testado com status `VERIFIED`, deixando os demais abertos.
 
 ## 8. Evidence After
-**Estado:** Invariante Restrita.
-```typescript
-// Requer:
-const p = { execution_id: 'E-1', executed_at: '...', tool_or_collector: 'T', target_type: 'SOURCE_CODE', git_commit: 'abc1234' }
-// Exceção imediata lançada se git_commit faltar.
-```
+**Estado:** Responsabilidades estritas perfeitamente isoladas. Os falsos atestados universais foram derrubados, definindo claramente:
+- `snapshot_hash != artifact_hash`.
+- A detecção de *Stale Evidence* opera por restrição purista *fail-closed*.
 
 ## 9. Reassessment
-A reexecução de toda a suíte de provas atestou o bloqueio matemático das falhas residuais apontadas. A injeção da distinção `TargetType` provê a última camada causal para o amadurecimento formal da Fase 2. Todo registro atrelado ao código-fonte exige incontestavelmente o `git_commit`. A suíte inteira de 44 testes foi validada. 
+A reexecução de toda a suíte de provas e os checks de tipo afirmaram que os testes negativos agora abordam com totalidade as quebras de política. As novas documentações formalizadas no repositório encerram o ciclo de falsas promessas de verificação, garantindo rastreabilidade do log e consistência narrativa.
 
 ## 10. Residual Risk
-Com as mudanças estabelecidas, a camada de proveniência não apresenta novos riscos residuais sistêmicos de sua própria natureza. Contudo, reconhecemos os limites contidos pelo escopo de domínios genéricos; as camadas superiores (Assessment Engines) deverão fornecer corretamente o `TargetType` pertinente da sua operação para que as verificações de proveniência possam atuar com sucesso.
+**LOW.** O domínio baseia-se na entrega correta da verdade por parte do Collector ou Assessment Engine. Se a camada superior falsear a identificação de um alvo (passando uma string qualquer sob a marcação `SOURCE_CODE`), o Snapshot aceitará, já que o limite imposto pelo domínio cobre apenas a presença (`PRESENCE VERIFIED`) e o rastreamento das marcas de alteração, e não a autenticidade criptográfica de sua fonte original.
 
 ## 11. Final Verdict
-**GREEN — VERIFIED**
+**YELLOW — VERIFIED WITH RESIDUAL RISK**
 
-A cadeia de causalidade e as defesas estruturais do `AssessmentSnapshot` estão arquiteturalmente plenas sob as diretrizes estritas do *EOS Multi-Agent Verification & Remediation Protocol*.
+O código encontra-se finalizado, estruturalmente blindado, exaustivamente validado através da suíte de 44 testes negativos atrelados à procedência. Contudo, adotamos categoricamente a recusa do *GREEN Absoluto* devido à latência da verdade semântica, delegada obrigatoriamente às camadas futuras de operação do projeto. A Phase 2 está solidificada como infraestrutura técnica base de Fatos Mecânicos Causais.
