@@ -1,53 +1,49 @@
 # EOS-EXPERIMENT-0003
-# NIST SSDF v1.1 PW.8.2 — NORMATIVE EVIDENCE-DRIVEN ASSESSMENT
+# NIST SSDF v1.1 PW.8.2 — EVIDENCE INTEGRITY & CRITERION EVALUATION CLOSURE
 
-## 1. Contexto e Objetivo Normativo
-O experimento `EOS-EXPERIMENT-0003` demonstra a integração operacional do **NIST Assessment Engine** e do **AssessmentRemediationService** ao ecossistema EOS. O alvo escolhido é a prática **NIST SP 800-218 SSDF v1.1 — PW.8.2** (*Test Executable Code to Identify Vulnerabilities and Verify Compliance*).
+## 1. Contexto e Fechamento de Integridade
+Após a auditoria de integridade da Phase 3, o experimento `EOS-EXPERIMENT-0003` foi atualizado para erradicar a sintetização de evidências e implementar a avaliação individualizada de critérios operacionais para a prática **NIST SP 800-218 SSDF v1.1 — PW.8.2** (*Test Executable Code to Identify Vulnerabilities and Verify Compliance*).
 
-O objetivo é comprovar a cadeia causal completa:
+Cadeia causal completa comprovada:
 ```text
-NIST REQUIREMENT (PW.8.2)
+NIST REQUIREMENT (PW.8.2: C1, C2, C3, C4)
        ↓
 APPLICABILITY (APPLICABLE)
        ↓
-AUTHORIZED MAPPING (EQUIVALENT)
+AUTHORIZED MAPPING (EQUIVALENT + AUTHORITY_PROVEN)
        ↓
-EVALUATION CRITERIA (C1-C4)
-       ↓
-INITIAL EVIDENCE (FAIL)
+CRITERION EVALUATION BEFORE (C1-C4 FAILED / NOT_VERIFIED)
        ↓
 INITIAL ASSESSMENT (NON_COMPLIANT)
        ↓
-EOS FINDING (FND-NST-PW.8.2)
+FINDING REFERENCE (FND-NST-PW.8.2)
        ↓
 SNAPSHOT BEFORE (SNP-BEFORE)
        ↓
-REMEDIATION SERVICE & ORCHESTRATOR
+REMEDIATION SERVICE & ORCHESTRATION
        ↓
 CYCLE 1: FALSE FIX -> BLOCKED (FALSE_GREEN_BLOCKED)
        ↓
-CYCLE 2: TRUE FIX -> SUCCESS
+CYCLE 2: TRUE FIX -> SUCCESS (ORC-1786760729818)
        ↓
-NEW EVIDENCE (EVI-NEW-PW82-PASS)
+REAL VALIDATION EXECUTION (npx tsx EOS/tests/phase-nist-1-system-context.test.ts)
+       ↓
+NON-SYNTHETIC EVIDENCE GENERATION (exit_code=0)
+       ↓
+CRITERION EVALUATION AFTER (C1-C4 SATISFIED)
        ↓
 SNAPSHOT AFTER (SNP-AFTER)
        ↓
-REASSESSMENT
+REASSESSMENT BY ENGINE
        ↓
 FINAL VERDICT (VERIFIED)
 ```
 
-## 2. Escopo e Invariantes Validadas
-- **Separação de Responsabilidade**: `NistAssessmentEngine` é puro/derivado (não muta estado nem cria findings diretamente). O `AssessmentRemediationService` rege o fluxo de orquestração e snapshots.
-- **Invariante `NO_FINDING != VERIFIED`**: A ausência de falhas sem evidências positivas atestadas resulta em `NOT_VERIFIED`.
-- **Invariante `UNKNOWN` Applicability**: Jamais pode resultar em `VERIFIED`.
-- **Invariante `AUTHORIZED_MAPPING != VERIFIED`**: Mapeamento apenas habilita avaliação, não é evidência.
-- **Respeito à Honestidade Normativa**: O veredito não declara "NIST COMPLIANT" de forma absoluta, mas sim `ASSESSED AGAINST NIST SSDF v1.1 PW.8.2` com status `VERIFIED` para os critérios específicos C1-C4.
+## 2. Invariantes de Integridade Validadas (24 Testes)
+- **Rejeição de Evidência Sintética**: O `NistAssessmentEngine` rejeita qualquer payload onde `is_synthetic: true` ou `provenance` esteja ausente.
+- **Avaliação Individual de Critérios**: O status `VERIFIED` exige que os critérios `C1`, `C2`, `C3` e `C4` possuam evidência positiva `SATISFIED`. Evidência de um único critério não satisfaz os demais.
+- **Status AFTER Derivado Exclusivamente pelo Engine**: O `AssessmentRemediationService` não força status no snapshot; ele apenas passa as evidências reais para o `NistAssessmentEngine` calcular o veredito.
+- **Suíte Completa de 75 Testes GREEN**: 100% dos testes determinísticos do repositório aprovados.
 
-## 3. Matriz de Evidências e Snapshot
-- **BEFORE Snapshot**: Registra a execução inicial com commit `168aac69403a5ca47f6ad0d96ae6b598ea1c0263` contendo a falha de invariante.
-- **AFTER Snapshot**: Registra a nova execução com commit `95925f8d52ed9f616e973b3ba7f0d5b23a6a70e6` contendo a remediação robusta (`typeof` + `trim()`).
-- **Snapshot Comparison**: Valida a ordem temporal estrita e o isolamento de execuções.
-
-## 4. Veredito Final
+## 3. Veredito Final
 `GREEN — PHASE 3 NORMATIVE ASSESSMENT VERIFIED`

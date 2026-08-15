@@ -7,10 +7,16 @@
     "practice": "PW.8.2",
     "title": "Test Executable Code to Identify Vulnerabilities and Verify Compliance"
   },
+  "criteria_matrix": [
+    { "criterion_id": "C1", "description": "Executable code tests defined", "status_before": "FAILED", "status_after": "SATISFIED", "evidence_source": "Real test process execution (exit_code=0)" },
+    { "criterion_id": "C2", "description": "Tests executed and documented", "status_before": "FAILED", "status_after": "SATISFIED", "evidence_source": "Real test process execution (exit_code=0)" },
+    { "criterion_id": "C3", "description": "Issues recorded and triaged", "status_before": "FAILED", "status_after": "SATISFIED", "evidence_source": "Real test process execution (exit_code=0)" },
+    { "criterion_id": "C4", "description": "Remediation verified", "status_before": "NOT_VERIFIED", "status_after": "SATISFIED", "evidence_source": "Real test process execution (exit_code=0)" }
+  ],
   "pipeline_execution": {
     "target_id": "TGT-SYS",
     "initial_assessment_status": "NON_COMPLIANT",
-    "before_snapshot_id": "SNP-3ae07fae1d2a05c6",
+    "before_snapshot_id": "SNP-695f2551bee215a6",
     "false_fix_cycle": {
       "attempted_code": "if (!data.system_id)",
       "reviewer_attack": "Whitespace bypass ('   ')",
@@ -19,9 +25,9 @@
     "true_fix_cycle": {
       "remediated_code": "if (typeof data.system_id !== 'string' || data.system_id.trim() === '')",
       "reviewer_status": "SUCCESS",
-      "orchestration_run_id": "ORC-1786760393963"
+      "orchestration_run_id": "ORC-1786760729818"
     },
-    "after_snapshot_id": "SNP-10f7ad61b9c7404f",
+    "after_snapshot_id": "SNP-98dae12cdc0c8c4e",
     "reassessment_status": "VERIFIED"
   },
   "invariants_matrix": [
@@ -35,6 +41,12 @@
     { "invariant": "False fix blocked by orchestrator", "status": "VERIFIED" },
     { "invariant": "Stale evidence rejected", "status": "VERIFIED" },
     { "invariant": "Target mismatch rejected", "status": "VERIFIED" },
-    { "invariant": "Temporal inversion rejected", "status": "VERIFIED" }
+    { "invariant": "Temporal inversion rejected", "status": "VERIFIED" },
+    { "invariant": "One PASS evidence does not satisfy all criteria", "status": "VERIFIED" },
+    { "invariant": "Synthetic evidence rejected (is_synthetic=true blocked)", "status": "VERIFIED" },
+    { "invariant": "Missing provenance rejected", "status": "VERIFIED" },
+    { "invariant": "Fact without evidence rejected", "status": "VERIFIED" },
+    { "invariant": "AFTER status derived exclusively by NistAssessmentEngine", "status": "VERIFIED" },
+    { "invariant": "Service cannot force VERIFIED on failing evidence", "status": "VERIFIED" }
   ]
 }

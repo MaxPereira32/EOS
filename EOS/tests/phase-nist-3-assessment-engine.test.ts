@@ -19,11 +19,11 @@ test.describe('EOS Phase 3 — NIST Assessment Engine & Invariants Suite (SSDF P
     taxonomy_kind: 'TASK',
     title: 'Test Executable Code to Identify Vulnerabilities and Verify Compliance',
     description: 'Scope, design, execute, and document tests to identify vulnerabilities and verify compliance with security requirements.',
-    operational_criteria: [
-      'C1: Executable code tests defined',
-      'C2: Tests executed and documented',
-      'C3: Issues recorded and triaged',
-      'C4: Remediation verified'
+    criteria: [
+      { criterion_id: 'C1', description: 'Executable code tests defined', required: true },
+      { criterion_id: 'C2', description: 'Tests executed and documented', required: true },
+      { criterion_id: 'C3', description: 'Issues recorded and triaged', required: true },
+      { criterion_id: 'C4', description: 'Remediation verified', required: true }
     ]
   };
 
@@ -38,8 +38,24 @@ test.describe('EOS Phase 3 — NIST Assessment Engine & Invariants Suite (SSDF P
     eos_rule_id: 'SEC-RULE-502-HARDCODED-SECRET',
     relationship: 'EQUIVALENT',
     has_authority: true,
+    authority_type: 'AUTHORITY_PROVEN',
     rationale: 'Maps directly to domain invariant testing and security compliance rule.'
   };
+
+  const validProvenance = {
+    tool_or_command: 'npx tsx EOS/tests/phase-nist-1-system-context.test.ts',
+    exit_code: 0,
+    execution_id: 'EXEC-TEST-01',
+    git_commit: '95925f8d52ed9f616e973b3ba7f0d5b23a6a70e6',
+    is_synthetic: false
+  };
+
+  const fullPassEvidences: EvidencePayload[] = [
+    { evidence_id: 'EVI-C1', target_id: 'T1', timestamp: new Date().toISOString(), status: 'PASS', criterion_id: 'C1', provenance: validProvenance },
+    { evidence_id: 'EVI-C2', target_id: 'T1', timestamp: new Date().toISOString(), status: 'PASS', criterion_id: 'C2', provenance: validProvenance },
+    { evidence_id: 'EVI-C3', target_id: 'T1', timestamp: new Date().toISOString(), status: 'PASS', criterion_id: 'C3', provenance: validProvenance },
+    { evidence_id: 'EVI-C4', target_id: 'T1', timestamp: new Date().toISOString(), status: 'PASS', criterion_id: 'C4', provenance: validProvenance }
+  ];
 
   const engine = new NistAssessmentEngine();
   const service = new AssessmentRemediationService();
@@ -50,7 +66,7 @@ test.describe('EOS Phase 3 — NIST Assessment Engine & Invariants Suite (SSDF P
       applicability: { requirement_id: 'PW.8.2', status: 'UNKNOWN' },
       mapping: authorizedMapping,
       facts: ['FACT-1'],
-      evidence: [{ evidence_id: 'E1', target_id: 'T1', timestamp: new Date().toISOString(), status: 'PASS' }],
+      evidence: fullPassEvidences,
       target_id: 'T1'
     });
 
@@ -76,8 +92,8 @@ test.describe('EOS Phase 3 — NIST Assessment Engine & Invariants Suite (SSDF P
       requirement: pw82Req,
       applicability: validApplicability,
       mapping: authorizedMapping,
-      facts: ['FACT-1'],
-      evidence: [], // Zero findings, but ZERO evidence!
+      facts: [],
+      evidence: [],
       target_id: 'T1'
     });
 
@@ -104,20 +120,25 @@ test.describe('EOS Phase 3 — NIST Assessment Engine & Invariants Suite (SSDF P
       applicability: validApplicability,
       mapping: authorizedMapping,
       facts: ['FACT-1'],
-      evidence: [{ evidence_id: 'EVI-PASS-1', target_id: 'T1', timestamp: new Date().toISOString(), status: 'PASS' }],
+      evidence: fullPassEvidences,
       target_id: 'T1'
     });
 
     assert.strictEqual(result.status, 'VERIFIED');
+    assert.strictEqual(result.criterion_evaluations.every(c => c.status === 'SATISFIED'), true);
   });
 
   test.it('6. Contradictory evidence -> NON_COMPLIANT', () => {
+    const failEvidences: EvidencePayload[] = [
+      { evidence_id: 'EVI-FAIL', target_id: 'T1', timestamp: new Date().toISOString(), status: 'FAIL', criterion_id: 'C1', provenance: { ...validProvenance, exit_code: 1 } }
+    ];
+
     const result = engine.assessRequirement({
       requirement: pw82Req,
       applicability: validApplicability,
       mapping: authorizedMapping,
       facts: ['FACT-1'],
-      evidence: [{ evidence_id: 'EVI-FAIL-1', target_id: 'T1', timestamp: new Date().toISOString(), status: 'FAIL' }],
+      evidence: failEvidences,
       target_id: 'T1'
     });
 
@@ -130,7 +151,8 @@ test.describe('EOS Phase 3 — NIST Assessment Engine & Invariants Suite (SSDF P
       requirement_id: 'PW.8.2',
       eos_rule_id: 'RULE-1',
       relationship: 'EQUIVALENT',
-      has_authority: false, // Unauthorized!
+      has_authority: false,
+      authority_type: 'AUTHORITY_ASSERTED',
       rationale: 'Unverified mapping'
     };
 
@@ -140,7 +162,7 @@ test.describe('EOS Phase 3 — NIST Assessment Engine & Invariants Suite (SSDF P
         applicability: validApplicability,
         mapping: unauthMapping,
         facts: [],
-        evidence: [{ evidence_id: 'E1', target_id: 'T1', timestamp: new Date().toISOString(), status: 'PASS' }],
+        evidence: fullPassEvidences,
         target_id: 'T1'
       });
     }, /EQUIVALENT mapping requires explicit authority provenance/);
@@ -150,9 +172,9 @@ test.describe('EOS Phase 3 — NIST Assessment Engine & Invariants Suite (SSDF P
     const result = engine.assessRequirement({
       requirement: pw82Req,
       applicability: validApplicability,
-      mapping: authorizedMapping, // Authorized!
+      mapping: authorizedMapping,
       facts: [],
-      evidence: [], // But no evidence!
+      evidence: [],
       target_id: 'T1'
     });
 
@@ -161,41 +183,47 @@ test.describe('EOS Phase 3 — NIST Assessment Engine & Invariants Suite (SSDF P
   });
 
   test.it('9. BEFORE state -> NON_COMPLIANT when failing evidence present', () => {
+    const failingBeforeEvidences: EvidencePayload[] = [
+      { evidence_id: 'EVI-BEFORE-FAIL', target_id: 'TGT-SYS', timestamp: new Date().toISOString(), status: 'FAIL', criterion_id: 'C1', provenance: { ...validProvenance, exit_code: 1 } }
+    ];
+
     const result = engine.assessRequirement({
       requirement: pw82Req,
       applicability: validApplicability,
       mapping: authorizedMapping,
       facts: ['FACT-SYSCTX-01'],
-      evidence: [{ evidence_id: 'EVI-PW82-BEFORE-FAIL', target_id: 'TGT-SYS', timestamp: new Date().toISOString(), status: 'FAIL' }],
+      evidence: failingBeforeEvidences,
       target_id: 'TGT-SYS'
     });
 
     assert.strictEqual(result.status, 'NON_COMPLIANT');
   });
 
-  test.it('10 & 11. End-to-End Remediation Pipeline: False Remediation BLOCKED & True Remediation VERIFIED', async () => {
+  test.it('10 & 11. End-to-End Remediation Pipeline: False Remediation BLOCKED & True Remediation VERIFIED with Real Execution', async () => {
+    const failingBeforeEvidences: EvidencePayload[] = [
+      { evidence_id: 'EVI-BEFORE-FAIL', target_id: 'TGT-SYS', timestamp: new Date().toISOString(), status: 'FAIL', criterion_id: 'C1', provenance: { ...validProvenance, exit_code: 1 } }
+    ];
+
     const pipelineResult = await service.runFullRemediationPipeline({
       requirement: pw82Req,
       applicability: validApplicability,
       mapping: authorizedMapping,
       target_id: 'TGT-SYS',
-      initial_evidence: [{ evidence_id: 'EVI-PW82-BEFORE-FAIL', target_id: 'TGT-SYS', timestamp: new Date().toISOString(), status: 'FAIL' }],
+      initial_evidence: failingBeforeEvidences,
       git_commit_before: '168aac69403a5ca47f6ad0d96ae6b598ea1c0263',
       git_commit_after: '95925f8d52ed9f616e973b3ba7f0d5b23a6a70e6'
     });
 
-    // Verify initial
     assert.strictEqual(pipelineResult.initial_assessment.status, 'NON_COMPLIANT');
     assert.ok(pipelineResult.before_snapshot);
     assert.strictEqual(pipelineResult.before_snapshot.snapshot_type, 'BEFORE_REMEDIATION');
 
-    // Verify False Fix was BLOCKED
     assert.strictEqual(pipelineResult.false_fix_blocked, true);
 
-    // Verify True Fix succeeded and Reassessment is VERIFIED
     assert.ok(pipelineResult.after_snapshot);
     assert.strictEqual(pipelineResult.after_snapshot.snapshot_type, 'AFTER_REMEDIATION');
     assert.strictEqual(pipelineResult.final_reassessment.status, 'VERIFIED');
+    assert.strictEqual(pipelineResult.after_snapshot.verification_status, 'VERIFIED');
   });
 
   test.it('12. Stale evidence -> reject (NOT_VERIFIED)', () => {
@@ -204,7 +232,7 @@ test.describe('EOS Phase 3 — NIST Assessment Engine & Invariants Suite (SSDF P
       applicability: validApplicability,
       mapping: authorizedMapping,
       facts: ['FACT-1'],
-      evidence: [{ evidence_id: 'EVI-STALE', target_id: 'T1', timestamp: new Date().toISOString(), status: 'PASS', is_stale: true }],
+      evidence: [{ evidence_id: 'EVI-STALE', target_id: 'T1', timestamp: new Date().toISOString(), status: 'PASS', criterion_id: 'C1', provenance: validProvenance, is_stale: true }],
       target_id: 'T1'
     });
 
@@ -218,7 +246,7 @@ test.describe('EOS Phase 3 — NIST Assessment Engine & Invariants Suite (SSDF P
       applicability: validApplicability,
       mapping: authorizedMapping,
       facts: ['FACT-1'],
-      evidence: [{ evidence_id: 'EVI-OTHER', target_id: 'OTHER_TARGET', timestamp: new Date().toISOString(), status: 'PASS' }],
+      evidence: [{ evidence_id: 'EVI-OTHER', target_id: 'OTHER_TARGET', timestamp: new Date().toISOString(), status: 'PASS', criterion_id: 'C1', provenance: validProvenance }],
       target_id: 'TARGET_EXPECTED'
     });
 
@@ -255,7 +283,7 @@ test.describe('EOS Phase 3 — NIST Assessment Engine & Invariants Suite (SSDF P
       verification_status: 'VERIFIED',
       provenance: {
         execution_id: 'EXEC-AFTER',
-        executed_at: '2026-08-15T09:00:00.000Z', // Temporal Inversion! (09:00 < 10:00)
+        executed_at: '2026-08-15T09:00:00.000Z',
         eos_version: '2.2.0',
         tool_or_collector: 'Engine',
         target_type: 'SOURCE_CODE',
@@ -267,4 +295,174 @@ test.describe('EOS Phase 3 — NIST Assessment Engine & Invariants Suite (SSDF P
       AssessmentSnapshot.compare(snapBefore, snapAfterInverted, [parseFindingId('FND-1')]);
     }, /INVALID_TEMPORAL_ORDER/);
   });
+
+  test.it('15. One PASS Evidence does not satisfy all criteria', () => {
+    const singlePassEvidence: EvidencePayload[] = [
+      { evidence_id: 'EVI-C1', target_id: 'T1', timestamp: new Date().toISOString(), status: 'PASS', criterion_id: 'C1', provenance: validProvenance }
+    ];
+
+    const result = engine.assessRequirement({
+      requirement: pw82Req,
+      applicability: validApplicability,
+      mapping: authorizedMapping,
+      facts: ['FACT-1'],
+      evidence: singlePassEvidence,
+      target_id: 'T1'
+    });
+
+    assert.strictEqual(result.status, 'NOT_VERIFIED');
+    assert.strictEqual(result.criterion_evaluations.find(c => c.criterion_id === 'C1')?.status, 'SATISFIED');
+    assert.strictEqual(result.criterion_evaluations.find(c => c.criterion_id === 'C2')?.status, 'NOT_VERIFIED');
+  });
+
+  test.it('16. Required criterion without evidence -> NOT_VERIFIED', () => {
+    const partialEvidences: EvidencePayload[] = [
+      { evidence_id: 'EVI-C1', target_id: 'T1', timestamp: new Date().toISOString(), status: 'PASS', criterion_id: 'C1', provenance: validProvenance },
+      { evidence_id: 'EVI-C2', target_id: 'T1', timestamp: new Date().toISOString(), status: 'PASS', criterion_id: 'C2', provenance: validProvenance }
+      // Missing C3 and C4!
+    ];
+
+    const result = engine.assessRequirement({
+      requirement: pw82Req,
+      applicability: validApplicability,
+      mapping: authorizedMapping,
+      facts: ['FACT-1'],
+      evidence: partialEvidences,
+      target_id: 'T1'
+    });
+
+    assert.strictEqual(result.status, 'NOT_VERIFIED');
+    assert.match(result.rationale, /Incomplete Criterion Evaluation/);
+  });
+
+  test.it('17. Criterion-specific Evidence -> VERIFIED when all satisfied', () => {
+    const result = engine.assessRequirement({
+      requirement: pw82Req,
+      applicability: validApplicability,
+      mapping: authorizedMapping,
+      facts: ['FACT-1'],
+      evidence: fullPassEvidences,
+      target_id: 'T1'
+    });
+
+    assert.strictEqual(result.status, 'VERIFIED');
+  });
+
+  test.it('18. Contradictory criterion Evidence -> NON_COMPLIANT', () => {
+    const mixedEvidences: EvidencePayload[] = [
+      { evidence_id: 'EVI-C1', target_id: 'T1', timestamp: new Date().toISOString(), status: 'PASS', criterion_id: 'C1', provenance: validProvenance },
+      { evidence_id: 'EVI-C2-FAIL', target_id: 'T1', timestamp: new Date().toISOString(), status: 'FAIL', criterion_id: 'C2', provenance: { ...validProvenance, exit_code: 1 } }
+    ];
+
+    const result = engine.assessRequirement({
+      requirement: pw82Req,
+      applicability: validApplicability,
+      mapping: authorizedMapping,
+      facts: ['FACT-1'],
+      evidence: mixedEvidences,
+      target_id: 'T1'
+    });
+
+    assert.strictEqual(result.status, 'NON_COMPLIANT');
+    assert.strictEqual(result.criterion_evaluations.find(c => c.criterion_id === 'C2')?.status, 'FAILED');
+  });
+
+  test.it('19. Synthetic Evidence cannot establish VERIFIED', () => {
+    const syntheticEvidences: EvidencePayload[] = [
+      { evidence_id: 'EVI-C1', target_id: 'T1', timestamp: new Date().toISOString(), status: 'PASS', criterion_id: 'C1', provenance: { ...validProvenance, is_synthetic: true } },
+      { evidence_id: 'EVI-C2', target_id: 'T1', timestamp: new Date().toISOString(), status: 'PASS', criterion_id: 'C2', provenance: { ...validProvenance, is_synthetic: true } },
+      { evidence_id: 'EVI-C3', target_id: 'T1', timestamp: new Date().toISOString(), status: 'PASS', criterion_id: 'C3', provenance: { ...validProvenance, is_synthetic: true } },
+      { evidence_id: 'EVI-C4', target_id: 'T1', timestamp: new Date().toISOString(), status: 'PASS', criterion_id: 'C4', provenance: { ...validProvenance, is_synthetic: true } }
+    ];
+
+    const result = engine.assessRequirement({
+      requirement: pw82Req,
+      applicability: validApplicability,
+      mapping: authorizedMapping,
+      facts: ['FACT-1'],
+      evidence: syntheticEvidences,
+      target_id: 'T1'
+    });
+
+    assert.strictEqual(result.status, 'NOT_VERIFIED');
+    assert.match(result.rationale, /Synthetic Evidence Guard/);
+  });
+
+  test.it('20. Missing provenance -> NOT_VERIFIED', () => {
+    const noProvenanceEvidences: any[] = [
+      { evidence_id: 'EVI-C1', target_id: 'T1', timestamp: new Date().toISOString(), status: 'PASS', criterion_id: 'C1' } // Missing provenance!
+    ];
+
+    const result = engine.assessRequirement({
+      requirement: pw82Req,
+      applicability: validApplicability,
+      mapping: authorizedMapping,
+      facts: ['FACT-1'],
+      evidence: noProvenanceEvidences,
+      target_id: 'T1'
+    });
+
+    assert.strictEqual(result.status, 'NOT_VERIFIED');
+    assert.match(result.rationale, /Missing Provenance/);
+  });
+
+  test.it('21. Fact without supporting Evidence -> NOT_VERIFIED', () => {
+    const result = engine.assessRequirement({
+      requirement: pw82Req,
+      applicability: validApplicability,
+      mapping: authorizedMapping,
+      facts: ['FACT-ORPHAN-01'], // Fact registered, but ZERO evidence payloads!
+      evidence: [],
+      target_id: 'T1'
+    });
+
+    assert.strictEqual(result.status, 'NOT_VERIFIED');
+    assert.match(result.rationale, /Fact Without Supporting Evidence/);
+  });
+
+  test.it('22. AFTER status is derived exclusively by NistAssessmentEngine', async () => {
+    const realEvidences = service.executeRealValidation('TGT-SYS', '95925f8d52ed9f616e973b3ba7f0d5b23a6a70e6');
+    const assessment = engine.assessRequirement({
+      requirement: pw82Req,
+      applicability: validApplicability,
+      mapping: authorizedMapping,
+      facts: ['FACT-SYSCTX-01'],
+      evidence: realEvidences,
+      target_id: 'TGT-SYS'
+    });
+
+    assert.strictEqual(assessment.status, 'VERIFIED');
+  });
+
+  test.it('23. AssessmentRemediationService cannot force VERIFIED on failing evidence', async () => {
+    const failingEvidences: EvidencePayload[] = [
+      { evidence_id: 'EVI-FAIL', target_id: 'TGT-SYS', timestamp: new Date().toISOString(), status: 'FAIL', criterion_id: 'C1', provenance: { ...validProvenance, exit_code: 1 } }
+    ];
+
+    const result = engine.assessRequirement({
+      requirement: pw82Req,
+      applicability: validApplicability,
+      mapping: authorizedMapping,
+      facts: ['FACT-SYSCTX-01'],
+      evidence: failingEvidences,
+      target_id: 'TGT-SYS'
+    });
+
+    assert.strictEqual(result.status, 'NON_COMPLIANT');
+  });
+
+  test.it('24. Invalid Finding reference cannot be treated as materialized Finding', () => {
+    const result = engine.assessRequirement({
+      requirement: pw82Req,
+      applicability: validApplicability,
+      mapping: authorizedMapping,
+      facts: ['FACT-1'],
+      evidence: [{ evidence_id: 'EVI-FAIL', target_id: 'T1', timestamp: new Date().toISOString(), status: 'FAIL', criterion_id: 'C1', provenance: { ...validProvenance, exit_code: 1 } }],
+      target_id: 'T1'
+    });
+
+    assert.strictEqual(result.finding_materialization_status, 'FINDING_REFERENCE_ONLY');
+    assert.strictEqual(result.finding_reference, 'FND-NST-PW.8.2');
+  });
+
 });

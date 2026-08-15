@@ -155,20 +155,33 @@ async function main() {
         taxonomy_kind: 'TASK',
         title: 'Test Executable Code to Identify Vulnerabilities and Verify Compliance',
         description: 'Scope, design, execute, and document tests to identify vulnerabilities and verify compliance with security requirements.',
-        operational_criteria: [
-          'C1: Executable code tests defined',
-          'C2: Tests executed and documented',
-          'C3: Issues recorded and triaged',
-          'C4: Remediation verified'
+        criteria: [
+          { criterion_id: 'C1', description: 'Executable code tests defined', required: true },
+          { criterion_id: 'C2', description: 'Tests executed and documented', required: true },
+          { criterion_id: 'C3', description: 'Issues recorded and triaged', required: true },
+          { criterion_id: 'C4', description: 'Remediation verified', required: true }
         ]
       };
 
       const result = await service.runFullRemediationPipeline({
         requirement: pw82Req,
         applicability: { requirement_id: reqId, status: 'APPLICABLE', rationale: 'Core System Integrity' },
-        mapping: { requirement_id: reqId, eos_rule_id: 'SEC-RULE-502', relationship: 'EQUIVALENT', has_authority: true, rationale: 'Canonical Mapping' },
+        mapping: { requirement_id: reqId, eos_rule_id: 'SEC-RULE-502', relationship: 'EQUIVALENT', has_authority: true, authority_type: 'AUTHORITY_PROVEN', rationale: 'Canonical Mapping' },
         target_id: 'TGT-SYS',
-        initial_evidence: [{ evidence_id: 'EVI-BEFORE-FAIL', target_id: 'TGT-SYS', timestamp: new Date().toISOString(), status: 'FAIL' }],
+        initial_evidence: [{
+          evidence_id: 'EVI-BEFORE-FAIL',
+          target_id: 'TGT-SYS',
+          timestamp: new Date().toISOString(),
+          status: 'FAIL',
+          criterion_id: 'C1',
+          provenance: {
+            tool_or_command: 'npx tsx EOS/tests/phase-nist-1-system-context.test.ts',
+            exit_code: 1,
+            execution_id: 'EXEC-INIT',
+            git_commit: '168aac69403a5ca47f6ad0d96ae6b598ea1c0263',
+            is_synthetic: false
+          }
+        }],
         git_commit_before: '168aac69403a5ca47f6ad0d96ae6b598ea1c0263',
         git_commit_after: '95925f8d52ed9f616e973b3ba7f0d5b23a6a70e6'
       });

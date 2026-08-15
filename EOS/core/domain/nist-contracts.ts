@@ -1,8 +1,9 @@
 /**
- * EOS CONTINUOUS ARCHITECTURE - NIST DOMAIN CONTRACTS (v3.0.0)
+ * EOS CONTINUOUS ARCHITECTURE - NIST DOMAIN CONTRACTS (v3.1.0)
  * 
  * Contratos formais e taxonômicos para avaliação de requisitos normativos NIST
- * (SSDF v1.1 / CSF v2.0) alinhados aos primitivos canônicos de governança do EOS.
+ * (SSDF v1.1 / CSF v2.0) com suporte a avaliação individualizada de critérios
+ * e rastreabilidade de prova não-sintética.
  */
 
 export type NistFrameworkType = 'NIST_SSDF_V1.1' | 'NIST_CSF_V2';
@@ -28,6 +29,12 @@ export type NistAssessmentStatus =
   | 'NOT_APPLICABLE' 
   | 'UNKNOWN';
 
+export type CriterionStatus = 
+  | 'SATISFIED' 
+  | 'FAILED' 
+  | 'NOT_VERIFIED' 
+  | 'UNKNOWN';
+
 export type MappingRelationship = 
   | 'EQUIVALENT' 
   | 'SUPPORTS' 
@@ -43,13 +50,29 @@ export interface NistSource {
   readonly retrieval_date: string;
 }
 
+export interface AssessmentCriterion {
+  readonly criterion_id: string; // ex: 'C1', 'C2'
+  readonly description: string;
+  readonly required: boolean;
+  readonly rule_reference?: string;
+  readonly required_evidence_type?: string;
+}
+
+export interface CriterionEvaluationResult {
+  readonly criterion_id: string;
+  readonly status: CriterionStatus;
+  readonly evidence_ids: readonly string[];
+  readonly fact_ids: readonly string[];
+  readonly rationale: string;
+}
+
 export interface NistRequirement {
   readonly requirement_id: string; // ex: 'PW.8.2'
   readonly source: NistSource;
   readonly taxonomy_kind: NistTaxonomyKind;
   readonly title: string;
   readonly description: string;
-  readonly operational_criteria: readonly string[]; // ex: C1 a C6
+  readonly criteria: readonly AssessmentCriterion[];
 }
 
 export interface ControlMapping {
@@ -57,6 +80,7 @@ export interface ControlMapping {
   readonly eos_rule_id: string;
   readonly relationship: MappingRelationship;
   readonly has_authority: boolean;
+  readonly authority_type: 'AUTHORITY_PROVEN' | 'AUTHORITY_ASSERTED';
   readonly rationale: string;
 }
 
@@ -77,10 +101,11 @@ export interface NistAssessmentResult {
   readonly version: string;
   readonly applicability: NistApplicability;
   readonly mapping: ControlMapping;
-  readonly evaluated_criteria: readonly string[];
+  readonly criterion_evaluations: readonly CriterionEvaluationResult[];
   readonly fact_ids: readonly string[];
   readonly evidence_ids: readonly string[];
   readonly finding_reference?: string;
+  readonly finding_materialization_status: 'FINDING_MATERIALIZED' | 'FINDING_REFERENCE_ONLY' | 'NO_FINDING';
   readonly status: NistAssessmentStatus;
   readonly rationale: string;
   readonly limitations: readonly string[];
