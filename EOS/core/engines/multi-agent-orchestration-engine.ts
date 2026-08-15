@@ -111,7 +111,7 @@ export class MultiAgentOrchestrationEngine {
       this.transitionTo('IMPLEMENTING', 'Dispatch Implementer');
       const implResult = await this.dispatch('IMPLEMENTER');
       
-      if (this.run.state === 'BLOCKED' || this.run.state === 'FAILED') {
+      if ((this.run.state as OrchestrationState) === 'BLOCKED' || (this.run.state as OrchestrationState) === 'FAILED') {
         return this.finishWithVerdict('BLOCKED', 'IMPLEMENTATION FAILED OR BLOCKED');
       }
 
@@ -119,7 +119,7 @@ export class MultiAgentOrchestrationEngine {
       this.transitionTo('REVIEWING', 'Dispatch Reviewer');
       const revResult = await this.dispatch('REVIEWER');
       
-      if (this.run.state === 'BLOCKED') {
+      if ((this.run.state as OrchestrationState) === 'BLOCKED') {
         return this.finishWithVerdict('BLOCKED', 'REVIEWER REJECTED IMPLEMENTATION (FALSE_GREEN_BLOCKED)');
       }
 
@@ -127,7 +127,7 @@ export class MultiAgentOrchestrationEngine {
       this.transitionTo('EVIDENCE_AUDIT', 'Dispatch Evidence Auditor');
       const auditResult = await this.dispatch('EVIDENCE_AUDITOR');
 
-      if (this.run.state === 'BLOCKED') {
+      if ((this.run.state as OrchestrationState) === 'BLOCKED') {
         return this.finishWithVerdict('BLOCKED', 'EVIDENCE AUDITOR REJECTED EVIDENCE');
       }
 

@@ -135,6 +135,64 @@ async function main() {
       break;
     }
 
+    case 'nist-assess': {
+      printBanner();
+      const reqId = args[1] || 'PW.8.2';
+      console.log(`[NIST Assessment Engine] Iniciando avaliação do Requisito Normativo: '${reqId}'...`);
+
+      const { AssessmentRemediationService } = require('../core/services/assessment-remediation-service');
+      const service = new AssessmentRemediationService();
+
+      const pw82Req = {
+        requirement_id: reqId,
+        source: {
+          framework: 'NIST_SSDF_V1.1',
+          version: '1.1',
+          title: 'NIST SP 800-218 SSDF v1.1',
+          official_url: 'https://csrc.nist.gov/pubs/sp/800/218/final',
+          retrieval_date: '2026-08-15'
+        },
+        taxonomy_kind: 'TASK',
+        title: 'Test Executable Code to Identify Vulnerabilities and Verify Compliance',
+        description: 'Scope, design, execute, and document tests to identify vulnerabilities and verify compliance with security requirements.',
+        operational_criteria: [
+          'C1: Executable code tests defined',
+          'C2: Tests executed and documented',
+          'C3: Issues recorded and triaged',
+          'C4: Remediation verified'
+        ]
+      };
+
+      const result = await service.runFullRemediationPipeline({
+        requirement: pw82Req,
+        applicability: { requirement_id: reqId, status: 'APPLICABLE', rationale: 'Core System Integrity' },
+        mapping: { requirement_id: reqId, eos_rule_id: 'SEC-RULE-502', relationship: 'EQUIVALENT', has_authority: true, rationale: 'Canonical Mapping' },
+        target_id: 'TGT-SYS',
+        initial_evidence: [{ evidence_id: 'EVI-BEFORE-FAIL', target_id: 'TGT-SYS', timestamp: new Date().toISOString(), status: 'FAIL' }],
+        git_commit_before: '168aac69403a5ca47f6ad0d96ae6b598ea1c0263',
+        git_commit_after: '95925f8d52ed9f616e973b3ba7f0d5b23a6a70e6'
+      });
+
+      console.log('\n======================================================');
+      console.log(`  🏛️ EOS NIST ASSESSMENT & REMEDIATION PIPELINE (${reqId})`);
+      console.log('======================================================\n');
+      console.log(`  - Requirement ID:     ${pw82Req.requirement_id}`);
+      console.log(`  - Initial Assessment:  [ ${result.initial_assessment.status} ]`);
+      console.log(`  - Before Snapshot:     ${result.before_snapshot?.snapshot_id}`);
+      console.log(`  - False Fix Blocked:   ${result.false_fix_blocked ? 'YES (FALSE_GREEN_BLOCKED)' : 'NO'}`);
+      console.log(`  - True Fix Run ID:     ${result.true_fix_orchestration_id}`);
+      console.log(`  - After Snapshot:      ${result.after_snapshot?.snapshot_id}`);
+      console.log(`  - Reassessment Result: [ ${result.final_reassessment.status} ]`);
+
+      if (result.final_reassessment.status === 'VERIFIED') {
+        console.log('\n✅ AVALIAÇÃO NORMATIVA E REAVALIAÇÃO CONCLUÍDAS: Critérios comprovados por evidência.');
+      } else {
+        console.error(`\n💥 AVALIAÇÃO NORMATIVA REJEITADA OU BLOQUEADA! Status: ${result.final_reassessment.status}`);
+        process.exitCode = 1;
+      }
+      break;
+    }
+
     case 'fix': {
       printBanner();
       console.error('❌ [SEGURANÇA CRÍTICA]: O comando \'eos fix\' foi DESABILITADO nesta versão.');
