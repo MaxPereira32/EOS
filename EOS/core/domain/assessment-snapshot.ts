@@ -1,34 +1,57 @@
 /**
- * EOS CONTINUOUS ARCHITECTURE - ASSESSMENT SNAPSHOT CONTRACT (v1.0.0)
+ * EOS CONTINUOUS ARCHITECTURE - ASSESSMENT SNAPSHOT CONTRACT (v2.0.0)
  * 
- * Contrato de Domínio genérico para encapsular o estado sistêmico (Auditoria) 
- * de um artefato ou ambiente em um momento específico do tempo.
- * 
- * Fundamental para provar se uma Remediação realmente resolveu uma Vulnerabilidade/Finding,
- * comparando o snapshot BEFORE (com findings e evidências do problema) 
- * contra o snapshot AFTER (com fatos e evidências atestando a correção).
+ * Contrato genérico e rigoroso de prova de auditoria e remediação.
+ * Sela criptograficamente e mecanicamente o estado de um alvo no tempo.
  */
 
 import * as crypto from 'crypto';
+import { 
+  TargetId, 
+  ExecutionId, 
+  EvidenceId, 
+  FactId, 
+  FindingId,
+  parseTargetId,
+  parseExecutionId,
+  parseEvidenceId,
+  parseFactId,
+  parseFindingId
+} from './canonical-ids';
 
 export type VerificationStatus = 'VERIFIED' | 'NOT_VERIFIED' | 'PARTIALLY_VERIFIED' | 'NON_COMPLIANT' | 'NOT_APPLICABLE' | 'UNKNOWN';
 
 export interface SnapshotProvenance {
-  readonly execution_id: string;
-  readonly executed_at: string;
+  readonly execution_id: ExecutionId;
+  readonly executed_at: string; // ISO-8601
   readonly eos_version: string;
   readonly tool_or_collector: string;
+  readonly git_commit?: string; // Required for code targets
+  readonly target_version?: string;
+  readonly artifact_hash?: string; // e.g., 'NOT_APPLICABLE' or actual hash
+}
+
+export interface SnapshotComparisonResult {
+  readonly target_id_match: boolean;
+  readonly temporal_order_valid: boolean;
+  readonly execution_changed: boolean;
+  readonly stale_evidence_reused: boolean;
+
+  readonly resolved_target_finding_ids: readonly FindingId[];
+  readonly persisting_target_finding_ids: readonly FindingId[];
+  readonly new_finding_ids: readonly FindingId[];
+
+  readonly overall_resolution_status: 'RESOLVED' | 'PARTIALLY_RESOLVED' | 'NOT_RESOLVED' | 'INVALID_COMPARISON';
 }
 
 export class AssessmentSnapshot {
   public readonly snapshot_id: string;
   public readonly snapshot_type: 'BEFORE_REMEDIATION' | 'AFTER_REMEDIATION' | 'BASELINE' | 'ROUTINE';
-  public readonly target_id: string;
+  public readonly target_id: TargetId;
   
-  // Entidades canônicas do EOS referenciadas por ID tipado
-  public readonly evidence_ids: readonly string[];
-  public readonly fact_ids: readonly string[];
-  public readonly finding_ids: readonly string[];
+  public readonly evidence_ids: readonly EvidenceId[];
+  public readonly fact_ids: readonly FactId[];
+  public readonly finding_ids: readonly FindingId[];
   
   public readonly risk_level: string;
   public readonly verification_status: VerificationStatus;
@@ -38,34 +61,47 @@ export class AssessmentSnapshot {
 
   constructor(data: {
     snapshot_type: 'BEFORE_REMEDIATION' | 'AFTER_REMEDIATION' | 'BASELINE' | 'ROUTINE';
-    target_id: string;
-    evidence_ids: string[];
-    fact_ids: string[];
-    finding_ids: string[];
+    target_id: string | TargetId;
+    evidence_ids: (string | EvidenceId)[];
+    fact_ids: (string | FactId)[];
+    finding_ids: (string | FindingId)[];
     risk_level: string;
     verification_status: VerificationStatus;
-    provenance: SnapshotProvenance;
+    provenance: {
+      execution_id: string | ExecutionId;
+      executed_at: string;
+      eos_version: string;
+      tool_or_collector: string;
+      git_commit?: string;
+      target_version?: string;
+      artifact_hash?: string;
+    };
   }) {
-    if (!data.target_id || data.target_id.trim() === '') {
-      throw new Error('AssessmentSnapshot Error: target_id obrigatório.');
-    }
-    if (!data.provenance || !data.provenance.execution_id) {
-      throw new Error('AssessmentSnapshot Error: Proveniência estrita é obrigatória.');
-    }
-
     this.snapshot_type = data.snapshot_type;
-    this.target_id = data.target_id;
-    this.evidence_ids = Object.freeze([...data.evidence_ids]);
-    this.fact_ids = Object.freeze([...data.fact_ids]);
-    this.finding_ids = Object.freeze([...data.finding_ids]);
+    this.target_id = parseTargetId(data.target_id);
+    this.evidence_ids = Object.freeze(data.evidence_ids.map(parseEvidenceId));
+    this.fact_ids = Object.freeze(data.fact_ids.map(parseFactId));
+    this.finding_ids = Object.freeze(data.finding_ids.map(parseFindingId));
     this.risk_level = data.risk_level;
     this.verification_status = data.verification_status;
-    this.provenance = Object.freeze({ ...data.provenance });
-
-    // Determina integridade unificando os IDs. Garante imutabilidade semântica do estado aferido.
-    this.snapshot_hash = this.generateHash();
     
-    // IDs como SNP-[HASH]
+    // Temporal validation
+    const date = new Date(data.provenance.executed_at);
+    if (isNaN(date.getTime())) {
+      throw new Error('AssessmentSnapshot Error: executed_at deve ser uma data ISO-8601 válida.');
+    }
+
+    this.provenance = Object.freeze({
+      execution_id: parseExecutionId(data.provenance.execution_id),
+      executed_at: date.toISOString(),
+      eos_version: data.provenance.eos_version,
+      tool_or_collector: data.provenance.tool_or_collector,
+      git_commit: data.provenance.git_commit,
+      target_version: data.provenance.target_version,
+      artifact_hash: data.provenance.artifact_hash
+    });
+
+    this.snapshot_hash = this.generateHash();
     this.snapshot_id = `SNP-${this.snapshot_hash.substring(0, 16)}`;
 
     Object.freeze(this);
@@ -75,43 +111,104 @@ export class AssessmentSnapshot {
     const seed = [
       this.snapshot_type,
       this.target_id,
-      this.evidence_ids.join(','),
-      this.fact_ids.join(','),
-      this.finding_ids.join(','),
+      [...this.evidence_ids].sort().join(','),
+      [...this.fact_ids].sort().join(','),
+      [...this.finding_ids].sort().join(','),
       this.risk_level,
       this.verification_status,
       this.provenance.execution_id,
-      this.provenance.executed_at
+      this.provenance.executed_at,
+      this.provenance.eos_version,
+      this.provenance.tool_or_collector,
+      this.provenance.git_commit || '',
+      this.provenance.target_version || '',
+      this.provenance.artifact_hash || ''
     ].join('|');
 
     return crypto.createHash('sha256').update(seed).digest('hex');
   }
 
   /**
-   * Avalia comparativamente se houve redução do estado de risco e achados entre dois snapshots.
-   * Regra de Negócio Central do EOS: BEFORE não pode usar as mesmas Evidências do AFTER.
+   * Avalia comparativamente e produz fatos mecânicos de resolução de findings.
+   * Não emite juízos de política sobre a gravidade de regressões.
    */
-  public static compare(before: AssessmentSnapshot, after: AssessmentSnapshot): { 
-    resolved: boolean; 
-    regression: boolean; 
-    stale_evidence_reused: boolean;
-  } {
+  public static compare(
+    before: AssessmentSnapshot, 
+    after: AssessmentSnapshot,
+    target_finding_ids: readonly FindingId[]
+  ): SnapshotComparisonResult {
+    
     if (before.snapshot_type !== 'BEFORE_REMEDIATION' && before.snapshot_type !== 'BASELINE') {
-      throw new Error('AssessmentSnapshot Error: O primeiro parâmetro deve ser estado anterior.');
+      throw new Error('AssessmentSnapshot Error: O primeiro parâmetro deve ser o estado anterior.');
     }
     if (after.snapshot_type !== 'AFTER_REMEDIATION' && after.snapshot_type !== 'ROUTINE') {
-      throw new Error('AssessmentSnapshot Error: O segundo parâmetro deve ser estado posterior.');
+      throw new Error('AssessmentSnapshot Error: O segundo parâmetro deve ser o estado posterior.');
     }
 
-    // Regra estrita nº 15 do Prompt Master: "Não reutilizar Evidence antiga como prova pós-correção."
-    const staleEvidenceReused = after.evidence_ids.some(id => before.evidence_ids.includes(id));
-    
-    // Verifica regresso: se há um Finding novo que não existia no Before.
-    const regression = after.finding_ids.some(id => !before.finding_ids.includes(id));
-    
-    // Sucesso: não há findings ativos relacionados ao escopo e não usou evidência antiga
-    const resolved = after.finding_ids.length === 0 && !regression && !staleEvidenceReused;
+    if (target_finding_ids.length === 0) {
+      throw new Error('AssessmentSnapshot Error: Escopo de remediação ausente (target_finding_ids vazio).');
+    }
 
-    return { resolved, regression, stale_evidence_reused: staleEvidenceReused };
+    for (const tid of target_finding_ids) {
+      if (!before.finding_ids.includes(tid)) {
+        throw new Error(`AssessmentSnapshot Error: Finding alvo ${tid} não existe no estado BEFORE.`);
+      }
+    }
+
+    // Invariantes estritas
+    const target_id_match = before.target_id === after.target_id;
+    if (!target_id_match) {
+      throw new Error('TARGET_MISMATCH: Tentativa de comparar dois alvos distintos.');
+    }
+
+    const tBefore = new Date(before.provenance.executed_at).getTime();
+    const tAfter = new Date(after.provenance.executed_at).getTime();
+    const temporal_order_valid = tAfter > tBefore;
+
+    if (!temporal_order_valid) {
+      throw new Error('INVALID_TEMPORAL_ORDER: O snapshot AFTER deve ser estritamente posterior ao BEFORE.');
+    }
+
+    const execution_changed = before.provenance.execution_id !== after.provenance.execution_id;
+    if (!execution_changed && after.snapshot_type === 'AFTER_REMEDIATION') {
+      throw new Error('INVALID_EXECUTION_STATE: Snapshot de remediação exige uma nova execução.');
+    }
+
+    // Fact generation
+    const resolved_target_finding_ids: FindingId[] = [];
+    const persisting_target_finding_ids: FindingId[] = [];
+    
+    for (const tid of target_finding_ids) {
+      if (after.finding_ids.includes(tid)) {
+        persisting_target_finding_ids.push(tid);
+      } else {
+        resolved_target_finding_ids.push(tid);
+      }
+    }
+
+    const new_finding_ids: FindingId[] = after.finding_ids.filter(id => !before.finding_ids.includes(id));
+    
+    const stale_evidence_reused = after.evidence_ids.some(id => before.evidence_ids.includes(id));
+
+    let overall_resolution_status: SnapshotComparisonResult['overall_resolution_status'] = 'NOT_RESOLVED';
+    
+    if (stale_evidence_reused) {
+      overall_resolution_status = 'INVALID_COMPARISON';
+    } else if (resolved_target_finding_ids.length === target_finding_ids.length) {
+      overall_resolution_status = 'RESOLVED';
+    } else if (resolved_target_finding_ids.length > 0) {
+      overall_resolution_status = 'PARTIALLY_RESOLVED';
+    }
+
+    return Object.freeze({
+      target_id_match,
+      temporal_order_valid,
+      execution_changed,
+      stale_evidence_reused,
+      resolved_target_finding_ids: Object.freeze(resolved_target_finding_ids),
+      persisting_target_finding_ids: Object.freeze(persisting_target_finding_ids),
+      new_finding_ids: Object.freeze(new_finding_ids),
+      overall_resolution_status
+    });
   }
 }
