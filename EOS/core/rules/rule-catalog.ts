@@ -16,6 +16,7 @@ export interface EnterpriseRule {
   cvss_v4_vector: string;
   taxonomy: SecurityTaxonomy;
   evaluation_method: 'AST_STATIC' | 'DTI_RUNTIME' | 'IAC_TERRAFORM' | 'DEPENDENCY_ANALYSIS';
+  aas_skill_ids?: string[];
 }
 
 export class RuleCatalog {
@@ -38,6 +39,7 @@ export class RuleCatalog {
         mitre_attack_id: 'T1539 - Steal Web Session Cookie',
       },
       evaluation_method: 'DTI_RUNTIME',
+      aas_skill_ids: ['cloudflare-security-audit', 'security-compliance-compliance-check'],
     });
 
     // 2. Injeção / JWT Inseguro
@@ -56,6 +58,7 @@ export class RuleCatalog {
         mitre_attack_id: 'T1550 - Use Alternate Authentication Material',
       },
       evaluation_method: 'DTI_RUNTIME',
+      aas_skill_ids: ['nextjs-supabase-auth', 'security-compliance-compliance-check'],
     });
 
     // 3. Violações Arquiteturais de Acoplamento
@@ -73,6 +76,7 @@ export class RuleCatalog {
         mitre_attack_id: 'T1195 - Supply Chain Compromise',
       },
       evaluation_method: 'AST_STATIC',
+      aas_skill_ids: ['ecl-harness-engineer', 'trpc-fullstack'],
     });
 
     // 4. Inoculação de Segredos em Código Fonte
@@ -90,6 +94,7 @@ export class RuleCatalog {
         mitre_attack_id: 'T1552 - Unsecured Credentials',
       },
       evaluation_method: 'AST_STATIC',
+      aas_skill_ids: ['security-compliance-compliance-check', 'cloudflare-security-audit'],
     });
   }
 

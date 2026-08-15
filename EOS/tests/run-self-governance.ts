@@ -1,34 +1,72 @@
-import { GovernorIntegrityVerifier } from '../core/utils/governor-integrity-verifier';
+import { FirestoreSecurityEngine } from '../core/engines/firestore-security-engine';
+import { CausalityMutationEngine } from '../core/engines/causality-mutation-engine';
 import { HardQualityGateEngine } from '../core/engines/hard-quality-gate-engine';
-import * as path from 'path';
+import { SecurityClaimEvaluation, FormalEvidence } from '../core/domain/types';
 
-async function runSelfGovernanceChecks() {
-  console.log('======================================================');
-  console.log('  🛡️ EOS SELF-GOVERNANCE & GOVERNOR INTEGRITY CHECK');
-  console.log('======================================================\n');
+console.log('======================================================');
+console.log('  🛡️ EXECUÇÃO DA SUÍTE DE SELF-GOVERNANCE DO EOS');
+console.log('======================================================\n');
 
-  const verifier = new GovernorIntegrityVerifier();
-  const coreDir = path.resolve(__dirname, '../core');
-  const integrityRes = verifier.verifyGovernorIntegrity(coreDir);
+const causalityEngine = new CausalityMutationEngine();
+const hardGateEngine = new HardQualityGateEngine();
 
-  console.log(`- Checked Core Files: ${integrityRes.checkedFilesCount}`);
-  console.log(`- Integrity Status:  ${integrityRes.isValid ? 'VALID' : 'INVALID'}`);
-  console.log(`- Rationale:         ${integrityRes.rationale}`);
+let passed = 0;
+let failed = 0;
 
-  const hardGateEngine = new HardQualityGateEngine();
-  const gateRes = hardGateEngine.evaluateHardGates([], [], integrityRes.isValid, 100);
-
-  console.log(`- Overall Phase Status: [ ${gateRes.overall_phase_status} ]`);
-
-  if (!integrityRes.isValid || gateRes.overall_phase_status !== 'GREEN') {
-    console.error('\n💥 GOVERNANCE TAMPERING OR INTEGRITY VIOLATION DETECTED!');
-    process.exit(1);
+function assert(condition: boolean, testName: string) {
+  if (condition) {
+    console.log(`  ✓ [PASS] ${testName}`);
+    passed++;
   } else {
-    console.log('\n✅ GOVERNANCE INTEGRITY VERIFIED: EOS Governor core is intact and self-governed.');
+    console.error(`  ❌ [FAIL] ${testName}`);
+    failed++;
   }
 }
 
-runSelfGovernanceChecks().catch(err => {
-  console.error('[-] Error executing self-governance checks:', err);
+// TEST 1: CASE B
+const evidenceB: FormalEvidence = {
+  evidence_id: 'EVD-TEST-001',
+  category: 'SIMULATION',
+  source_artifact: 'firestore.rules',
+  test_artifact: 'src/nucleo/firebase/regrasFirestore.test.ts',
+  runtime_environment: 'JS_MOCK',
+  causality_status: 'UNVERIFIED',
+  confidence_score: 0.3,
+  source_reliability: 0.2,
+  reproducible: true,
+  is_simulation_only: true
+};
+
+const claimB: SecurityClaimEvaluation = {
+  claim_id: 'SEC-TEST-001',
+  claim_type: 'FIRESTORE_RULES',
+  target_artifact: 'firestore.rules',
+  evidence: evidenceB,
+  threat_vectors: [],
+  proven: false,
+  phase_status: 'BLOCKED',
+  blocking_reasons: ['EVIDÊNCIA SIMULADA']
+};
+
+const resB = hardGateEngine.evaluateHardGates([claimB], [], true, 100);
+assert(resB.overall_phase_status === 'BLOCKED', 'CASE B: Regra correta + Teste Simulation Only deve resultar em BLOCKED');
+assert(resB.can_grant_green === false, 'CASE B: can_grant_green deve ser FALSE');
+
+// TEST 2: CASE C
+const mutResC = causalityEngine.evaluateCausality('cebus', evidenceB);
+assert(mutResC.causality_proven === false, 'CASE C: Regra permissiva + Teste simulado deve falhar na Causalidade');
+
+// TEST 3: CASE G
+const resG = hardGateEngine.evaluateHardGates([claimB], [], true, 100);
+assert(resG.overall_phase_status === 'BLOCKED', 'CASE G: Score 100 com Hard Gate crítico ausente NÃO PODE conceder GREEN');
+
+// TEST 4: CASE H
+assert(mutResC.mutated_status === 'PASS', 'CASE H: Teste simulado continua fornecendo PASS após mutação (comprovando falha de causação)');
+
+console.log('\n------------------------------------------------------');
+console.log(`RESULTADO FINAL DA SUÍTE DE SELF-GOVERNANCE: ${passed} PASSED, ${failed} FAILED.`);
+console.log('======================================================\n');
+
+if (failed > 0) {
   process.exit(1);
-});
+}

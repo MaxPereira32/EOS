@@ -1,0 +1,2 @@
+   nginx.ingress.kubernetes.io/server-snippet: |
+     if ($request_method = TRACE) { return 405; }

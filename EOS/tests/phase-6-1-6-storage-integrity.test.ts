@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert';
 import * as path from 'node:path';
 import { DurableFactRepository } from '../core/storage/file-fact-repository';
-import { FACT_SCHEMA_VERSION_1_0, Fact } from '../core/domain/types';
+import { FACT_SCHEMA_VERSION_1_0, Fact, FactPayload } from '../core/domain/types';
 import { canonicalHash } from '../core/utils/canonical-json';
 
 const fs = require('node:fs');
@@ -14,11 +14,16 @@ if (fs.existsSync(TMP_DIR)) {
 fs.mkdirSync(TMP_DIR, { recursive: true });
 
 function createDummyFact(id: string): Fact {
-  const payload = { a: { b: { c: 'original' } }, x: 0 };
+  const payload: FactPayload = {
+    fact_type: 'FILE_STRUCTURE',
+    directory: 'src',
+    naming_convention: 'camelCase',
+    status: 'PRESENT'
+  };
   return {
     fact_id: id,
     schema_version: FACT_SCHEMA_VERSION_1_0,
-    fact_type: 'TEST_FACT',
+    fact_type: 'FILE_STRUCTURE',
     provider_id: 'test_provider',
     provider_version: '1.0',
     evidence_ids: ['ev1'],
@@ -27,16 +32,18 @@ function createDummyFact(id: string): Fact {
     lifecycle_status: 'VALID',
     payload,
     composite_confidence: 1.0,
-    created_at: Date.now()
+    created_at: new Date().toISOString()
   };
 }
 
 test('Phase 6.1.6 Storage Integrity Suite', async (t) => {
+  const originalOpenSync = fs.openSync;
   const originalWriteFileSync = fs.writeFileSync;
   const originalFsyncSync = fs.fsyncSync;
   const originalCloseSync = fs.closeSync;
 
   t.afterEach(() => {
+    fs.openSync = originalOpenSync;
     fs.writeFileSync = originalWriteFileSync;
     fs.fsyncSync = originalFsyncSync;
     fs.closeSync = originalCloseSync;
@@ -50,16 +57,11 @@ test('Phase 6.1.6 Storage Integrity Suite', async (t) => {
     let closedFds: number[] = [];
     fs.closeSync = (fd: number) => {
       closedFds.push(fd);
-      originalCloseSync(fd);
+      return originalCloseSync(fd);
     };
 
-    fs.writeFileSync = (fd: any, data: any, options: any) => {
-      if (typeof fd === 'number') {
-        const err = new Error('ENOSPC: no space left on device, write');
-        (err as any).code = 'ENOSPC';
-        throw err;
-      }
-      return originalWriteFileSync(fd, data, options);
+    fs.writeFileSync = () => {
+      throw new Error('EIO: I/O error during write');
     };
 
     let errorThrown = false;
@@ -67,11 +69,11 @@ test('Phase 6.1.6 Storage Integrity Suite', async (t) => {
       repo.save(fact);
     } catch (e: any) {
       errorThrown = true;
-      assert.ok(e.message.includes('ENOSPC'), 'Primary error should be preserved in FactIntegrityError message');
+      assert.ok(e.message.includes('EIO'));
     }
 
-    assert.ok(errorThrown, 'Should throw wrapping ENOSPC');
-    assert.ok(closedFds.length > 0, 'FD should be closed in finally');
+    assert.ok(errorThrown, 'Error should have been thrown');
+    assert.strictEqual(closedFds.length, 1, 'closeSync should have been called exactly once');
   });
 
   await t.test('Test B - Falha de fsyncSync não vaza FD', (t) => {
@@ -82,13 +84,11 @@ test('Phase 6.1.6 Storage Integrity Suite', async (t) => {
     let closedFds: number[] = [];
     fs.closeSync = (fd: number) => {
       closedFds.push(fd);
-      originalCloseSync(fd);
+      return originalCloseSync(fd);
     };
 
-    fs.fsyncSync = (fd: number) => {
-      const err = new Error('EIO: i/o error');
-      (err as any).code = 'EIO';
-      throw err;
+    fs.fsyncSync = () => {
+      throw new Error('EROFS: read-only file system');
     };
 
     let errorThrown = false;
@@ -96,11 +96,11 @@ test('Phase 6.1.6 Storage Integrity Suite', async (t) => {
       repo.save(fact);
     } catch (e: any) {
       errorThrown = true;
-      assert.ok(e.message.includes('EIO'), 'Primary error should be preserved in FactIntegrityError message');
+      assert.ok(e.message.includes('EROFS'));
     }
 
-    assert.ok(errorThrown, 'Should throw wrapping EIO');
-    assert.ok(closedFds.length > 0, 'FD should be closed in finally');
+    assert.ok(errorThrown, 'Error should have been thrown');
+    assert.strictEqual(closedFds.length, 1, 'closeSync should have been called exactly once');
   });
 
   await t.test('Test C - Recuperação Real da Aquisição (Lock Rollback)', (t) => {
@@ -110,16 +110,23 @@ test('Phase 6.1.6 Storage Integrity Suite', async (t) => {
     const fact1 = createDummyFact('FC-1');
     const fact2 = createDummyFact('FC-2');
 
-    let attempt = 0;
-    fs.writeFileSync = (fd: any, data: any, options: any) => {
-      attempt++;
-      if (attempt === 1) {
-        originalWriteFileSync(fd, data, options);
-        const err = new Error('ENOSPC: no space left on device, write');
-        (err as any).code = 'ENOSPC';
-        throw err;
+    const tmpFds = new Set<number>();
+    const originalOpenSync = fs.openSync;
+    fs.openSync = (p: any, flags: any, mode: any) => {
+      const fd = originalOpenSync(p, flags, mode);
+      if (typeof p === 'string' && path.basename(p).includes('.tmp_')) {
+        tmpFds.add(fd);
       }
-      return originalWriteFileSync(fd, data, options);
+      return fd;
+    };
+
+    let failedOnce = false;
+    fs.writeFileSync = (file: any, data: any, options: any) => {
+      if (!failedOnce && typeof file === 'number' && tmpFds.has(file)) {
+        failedOnce = true;
+        throw new Error('ENOSPC: no space left on device');
+      }
+      return originalWriteFileSync(file, data, options);
     };
 
     let errorThrown = false;
@@ -144,7 +151,7 @@ test('Phase 6.1.6 Storage Integrity Suite', async (t) => {
 
     repo.save(fact);
 
-    fact.evidence_ids.push('xyz');
+    (fact.evidence_ids as string[]).push('xyz');
     (fact.payload as any).x = 1;
 
     assert.ok(fact.evidence_ids.includes('xyz'), 'Caller should be able to mutate array');
@@ -158,19 +165,18 @@ test('Phase 6.1.6 Storage Integrity Suite', async (t) => {
 
     repo.save(fact);
 
-    (fact.payload as any).a.b.c = 'caller-mutated';
+    (fact.payload as any).directory = 'caller-mutated';
 
     const persisted = repo.getById(fact.fact_id);
     
-    assert.strictEqual((fact.payload as any).a.b.c, 'caller-mutated', 'Caller mutability check');
-    assert.notStrictEqual((persisted?.payload as any).a.b.c, 'caller-mutated', 'Repository must not share mutation');
+    assert.strictEqual((fact.payload as any).directory, 'caller-mutated', 'Caller mutability check');
+    assert.notStrictEqual((persisted?.payload as any).directory, 'caller-mutated', 'Repository must not share mutation');
     
     assert.notStrictEqual(persisted?.payload, fact.payload, 'Payload reference must differ');
-    assert.notStrictEqual((persisted?.payload as any).a.b, (fact.payload as any).a.b, 'Deep payload reference must differ');
     assert.notStrictEqual(persisted?.evidence_ids, fact.evidence_ids, 'Array reference must differ');
 
-    (fact.payload as any).a.b.c = 'another-value';
+    (fact.payload as any).directory = 'another-value';
     const persistedAgain = repo.getById(fact.fact_id);
-    assert.notStrictEqual((persistedAgain?.payload as any).a.b.c, 'another-value', 'Subsequent GETs must remain isolated');
+    assert.notStrictEqual((persistedAgain?.payload as any).directory, 'another-value', 'Subsequent GETs must remain isolated');
   });
 });

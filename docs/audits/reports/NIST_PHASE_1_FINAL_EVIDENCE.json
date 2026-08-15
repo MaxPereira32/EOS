@@ -1,0 +1,75 @@
+{
+  "phase": 1,
+  "component": "SystemContext",
+  "audit_execution": {
+    "timestamp": "2026-08-15T00:54:00Z",
+    "eos_version": "2.2.0",
+    "node_version": "v24.17.0"
+  },
+  "findings_registry": [
+    {
+      "finding_id": "ARCH-001",
+      "status": "RESOLVED",
+      "severity": "MEDIUM",
+      "root_cause": "Policy inference embedded inside SystemContext.",
+      "remediation_method": "Responsibility Extraction / Policy Separation.",
+      "action": "Remove policy-derived behavior from SystemContext.",
+      "target_state": "SystemContext contains only state representation and structural validation.",
+      "evidence_before": {
+        "status": "BEFORE_REPRODUCTION_LIMITED",
+        "rationale": "Alteração efetuada dinamicamente sem hash de commit estrito gravado para o delta exato."
+      },
+      "validation": {
+        "text_search_evidence": {
+          "tool": "grep_search",
+          "query": ["hasPublicDataExposureRisk", "isContainerizedCloud"],
+          "result": "No results found"
+        },
+        "dependency_analysis": {
+          "tool": "npx dependency-cruiser --no-config EOS/core/domain",
+          "result": "no dependency violations found (4 modules, 0 dependencies cruised)",
+          "limitation": "Configuração arquitetural oficial não encontrada. Isolamento comprovado restrito aos arquivos do diretório de domínio."
+        }
+      }
+    }
+  ],
+  "taxonomies": {
+    "KNOWN_DEFECT": [
+      {
+        "id": "TSC-001",
+        "description": "Pre-existing TypeScript errors in phase-6-1-6-storage-integrity.test.ts and self-governance-security.test.ts."
+      }
+    ]
+  },
+  "validation_results": {
+    "unit_tests": {
+      "command": "npm run test",
+      "test_files": 4,
+      "tests_executed": 39,
+      "passed": 39,
+      "failed": 0,
+      "skipped": 0,
+      "duration_ms": 1055,
+      "exit_code": 0
+    },
+    "self_governance": {
+      "command": "npm run self-governance",
+      "result": "INTEGRIDADE DO GOVERNADOR VERIFICADA",
+      "exit_code": 0
+    },
+    "type_check": {
+      "command": "npx tsc --noEmit",
+      "phase_1_errors": 0,
+      "pre_existing_errors": 9,
+      "exit_code": 1
+    }
+  },
+  "provenance_limitation": {
+    "structural_validity": "VERIFIED",
+    "semantic_truthfulness": "NOT AUTOMATICALLY VERIFIED",
+    "source": "Manual / Declared",
+    "automated_collector": "Not implemented",
+    "residual_risk": "Low/Medium"
+  },
+  "final_verdict": "GREEN — VERIFIED WITH RESIDUAL RISK"
+}

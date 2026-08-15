@@ -1,0 +1,1 @@
+ res.cookie("__Host-session_id", token, { path: "/", secure: true, httpOnly: true, sameSite: "strict" });

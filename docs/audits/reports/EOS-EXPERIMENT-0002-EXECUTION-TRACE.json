@@ -1,0 +1,80 @@
+{
+  "run_id": "ORC-1786759601122",
+  "finding_id": "FND-SYSCTX-01",
+  "target_id": "TGT-SYS",
+  "created_at": "2026-08-15T02:06:41.122Z",
+  "eos_version": "2.2.0",
+  "state": "VERIFIED",
+  "agent_runs": [
+    {
+      "run_id": "ORC-1786759601122",
+      "agent_id": "CLI-IMP",
+      "role": "IMPLEMENTER",
+      "status": "SUCCESS"
+    },
+    {
+      "run_id": "ORC-1786759601122",
+      "agent_id": "CLI-REV",
+      "role": "REVIEWER",
+      "status": "SUCCESS"
+    },
+    {
+      "run_id": "ORC-1786759601122",
+      "agent_id": "CLI-EVI",
+      "role": "EVIDENCE_AUDITOR",
+      "status": "SUCCESS",
+      "evidence_ids": [
+        "EVI-123"
+      ]
+    }
+  ],
+  "transitions": [
+    {
+      "timestamp": "2026-08-15T02:06:41.124Z",
+      "from_state": "CREATED",
+      "to_state": "ANALYZING",
+      "trigger": "Start Analysis"
+    },
+    {
+      "timestamp": "2026-08-15T02:06:41.124Z",
+      "from_state": "ANALYZING",
+      "to_state": "PLANNING",
+      "trigger": "Start Planning"
+    },
+    {
+      "timestamp": "2026-08-15T02:06:41.124Z",
+      "from_state": "PLANNING",
+      "to_state": "IMPLEMENTING",
+      "trigger": "Dispatch Implementer"
+    },
+    {
+      "timestamp": "2026-08-15T02:06:41.124Z",
+      "from_state": "IMPLEMENTING",
+      "to_state": "REVIEWING",
+      "trigger": "Dispatch Reviewer"
+    },
+    {
+      "timestamp": "2026-08-15T02:06:41.124Z",
+      "from_state": "REVIEWING",
+      "to_state": "EVIDENCE_AUDIT",
+      "trigger": "Dispatch Evidence Auditor"
+    },
+    {
+      "timestamp": "2026-08-15T02:06:41.125Z",
+      "from_state": "EVIDENCE_AUDIT",
+      "to_state": "RECONCILING",
+      "trigger": "Reconciliation Engine Started"
+    },
+    {
+      "timestamp": "2026-08-15T02:06:41.125Z",
+      "from_state": "RECONCILING",
+      "to_state": "VERIFIED",
+      "trigger": "All Agents SUCCEEDED and Evidence Validated"
+    }
+  ],
+  "verdict": {
+    "status": "VERIFIED",
+    "rationale": "EOS ORCHESTRATION VERIFIED",
+    "final_state": "VERIFIED"
+  }
+}

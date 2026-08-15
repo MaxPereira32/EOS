@@ -1,0 +1,213 @@
+{
+  "auditMetadata": {
+    "pilot": "EOS-CEBUS-PHASE-C1",
+    "targetRepository": "Cebus (estoque-kitchen)",
+    "auditMode": "READ-ONLY",
+    "timestamp": "2026-08-15T02:39:00Z",
+    "status": "COMPLETED",
+    "prohibitionsEnforced": {
+      "codeModified": false,
+      "commitsCreated": false,
+      "prsCreated": false,
+      "configChanged": false,
+      "firestoreRulesChanged": false,
+      "testsModified": false
+    }
+  },
+  "empiricalEvidence": {
+    "typeCheck": {
+      "command": "npx tsc --project tsconfig.app.json --noEmit",
+      "exitCode": 1,
+      "totalErrors": 15,
+      "errors": [
+        {
+          "file": "src/nucleo/servicos/servicoEstoque.ts",
+          "line": 99,
+          "column": 9,
+          "code": "TS2304",
+          "message": "Cannot find name 'setDoc'."
+        },
+        {
+          "file": "src/nucleo/servicos/servicoEstoque.ts",
+          "line": 105,
+          "column": 9,
+          "code": "TS2304",
+          "message": "Cannot find name 'setDoc'."
+        },
+        {
+          "file": "src/nucleo/servicos/servicoEstoque.ts",
+          "line": 55,
+          "column": 12,
+          "code": "TS2352",
+          "message": "Conversion of type with missing required property 'quantidade' to type 'Estoque' may be a mistake."
+        },
+        {
+          "file": "src/modulos/Permissoes.tsx",
+          "line": 149,
+          "column": 5,
+          "code": "TS2552",
+          "message": "Cannot find name 'setCarregando'. Did you mean 'setCarregandoLogs'?"
+        },
+        {
+          "file": "src/modulos/Permissoes.tsx",
+          "line": 165,
+          "column": 9,
+          "code": "TS2552",
+          "message": "Cannot find name 'setCarregando'. Did you mean 'setCarregandoLogs'?"
+        },
+        {
+          "file": "src/modulos/Permissoes.tsx",
+          "line": 189,
+          "column": 11,
+          "code": "TS2552",
+          "message": "Cannot find name 'setCarregando'. Did you mean 'setCarregandoLogs'?"
+        },
+        {
+          "file": "src/estados/useCronogramaStore.ts",
+          "line": 51,
+          "column": 9,
+          "code": "TS2345",
+          "message": "Type '{ id: string; }[]' is missing properties 'titulo', 'data_limite' from type 'Tarefa[]'."
+        },
+        {
+          "file": "src/estados/useDistribuicaoStore.ts",
+          "line": 28,
+          "column": 7,
+          "code": "TS2322",
+          "message": "Property 'DiaSemana' is optional in 'DistribuicaoItem' but required in 'Distribuicao'."
+        },
+        {
+          "file": "src/estados/useEntradaStore.ts",
+          "line": 28,
+          "column": 7,
+          "code": "TS2322",
+          "message": "Property 'ID_Produto' is optional in 'EntradaItem' but required in 'Entrada'."
+        },
+        {
+          "file": "src/estados/useEquipeStore.ts",
+          "line": 31,
+          "column": 7,
+          "code": "TS2322",
+          "message": "Types of property 'criadoEm' are incompatible: Date vs string."
+        },
+        {
+          "file": "src/estados/useFornecedorStore.ts",
+          "line": 31,
+          "column": 7,
+          "code": "TS2322",
+          "message": "Types of property 'criadoEm' are incompatible: Date vs string."
+        },
+        {
+          "file": "src/estados/useSaidaStore.ts",
+          "line": 28,
+          "column": 7,
+          "code": "TS2322",
+          "message": "Property 'ID_Produto' is optional in 'SaidaItem' but required in 'Saida'."
+        }
+      ]
+    },
+    "testSuite": {
+      "command": "npx vitest run",
+      "exitCode": 0,
+      "testFilesTotal": 9,
+      "testFilesPassed": 9,
+      "testsTotal": 45,
+      "testsPassed": 45,
+      "uncoveredServices": [
+        "src/nucleo/servicos/servicoEstoque.ts",
+        "src/nucleo/servicos/servicoEntrada.ts",
+        "src/nucleo/servicos/servicoSaida.ts",
+        "src/nucleo/servicos/servicoMovimentacao.ts",
+        "src/nucleo/servicos/servicoDistribuicao.ts",
+        "src/nucleo/servicos/servicoAuth.ts",
+        "src/nucleo/servicos/servicoUsuarios.ts",
+        "src/nucleo/servicos/servicoLog.ts"
+      ],
+      "uncoveredRules": [
+        "firestore.rules"
+      ]
+    },
+    "staticAnalysis": {
+      "deadValidationSchemas": {
+        "file": "src/nucleo/validacoes/schemas.ts",
+        "definedSchemas": [
+          "schemaProduto",
+          "schemaEntrada",
+          "schemaSaida",
+          "schemaDistribuicao",
+          "schemaFornecedor",
+          "schemaEquipe",
+          "schemaUsuario",
+          "schemaLogin",
+          "schemaConfiguracoes"
+        ],
+        "importCountInUi": 0
+      },
+      "ruleServiceMismatch": {
+        "ruleFile": "firestore.rules",
+        "ruleLine": 73,
+        "ruleConstraint": "allow update, delete: if false; on /logs/{logId}",
+        "serviceFile": "src/nucleo/servicos/servicoLog.ts",
+        "conflictingFunctions": [
+          "servicoResolverLog",
+          "servicoResolverMultiplosLogs",
+          "servicoReabrirLog",
+          "servicoExcluirLog"
+        ]
+      },
+      "transactionalAtomicityViolation": {
+        "moduleFiles": [
+          "src/modulos/Entradas.tsx",
+          "src/modulos/Saidas.tsx"
+        ],
+        "entryFlow": "adicionarEntrada() writes to /entradas first, then somarEntrada() updates /estoque. Non-atomic failure risk.",
+        "exitFlow": "adicionarSaida() writes to /saidas first, then subtrairSaida() updates /estoque. If subtrairSaida throws error due to negative stock, orphan exit document remains in /saidas.",
+        "deletionFlow": "excluirItem() removes record from /entradas or /saidas without reducing/reverting /estoque balance."
+      }
+    }
+  },
+  "findingsSummary": [
+    {
+      "id": "FINDING-CEBUS-001",
+      "severity": "CRITICAL",
+      "category": "Domain Invariant & Transactional Integrity",
+      "status": "VERIFIED FINDING",
+      "summary": "Non-atomic inventory updates & orphan exit records causing stock desynchronization and negative stock potential."
+    },
+    {
+      "id": "FINDING-CEBUS-002",
+      "severity": "HIGH",
+      "category": "Security & Architectural Mismatch",
+      "status": "VERIFIED FINDING",
+      "summary": "Firestore rules block update/delete on /logs while servicoLog attempts frontend updates/deletions."
+    },
+    {
+      "id": "FINDING-CEBUS-003",
+      "severity": "HIGH",
+      "category": "Architecture & Compilation",
+      "status": "VERIFIED FINDING",
+      "summary": "Undeclared identifier setDoc in servicoEstoque.ts and setCarregando in Permissoes.tsx break compilation."
+    },
+    {
+      "id": "FINDING-CEBUS-004",
+      "severity": "MEDIUM",
+      "category": "Security & Data Hygiene",
+      "status": "VERIFIED FINDING",
+      "summary": "Dead input validation schemas in schemas.ts leave UI forms without Anti-XSS or format enforcement."
+    },
+    {
+      "id": "FINDING-CEBUS-005",
+      "severity": "MEDIUM",
+      "category": "Type Safety & Contract Integrity",
+      "status": "VERIFIED FINDING",
+      "summary": "TypeScript interface drift between Zustand store declarations and Firestore service return types."
+    },
+    {
+      "id": "FINDING-CEBUS-006",
+      "severity": "MEDIUM",
+      "category": "Test & Verification Quality",
+      "status": "VERIFIED FINDING",
+      "summary": "0% test coverage for core business services and Firestore security rules despite 100% vitest suite pass rate."
+    }
+  ]
+}

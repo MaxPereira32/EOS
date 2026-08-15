@@ -1,0 +1,63 @@
+{
+  "experiment_id": "EOS-EXPERIMENT-0002",
+  "status": "GREEN — ORCHESTRATION CORE VERIFIED",
+  "orchestration_coverage": {
+    "state_machine": "VERIFIED",
+    "invalid_transitions": "VERIFIED",
+    "evidence_sufficiency_gate": "VERIFIED",
+    "mock_default_safety": "VERIFIED",
+    "real_llm_execution": "NOT_YET_VERIFIED"
+  },
+  "traceability_matrix": [
+    {
+      "stage": "State Machine Init",
+      "eos_controlled": true,
+      "agent": "Orchestrator",
+      "input": "FND-SYSCTX-01",
+      "output": "CREATED",
+      "evidence": "Transition Log 0",
+      "automated": true,
+      "status": "PASS"
+    },
+    {
+      "stage": "Implementation Dispatch",
+      "eos_controlled": true,
+      "agent": "IMPLEMENTER",
+      "input": "AgentContext",
+      "output": "AgentResult (SUCCESS)",
+      "evidence": "AgentRun 0",
+      "automated": true,
+      "status": "PASS"
+    },
+    {
+      "stage": "Review Dispatch",
+      "eos_controlled": true,
+      "agent": "REVIEWER",
+      "input": "AgentContext",
+      "output": "AgentResult (SUCCESS)",
+      "evidence": "AgentRun 1",
+      "automated": true,
+      "status": "PASS"
+    },
+    {
+      "stage": "Evidence Audit Dispatch",
+      "eos_controlled": true,
+      "agent": "EVIDENCE_AUDITOR",
+      "input": "AgentContext",
+      "output": "AgentResult (SUCCESS)",
+      "evidence": "AgentRun 2",
+      "automated": true,
+      "status": "PASS"
+    },
+    {
+      "stage": "Reconciliation",
+      "eos_controlled": true,
+      "agent": "Orchestrator",
+      "input": "AgentResults",
+      "output": "VERIFIED",
+      "evidence": "Verdict Rationale",
+      "automated": true,
+      "status": "PASS"
+    }
+  ]
+}
