@@ -102,6 +102,9 @@ export class AssessmentSnapshot {
     if (data.provenance.target_type === 'ARTIFACT' && (!data.provenance.artifact_hash || data.provenance.artifact_hash.trim() === '')) {
       throw new Error('AssessmentSnapshot Error: artifact_hash is REQUIRED for ARTIFACT targets.');
     }
+    if (data.provenance.target_type === 'UNKNOWN' && data.verification_status !== 'NOT_VERIFIED') {
+      throw new Error('AssessmentSnapshot Error: UNKNOWN target_type can only have NOT_VERIFIED status.');
+    }
 
     this.provenance = Object.freeze({
       execution_id: parseExecutionId(data.provenance.execution_id),

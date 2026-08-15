@@ -1,60 +1,30 @@
 {
-  "phase": 2,
-  "component": "AssessmentSnapshot",
-  "audit_execution": {
-    "timestamp": "2026-08-15T01:25:35Z",
-    "eos_version": "2.2.0",
-    "baseline_commit": "PHASE2_HARDENING_BEFORE (commit 581ce7d)",
-    "current_commit": "PENDING_COMMIT"
-  },
-  "residual_risks_remediated": [
-    {
-      "finding": "git_commit opcional sem enforcement",
-      "root_cause": "Target agnóstico permitia ocultar a ausência de commit.",
-      "remediation_method": "TargetProvenancePolicy",
-      "implementation": "Introdução de TargetType e validação runtime no construtor para SOURCE_CODE."
-    },
-    {
-      "finding": "artifact_hash opcional sem applicability",
-      "root_cause": "Ausência de classificação de alvos materiais.",
-      "remediation_method": "TargetProvenancePolicy",
-      "implementation": "Validação runtime no construtor para ARTIFACT."
-    },
-    {
-      "finding": "Falta de comprovação de proveniência nos testes",
-      "root_cause": "Suíte não cobria os metadados opcionais.",
-      "remediation_method": "Negative Testing Expansion",
-      "implementation": "Bloco 'Target Provenance Policy' adicionado à suíte, provando rejeição."
-    },
-    {
-      "finding": "Falta de proveniência documental",
-      "root_cause": "Relatório gerado em diretório externo/isolado do repositório.",
-      "remediation_method": "Document Provenance Correction",
-      "implementation": "NIST_PHASE_2_FINAL_VERIFICATION_REPORT.md versionado no GitHub."
-    }
+  "finding": "Residual risks involving optional git_commit, artifact_hash, permissive UNKNOWN target types, absent formal reports on the repository and overconfident terminology.",
+  "root_cause": "AssessmentSnapshot lacked strict Domain invariant enforcement based on explicit TargetTypes.",
+  "method": "TargetProvenancePolicy (Native TargetType constraint and Error throwing at runtime).",
+  "files_changed": [
+    "EOS/core/domain/assessment-snapshot.ts",
+    "EOS/tests/phase-nist-2-assessment-snapshot.test.ts",
+    "NIST_PHASE_2_FINAL_VERIFICATION_REPORT.md",
+    "NIST_PHASE_2_FINAL_VERIFICATION_EVIDENCE.json"
   ],
-  "validation_results": {
-    "unit_tests": {
-      "command": "npm run test",
-      "suites": 3,
-      "tests": 44,
-      "passed": 44,
-      "failed": 0,
-      "duration_ms": 2273
-    },
-    "self_governance": {
-      "command": "npm run self-governance",
-      "result": "INTEGRIDADE DO GOVERNADOR VERIFICADA"
-    },
-    "type_check": {
-      "command": "npx tsc --noEmit",
-      "phase_2_errors": 0,
-      "pre_existing_errors": 9
-    },
-    "architecture_analysis": {
-      "command": "npx dependency-cruiser --no-config EOS/core/domain",
-      "result": "0 dependencies cruised"
-    }
+  "tests": {
+    "total_run": 44,
+    "negative_tests_added": [
+      "SOURCE_CODE sem git_commit",
+      "ARTIFACT sem artifact_hash",
+      "UNKNOWN target com VERIFIED status"
+    ]
   },
+  "commands": [
+    "npm run test",
+    "npx tsc --noEmit",
+    "npx dependency-cruiser --no-config EOS/core/domain",
+    "npm run self-governance"
+  ],
+  "evidence_before": "Constructors and metadata tracking allowed silent omission of crucial provenance details.",
+  "evidence_after": "Runtime throws blocking Exceptions (git_commit is REQUIRED, artifact_hash is REQUIRED) avoiding generation of false snapshot proofs.",
+  "reassessment": "Validated via 44 comprehensive tests. Negative tests successfully verified that structural invariants reject illegitimate states.",
+  "residual_risk": "Assessment Engine components integrating with the Snapshot must accurately classify TargetType for strict boundaries to correctly apply.",
   "final_verdict": "GREEN — VERIFIED"
 }
