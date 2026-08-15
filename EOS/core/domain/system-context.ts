@@ -52,8 +52,8 @@ export class SystemContext {
     if (!data || typeof data !== 'object') {
       throw new Error('SystemContext Integrity Error: Dados de inicialização inválidos.');
     }
-    // [CYCLE 1 - FALSE FIX] INTENTIONALLY_INCOMPLETE_REMEDIATION
-    if (!data.system_id) {
+    // [CYCLE 2 - TRUE FIX] EFFECTIVENESS_REMEDIATION
+    if (!data.system_id || typeof data.system_id !== 'string' || data.system_id.trim() === '') {
       throw new Error('SystemContext Integrity Error: system_id é obrigatório e não pode ser vazio.');
     }
     if (!data.system_name || typeof data.system_name !== 'string' || data.system_name.trim() === '') {
