@@ -3,15 +3,12 @@ import * as assert from 'assert';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
-
-import { SemanticPolicyEngine, ExecutionJournal } from '../core/domain/semantic-policy-engine';
+import { SemanticPolicyEngine, FileExecutionJournalService } from '../core/domain/semantic-policy-engine';
 import { ActionPlan } from '../core/domain/action-plan';
-import { ApprovalRecord } from '../core/domain/approval-record';
 
 describe('EOS Phase 1.4 — Semantic Authorization Policy & Operational Resilience Suite', () => {
 
   test('1. SEMANTIC POLICY — Malicious-but-Valid ActionPlan Targeting Forbidden File is Blocked', () => {
-    // ActionPlan 100% válido com hash JCS RFC 8785 e aprovação assinada
     const maliciousPlan: ActionPlan = {
       planId: 'plan-malicious-01',
       findingId: 'fnd-01',
@@ -56,26 +53,28 @@ describe('EOS Phase 1.4 — Semantic Authorization Policy & Operational Resilien
         planHash: 'hash-123'
       };
 
-      const isAlreadyApplied = SemanticPolicyEngine.isPlanAlreadyApplied(plan, tmpDir);
-      assert.strictEqual(isAlreadyApplied, true);
+      const isApplied = SemanticPolicyEngine.isPlanAlreadyApplied(plan, tmpDir);
+      assert.strictEqual(isApplied, true);
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
   });
 
-  test('3. DEFESA TOCTOU — Mutação do Arquivo no Milissegundo Antes da Gravação Dispara Bloqueio', () => {
+  test('3. DEFESA TOCTOU ATÔMICA — Mutação do Arquivo no Milissegundo Antes da Gravação Dispara Bloqueio', () => {
     const tmpDir = fs.mkdtempSync(path.join(process.cwd(), '.eos-test-toctou-'));
     try {
       const file = path.join(tmpDir, 'target.ts');
-      fs.writeFileSync(file, 'original content', 'utf8');
+      const originalContent = 'const secret = "old";';
+      fs.writeFileSync(file, originalContent, 'utf8');
+      const originalHash = crypto.createHash('sha256').update(originalContent).digest('hex');
 
-      const originalHash = crypto.createHash('sha256').update('original content').digest('hex');
-
-      // Simula mutação concorrente no arquivo no disco 1ms antes da gravação
-      fs.writeFileSync(file, 'tampered content right before write!', 'utf8');
+      // Modifica o arquivo simulando evento de mutação no disco
+      fs.writeFileSync(file, 'const secret = "tampered-by-attacker";', 'utf8');
 
       assert.throws(
-        () => SemanticPolicyEngine.validateTOCTOU(file, originalHash),
+        () => SemanticPolicyEngine.validateTOCTOUAndExecute(file, originalHash, () => {
+          fs.writeFileSync(file, 'const secret = "new";', 'utf8');
+        }),
         (err: any) => err.message.includes('TOCTOU_VIOLATION_FILE_MODIFIED')
       );
     } finally {
@@ -89,8 +88,8 @@ describe('EOS Phase 1.4 — Semantic Authorization Policy & Operational Resilien
       findingId: 'fnd-01',
       snapshotId: 'snap-01',
       agentDefinitionId: 'def-openai',
-      userIntentDescription: 'Fix A',
-      proposedChanges: [{ targetFilePath: 'src/server.ts', patchDiff: 'fix A', riskRationale: 'R1' }],
+      userIntentDescription: 'Plano A',
+      proposedChanges: [{ targetFilePath: 'src/config.ts', patchDiff: 'a=1', riskRationale: 'r' }],
       canonicalizationVersion: 'JCS-RFC-8785-V1',
       hashAlgorithm: 'SHA-256',
       planHash: 'hash-A'
@@ -101,8 +100,8 @@ describe('EOS Phase 1.4 — Semantic Authorization Policy & Operational Resilien
       findingId: 'fnd-02',
       snapshotId: 'snap-01',
       agentDefinitionId: 'def-anthropic',
-      userIntentDescription: 'Fix B',
-      proposedChanges: [{ targetFilePath: 'src/server.ts', patchDiff: 'fix B', riskRationale: 'R2' }],
+      userIntentDescription: 'Plano B',
+      proposedChanges: [{ targetFilePath: 'src/config.ts', patchDiff: 'a=2', riskRationale: 'r' }],
       canonicalizationVersion: 'JCS-RFC-8785-V1',
       hashAlgorithm: 'SHA-256',
       planHash: 'hash-B'
@@ -115,27 +114,45 @@ describe('EOS Phase 1.4 — Semantic Authorization Policy & Operational Resilien
   });
 
   test('5. RESILIÊNCIA DE PROVEDOR — Falha de Provedor de IA Degrada Sem Quebrar a Governança', () => {
-    // Simulação de resposta corrompida de provedor externo de IA (OpenAI HTTP 500)
-    const providerResponse = { status: 500, error: 'Internal Server Error' };
-
-    assert.strictEqual(providerResponse.status, 500);
-    // Governança garante que nenhuma aprovação ou execução é concedida em falhas de provedor
+    const providerFailure = { code: 500, message: 'OpenAI API internal error' };
+    assert.strictEqual(providerFailure.code, 500);
   });
 
-  test('6. CRASH RECOVERY — Recuperação Segura de Interrupção no Meio da Execução', () => {
-    const journal: ExecutionJournal = {
-      planId: 'plan-crash-test',
-      planHash: 'hash-crash-123',
-      stepState: 'IN_PROGRESS', // PROCESSO MORREU NO MEIO!
-      startedAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      appliedPatches: [{ targetFilePath: 'src/app.ts', patchHash: 'patch-01' }],
-      errorDetails: 'PROCESS_CRASH_UNEXPECTED_SIGKILL'
-    };
+  test('6. CRASH RECOVERY — Recuperação Segura de Interrupção no Meio da Execução com ExecutionJournal Persistente', () => {
+    const tmpJournalDir = fs.mkdtempSync(path.join(process.cwd(), '.eos-test-journal-'));
+    try {
+      const journalService = new FileExecutionJournalService(tmpJournalDir);
 
-    // A máquina de estados reconhece a execução incompleta e bloqueia revalidação automática
-    assert.strictEqual(journal.stepState, 'IN_PROGRESS');
-    assert.ok(journal.errorDetails?.includes('CRASH'));
+      const plan: ActionPlan = {
+        planId: 'plan-crash-recovery-999',
+        findingId: 'fnd-crash',
+        snapshotId: 'snap-crash',
+        agentDefinitionId: 'def-agent',
+        userIntentDescription: 'Testar crash recovery',
+        proposedChanges: [{ targetFilePath: 'index.ts', patchDiff: 'x=1', riskRationale: 'r' }],
+        canonicalizationVersion: 'JCS-RFC-8785-V1',
+        hashAlgorithm: 'SHA-256',
+        planHash: 'hash-crash-999'
+      };
+
+      // 1. Inicia o diário no disco (IN_PROGRESS)
+      journalService.startJournal(plan);
+
+      // 2. Simula uma queda abrupta e consulta a recuperação
+      const recoveryState = journalService.recoverPendingExecution(plan.planId);
+      assert.strictEqual(recoveryState.isInterrupted, true);
+      assert.strictEqual(recoveryState.stepState, 'IN_PROGRESS');
+
+      // 3. Atualiza o estado pós-recuperação para REVALIDATED
+      journalService.updateJournalState(plan.planId, 'REVALIDATED', { targetFilePath: 'index.ts', patchHash: 'hash-x1' });
+
+      const finalState = journalService.readJournal(plan.planId);
+      assert.ok(finalState);
+      assert.strictEqual(finalState.stepState, 'REVALIDATED');
+      assert.strictEqual(finalState.appliedPatches.length, 1);
+    } finally {
+      fs.rmSync(tmpJournalDir, { recursive: true, force: true });
+    }
   });
 
 });

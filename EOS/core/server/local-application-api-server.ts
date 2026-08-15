@@ -32,6 +32,10 @@ export class LocalApplicationApiServer {
     this.sessionToken = this.initializeSessionToken();
   }
 
+  public getSessionToken(): string {
+    return this.sessionToken;
+  }
+
   private initializeSessionToken(): string {
     const token = crypto.randomBytes(32).toString('hex');
     fs.writeFileSync(this.config.sessionTokenPath, token, { encoding: 'utf8', mode: 0o600 });
@@ -44,8 +48,12 @@ export class LocalApplicationApiServer {
 
       this.server.on('error', (err: any) => {
         if (err.code === 'EADDRINUSE') {
-          console.warn(`[EOS API Server] Port ${this.config.defaultPort} in use. Attempting fallback...`);
-          resolve(this.config.defaultPort);
+          // Bind to ephemeral port
+          this.server?.listen(0, this.config.bindAddress, () => {
+            const assignedPort = (this.server?.address() as any)?.port || 0;
+            fs.writeFileSync(this.config.portLockFilePath, String(assignedPort), 'utf8');
+            resolve(assignedPort);
+          });
         } else {
           reject(err);
         }
@@ -119,6 +127,13 @@ export class LocalApplicationApiServer {
     try {
       if (url === '/api/health' && method === 'GET') {
         this.sendJSON(res, 200, { status: 'OK', version: '2.2.0', server: 'EOS Local API Server' });
+        return;
+      }
+
+      // ENFORCE MANDATORY AUTHENTICATION FOR LOCAL API ENDPOINTS
+      const sessionHeader = (req.headers['x-eos-session-token'] || req.headers['X-EOS-Session-Token']) as string | undefined;
+      if (!sessionHeader || sessionHeader.trim() !== this.sessionToken.trim()) {
+        this.sendJSON(res, 401, { error: 'SECURITY_VIOLATION_INVALID_SESSION_TOKEN: Acesso não autorizado à API local. Token de sessão ausente ou inválido.' });
         return;
       }
 

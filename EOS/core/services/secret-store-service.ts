@@ -12,6 +12,7 @@ export interface SecretStoreContainer {
 export class SecretStoreService {
   private readonly config: SecretStoreConfig;
   private readonly lockFilePath: string;
+  private readonly machineKeyPath: string;
 
   constructor(customConfig?: Partial<SecretStoreConfig>) {
     const rootDir = process.cwd();
@@ -21,22 +22,69 @@ export class SecretStoreService {
       fs.mkdirSync(eosDir, { recursive: true });
     }
 
+    const saltPath = path.join(eosDir, 'machine.salt');
+    const machineSalt = this.resolveOrGenerateMachineSalt(saltPath);
+
+    this.machineKeyPath = path.join(eosDir, 'machine.key');
+    this.ensureMachineKey(this.machineKeyPath);
+
     this.config = {
       storeType: 'PASSPHRASE_DERIVED',
       storagePath: path.join(eosDir, 'credentials.enc.json'),
-      machineSalt: this.resolveMachineSalt(),
+      machineSalt,
       ...customConfig
     };
 
     this.lockFilePath = `${this.config.storagePath}.lock`;
   }
 
-  private resolveMachineSalt(): string {
-    return crypto.createHash('sha256').update(process.platform + '_' + process.arch + '_eos_salt').digest('hex');
+  /**
+   * Deriva um salt único por instalação persistido em arquivo com permissões estritas (0600).
+   * Elimina o problema de salt determinístico por SO/Arquitetura.
+   */
+  private resolveOrGenerateMachineSalt(saltPath: string): string {
+    if (fs.existsSync(saltPath)) {
+      try {
+        const salt = fs.readFileSync(saltPath, 'utf8').trim();
+        if (salt.length >= 32) return salt;
+      } catch {}
+    }
+
+    const newSalt = crypto.randomBytes(32).toString('hex');
+    try {
+      fs.writeFileSync(saltPath, newSalt, { encoding: 'utf8', mode: 0o600 });
+    } catch {}
+    return newSalt;
   }
 
-  private deriveKey(passphrase: string): Buffer {
-    return crypto.pbkdf2Sync(passphrase, this.config.machineSalt, 100000, 32, 'sha256');
+  /**
+   * Garante a existência de um segredo local de máquina único por instalação.
+   */
+  private ensureMachineKey(keyPath: string): string {
+    if (fs.existsSync(keyPath)) {
+      try {
+        const key = fs.readFileSync(keyPath, 'utf8').trim();
+        if (key.length >= 32) return key;
+      } catch {}
+    }
+
+    const newKey = crypto.randomBytes(32).toString('hex');
+    try {
+      fs.writeFileSync(keyPath, newKey, { encoding: 'utf8', mode: 0o600 });
+    } catch {}
+    return newKey;
+  }
+
+  private resolvePassphrase(passphrase?: string): string {
+    if (passphrase && passphrase.trim().length > 0) {
+      return passphrase;
+    }
+    return fs.readFileSync(this.machineKeyPath, 'utf8').trim();
+  }
+
+  private deriveKey(passphrase?: string): Buffer {
+    const finalPassphrase = this.resolvePassphrase(passphrase);
+    return crypto.pbkdf2Sync(finalPassphrase, this.config.machineSalt, 100000, 32, 'sha256');
   }
 
   public generateKeyFingerprint(apiKey: string): string {
@@ -54,14 +102,12 @@ export class SecretStoreService {
         return lockFd;
       } catch (err: any) {
         if (err.code === 'EEXIST') {
-          // Checa se lock expirou (> 5 segundos)
           try {
             const stat = fs.statSync(this.lockFilePath);
             if (Date.now() - stat.mtimeMs > 5000) {
               fs.unlinkSync(this.lockFilePath);
             }
           } catch {}
-          // Aguarda um pequeno intervalo síncrono
           const end = Date.now() + delayMs;
           while (Date.now() < end) {}
         } else {
@@ -81,7 +127,7 @@ export class SecretStoreService {
     } catch {}
   }
 
-  public storeCredential(providerId: string, apiKey: string, passphrase = 'eos-default-local-key'): EncryptedCredentialEnvelope {
+  public storeCredential(providerId: string, apiKey: string, passphrase?: string): EncryptedCredentialEnvelope {
     const lockFd = this.acquireLock();
 
     try {
@@ -103,24 +149,9 @@ export class SecretStoreService {
         updatedAt: new Date().toISOString()
       };
 
-      const container = this.readContainerWithMigration();
-      const updatedCredentials = {
-        ...container.credentials,
-        [envelope.providerId]: envelope
-      };
-
-      const newContainer: SecretStoreContainer = {
-        schemaVersion: 1,
-        credentials: updatedCredentials
-      };
-
-      const fd = fs.openSync(this.config.storagePath, 'w');
-      try {
-        fs.writeFileSync(fd, JSON.stringify(newContainer, null, 2), 'utf8');
-        fs.fsyncSync(fd);
-      } finally {
-        fs.closeSync(fd);
-      }
+      const container = this.readContainerInternal();
+      container.credentials[providerId.toUpperCase()] = envelope;
+      this.writeContainerInternal(container);
 
       return envelope;
     } finally {
@@ -128,69 +159,74 @@ export class SecretStoreService {
     }
   }
 
-  public retrieveCredential(providerId: string, passphrase = 'eos-default-local-key'): string | null {
-    const container = this.readContainerWithMigration();
+  public retrieveCredential(providerId: string, passphrase?: string): string {
+    const container = this.readContainerInternal();
     const envelope = container.credentials[providerId.toUpperCase()];
-    if (!envelope) return null;
+
+    if (!envelope) {
+      throw new Error(`NOT_FOUND_ERROR: Nenhuma credencial cadastrada para o provedor '${providerId}'.`);
+    }
 
     try {
       const key = this.deriveKey(passphrase);
-      const decipher = crypto.createDecipheriv(
-        'aes-256-gcm', 
-        key, 
-        Buffer.from(envelope.iv, 'hex')
-      );
+      const decipher = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(envelope.iv, 'hex'));
       decipher.setAuthTag(Buffer.from(envelope.authTag, 'hex'));
 
       let decrypted = decipher.update(envelope.encryptedData, 'hex', 'utf8');
       decrypted += decipher.final('utf8');
+
       return decrypted;
     } catch (err: any) {
-      // Se houver adulteração no ciphertext, IV ou authTag, o GCM lança erro de autenticação
-      throw new Error('SECURITY_VIOLATION_TAMPERING_DETECTED: A credencial salva foi adulterada ou corrompida.');
+      throw new Error(`SECURITY_VIOLATION_TAMPERING_DETECTED: A credencial do provedor '${providerId}' foi adulterada ou a chave é inválida.`);
     }
   }
 
-  public getRegistryEntries(): AgentRegistryEntry[] {
-    const container = this.readContainerWithMigration();
-    const providers: ('OPENAI' | 'ANTHROPIC' | 'GEMINI' | 'CUSTOM_PROXY')[] = ['OPENAI', 'ANTHROPIC', 'GEMINI'];
-    
-    return providers.map(p => {
-      const env = container.credentials[p];
+  public getRegistryEntries(passphrase?: string): AgentRegistryEntry[] {
+    const container = this.readContainerInternal();
+
+    return Object.values(container.credentials).map(env => {
+      let isConfigured = false;
+      try {
+        this.retrieveCredential(env.providerId, passphrase);
+        isConfigured = true;
+      } catch {
+        isConfigured = false;
+      }
+
       return {
-        agentDefinitionId: `def-${p.toLowerCase()}`,
-        providerId: p,
-        modelName: p === 'OPENAI' ? 'gpt-4o' : p === 'ANTHROPIC' ? 'claude-3-5-sonnet' : 'gemini-1.5-pro',
-        status: env ? 'CONFIGURED' : 'UNCONFIGURED',
-        keyFingerprint: env ? env.keyFingerprint : undefined,
-        configuredAt: env ? env.updatedAt : undefined
+        providerId: env.providerId,
+        displayName: `${env.providerId} Agent Provider`,
+        isConfigured,
+        maskedKey: env.keyFingerprint,
+        lastUpdated: env.updatedAt
       };
     });
   }
 
-  public redactLog(logText: string): string {
-    return logText.replace(/sk-[a-zA-Z0-9]{32,}/g, '[REDACTED_SECRET]');
-  }
-
-  public readContainerWithMigration(): SecretStoreContainer {
+  private readContainerInternal(): { schemaVersion: number; credentials: Record<string, EncryptedCredentialEnvelope> } {
     if (!fs.existsSync(this.config.storagePath)) {
       return { schemaVersion: 1, credentials: {} };
     }
-    try {
-      const raw = fs.readFileSync(this.config.storagePath, 'utf8');
-      const parsed = JSON.parse(raw);
 
-      // Suporte a migração automática de esquemas legados (sem schemaVersion)
-      if (!parsed.schemaVersion) {
+    try {
+      const content = fs.readFileSync(this.config.storagePath, 'utf8');
+      const data = JSON.parse(content);
+
+      if (!data.schemaVersion) {
         return {
           schemaVersion: 1,
-          credentials: parsed // Converte esquema legado onde a raiz era o Record
+          credentials: data
         };
       }
 
-      return parsed as SecretStoreContainer;
+      return data;
     } catch {
       return { schemaVersion: 1, credentials: {} };
     }
+  }
+
+  private writeContainerInternal(container: { schemaVersion: number; credentials: Record<string, EncryptedCredentialEnvelope> }): void {
+    const dataToWrite = JSON.stringify(container, null, 2);
+    fs.writeFileSync(this.config.storagePath, dataToWrite, { encoding: 'utf8', mode: 0o600 });
   }
 }
