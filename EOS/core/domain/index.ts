@@ -17,7 +17,7 @@ export * from './action-plan';
 export * from './approval-record';
 export * from './local-api-config';
 export * from './causal-pipeline-contracts';
-export * from './semantic-policy-engine';
+export { ExecutionStepState, ExecutionJournalService, SemanticPolicyEngine, FileOperationAdapter, ExecutionJournal } from './semantic-policy-engine';
 export * from './orchestration-contracts';
 export * from './nist-contracts';
 export * from './system-context';

@@ -1,0 +1,20 @@
+{
+  "artifactId": "art-AUD-IMMUT-1-1786833729781",
+  "schemaVersion": 2,
+  "auditRunId": "AUD-IMMUT-1",
+  "projectId": "proj-immut",
+  "createdAt": "2026-08-15T22:42:09.781Z",
+  "sourceSnapshotHash": "TAMPERED_HASH",
+  "sourceSnapshot": {
+    "snapshotId": "snap-1",
+    "repositoryRoot": "C:\\Users\\Max\\Desktop\\Projeto\\EOS",
+    "commitHash": "head",
+    "branchName": "main",
+    "observedAt": "2026-08-15T22:42:09.781Z",
+    "treeHash": "tree"
+  },
+  "evidences": [],
+  "facts": [],
+  "findings": [],
+  "artifactHash": "53d00aebbc735b7c1edc0b5c224380d418d0d71ed5a7701bc21cc323be9c9d4b"
+}

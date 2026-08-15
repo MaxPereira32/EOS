@@ -18,9 +18,19 @@ export class AuditArtifactMigrator {
 
     // Migração explícita de Schema v1 (legacy singular finding) para v3.1.1 (findings array plural)
     if (version === 1) {
-      const findingsList = Array.isArray(artifactRaw.findings)
-        ? artifactRaw.findings
-        : (artifactRaw.finding ? [artifactRaw.finding] : []);
+      if ('findings' in artifactRaw) {
+        throw new Error('AUDIT_MIGRATOR_ERROR: Artefato V1 não deve possuir a propriedade plural findings.');
+      }
+
+      let findingsList: any[];
+      if (artifactRaw.finding === null) {
+        // Semanticamente equivalente a "zero findings"
+        findingsList = [];
+      } else if (artifactRaw.finding && typeof artifactRaw.finding === 'object') {
+        findingsList = [artifactRaw.finding];
+      } else {
+        throw new Error('AUDIT_MIGRATOR_CAUSAL_ERROR: Campo finding ausente ou ambíguo não equivale a um array vazio.');
+      }
 
       const migrated: AuditArtifact = {
         ...artifactRaw,

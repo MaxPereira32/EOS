@@ -1,0 +1,29 @@
+{
+  "artifactId": "art-AUD-APP-ONLY-1786833729859",
+  "schemaVersion": 2,
+  "auditRunId": "AUD-APP-ONLY",
+  "projectId": "proj-exec",
+  "createdAt": "2026-08-15T22:42:09.859Z",
+  "sourceSnapshotHash": "snap-1",
+  "sourceSnapshot": {
+    "snapshotId": "snap-1",
+    "repositoryRoot": "C:\\Users\\Max\\Desktop\\Projeto\\EOS",
+    "commitHash": "head",
+    "branchName": "main",
+    "observedAt": "2026-08-15T22:42:09.859Z",
+    "treeHash": "tree"
+  },
+  "evidences": [],
+  "facts": [],
+  "findings": [],
+  "approvalRecord": {
+    "approvalId": "app-01",
+    "planId": "plan-01",
+    "approvedPlanHash": "hash-01",
+    "approvedBy": "admin",
+    "approvedAt": "2026-08-15T22:42:09.859Z",
+    "decision": "APPROVED",
+    "signature": "sig"
+  },
+  "artifactHash": "cff2c6acdd56d9e86d7d2471b92e5d94456a1f0562c9c4cac25f524bd94b3b29"
+}

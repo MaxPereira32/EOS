@@ -1,0 +1,43 @@
+{
+  "artifactId": "art-AUD-1786833729619-1786833729620",
+  "schemaVersion": 2,
+  "auditRunId": "AUD-1786833729619",
+  "projectId": "proj-omega",
+  "createdAt": "2026-08-15T22:42:09.620Z",
+  "sourceSnapshotHash": "snap-clean-1",
+  "sourceSnapshot": {
+    "snapshotId": "snap-clean-1",
+    "repositoryRoot": "C:\\Users\\Max\\Desktop\\Projeto\\EOS",
+    "commitHash": "head",
+    "branchName": "main",
+    "observedAt": "2026-08-15T22:42:09.614Z",
+    "treeHash": "tree-clean-1"
+  },
+  "evidences": [],
+  "facts": [],
+  "findings": [],
+  "revalidationProof": {
+    "proofId": "proof-AUD-1786833729619",
+    "auditRunId": "AUD-1786833729619",
+    "isResolved": true,
+    "remainingFindingIds": [],
+    "verifiedAt": "2026-08-15T22:42:09.620Z"
+  },
+  "runtimeSnapshot": {
+    "runtimeSnapshotId": "snap-rt-clean",
+    "timestamp": "2026-08-15T22:42:09.616Z",
+    "agentDefinitionId": "agent-orch-01",
+    "agentRole": "Orchestrator",
+    "agentVersion": "3.1.1",
+    "promptVersion": "1.0.0",
+    "promptHash": "p-hash",
+    "contextPolicyHash": "c-hash",
+    "modelConfigurationHash": "m-hash",
+    "skills": [],
+    "plugins": [],
+    "mcpServers": [],
+    "modelProvider": "OPENAI",
+    "modelName": "gpt-4o"
+  },
+  "artifactHash": "3750920b3bc8e4d395f37104beb72ab294b93341660ee83ed62b8d042fecda57"
+}

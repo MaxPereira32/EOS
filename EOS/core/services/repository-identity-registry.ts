@@ -6,6 +6,7 @@
  */
 
 import * as path from 'path';
+import * as fs from 'fs';
 
 export interface RepositoryIdentity {
   readonly projectId: string;
@@ -17,20 +18,28 @@ export class RepositoryIdentityRegistry {
   private static registeredProjects: Map<string, RepositoryIdentity> = new Map();
 
   static {
-    // Registra a identidade soberana do repositório workspace atual
-    const root = process.cwd();
-    this.registerProject({
-      projectId: 'project-alpha',
-      repositoryRoot: root,
-      canonicalName: 'EOS Sovereign Repository'
-    });
+    // DENY-BY-DEFAULT: Nenhum projeto é registrado implicitamente.
   }
 
   public static registerProject(identity: RepositoryIdentity): void {
     if (!identity || !identity.projectId || !identity.repositoryRoot) {
       throw new Error('REPOSITORY_IDENTITY_ERROR: projectId e repositoryRoot são obrigatórios.');
     }
+
+    if (this.registeredProjects.has(identity.projectId)) {
+      throw new Error(`SECURITY_VIOLATION_PROJECT_OVERWRITE: O projeto '${identity.projectId}' já está registrado.`);
+    }
+
     const normalized = path.normalize(identity.repositoryRoot).toLowerCase();
+    
+    if (normalized.includes('..')) {
+      throw new Error(`SECURITY_VIOLATION_INVALID_ROOT: Path de repositório malicioso ou relativo bloqueado.`);
+    }
+
+    if (!fs.existsSync(normalized)) {
+      throw new Error(`SECURITY_VIOLATION_INVALID_ROOT: O diretório do repositório '${normalized}' não existe no disco.`);
+    }
+
     this.registeredProjects.set(identity.projectId, {
       ...identity,
       repositoryRoot: normalized
@@ -77,11 +86,5 @@ export class RepositoryIdentityRegistry {
 
   public static reset(): void {
     this.registeredProjects.clear();
-    const root = process.cwd();
-    this.registerProject({
-      projectId: 'project-alpha',
-      repositoryRoot: root,
-      canonicalName: 'EOS Sovereign Repository'
-    });
   }
 }

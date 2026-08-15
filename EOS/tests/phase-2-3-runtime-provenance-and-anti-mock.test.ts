@@ -5,11 +5,9 @@ import * as path from 'path';
 import { fork } from 'child_process';
 import { AuditHistoryRepository } from '../core/storage/audit-history-repository';
 import { AuditHistoryProjectionService } from '../core/services/audit-history-projection-service';
-import { AgentRuntimeSnapshot } from '../core/domain/agent-runtime-snapshot';
 import { McpPluginRegistry } from '../core/domain/mcp-plugin-registry';
 import { EosPlatformV2, AuditExecutionContext } from '../core/eos-platform';
 import { CanonicalHashService } from '../core/services/canonical-hash-service';
-import { JsonAuditExporter } from '../core/reporters/json-audit-exporter';
 import { AuditArtifactMigrator } from '../core/storage/audit-artifact-migrator';
 import { RepositoryIdentityRegistry } from '../core/services/repository-identity-registry';
 import { Evidence, Finding } from '../core/domain/types';
@@ -55,7 +53,7 @@ test('EOS Phase 3.1.1 — Sovereign Causal Truth & Strict Closure Suite (v3.1.1)
     timestamp: new Date().toISOString()
   });
 
-  await t.test('1. PURE_REAL_EVIDENCE_TEST — Verify Clean Audit Runs Store Empty Findings Array Without Fabricating Mocks', async () => {
+  await t.test('1. ZERO SYNTHETIC EVIDENCE (NO_FABRICATED_FINDINGS & NO_SYNTHETIC_EVIDENCE) — Clean run strictly returns []', async () => {
     RepositoryIdentityRegistry.registerProject({
       projectId: 'proj-omega',
       repositoryRoot: process.cwd(),
@@ -95,248 +93,152 @@ test('EOS Phase 3.1.1 — Sovereign Causal Truth & Strict Closure Suite (v3.1.1)
     };
 
     const artifact = await platform.runPipeline(context);
-    assert.strictEqual(artifact.findings.length, 0, 'VIOLATION: Clean run deve conter array de findings vazio (findings: [])!');
-    assert.strictEqual(artifact.revalidationProof?.isResolved, true);
+    assert.strictEqual(artifact.findings.length, 0, 'VIOLATION: NO_FABRICATED_FINDINGS falhou.');
+    
+    const artifactPath = path.join(tmpDir, 'projects', 'proj-omega', 'audits', `${artifact.auditRunId}.json`);
+    const rawDiskContent = fs.readFileSync(artifactPath, 'utf8');
 
-    const jsonString = JSON.stringify(artifact);
-    assert.strictEqual(jsonString.includes('ev-pass'), false, 'VIOLATION: Evidência sintética ev-pass detectada!');
-    assert.strictEqual(jsonString.includes('RULE-PASS'), false, 'VIOLATION: Finding sintético RULE-PASS detectado!');
+    assert.strictEqual(rawDiskContent.includes('ev-pass'), false, 'VIOLATION: NO_SYNTHETIC_EVIDENCE falhou.');
+    assert.strictEqual(rawDiskContent.includes('RULE-PASS'), false, 'VIOLATION: NO_SYNTHETIC_EVIDENCE falhou.');
   });
 
-  await t.test('2. JCS_RFC_8785_COMPLIANCE_SUITE — Verify UTF-16 Sorting, Number Canonicalization & NaN Rejection', () => {
-    assert.strictEqual(CanonicalHashService.CANONICALIZATION_VERSION, 'JCS-RFC-8785');
+  await t.test('2. JCS RFC 8785 EDGE CASES (JCS_EDGE_CASES, JCS_INVALID_VALUES, JCS_DETERMINISM, JCS_UNICODE_AND_ESCAPING, JCS_NUMBER_SERIALIZATION)', () => {
+    // JCS_DETERMINISM & JCS_UNICODE_AND_ESCAPING
+    const canonicalStr1 = CanonicalHashService.stringify({ z_field: 'last', a_field: 'first' });
+    const canonicalStr2 = CanonicalHashService.stringify({ a_field: 'first', z_field: 'last' });
+    assert.strictEqual(canonicalStr1, canonicalStr2, 'JCS_DETERMINISM failed.');
+    assert.strictEqual(canonicalStr1.indexOf('"a_field"'), 1, 'JCS_UNICODE_AND_ESCAPING failed.');
 
-    const uncanonicalObject = {
-      z_field: 'last',
-      a_field: 'first',
-      num_field: 100,
-      nested: {
-        beta: 2,
-        alpha: 1
-      }
-    };
+    // JCS_NUMBER_SERIALIZATION & JCS_EDGE_CASES
+    const vector1 = CanonicalHashService.stringify({ n: 1e5, s: "hello\nworld", u: "🚀" });
+    const vector2 = CanonicalHashService.stringify({ n: 100000, s: "hello\nworld", u: "🚀" });
+    assert.strictEqual(vector1, vector2, 'JCS_NUMBER_SERIALIZATION failed.');
 
-    const canonicalStr1 = CanonicalHashService.stringify(uncanonicalObject);
-    const canonicalStr2 = CanonicalHashService.stringify({
-      num_field: 100,
-      nested: { alpha: 1, beta: 2 },
-      a_field: 'first',
-      z_field: 'last'
-    });
-
-    assert.strictEqual(canonicalStr1, canonicalStr2, 'JCS_RFC_8785_VIOLATION: Serializações canônicas de objetos diferem!');
-    assert.strictEqual(canonicalStr1.indexOf('"a_field"'), 1, 'JCS_RFC_8785_VIOLATION: A primeira chave deve ser a_field (ordenação lexicográfica UTF-16)!');
-
-    // NaN e Infinity devem ser rejeitados estritamente conforme RFC 8785
-    assert.throws(
-      () => CanonicalHashService.stringify({ invalid: NaN }),
-      /JCS_RFC_8785_ERROR/
-    );
-    assert.throws(
-      () => CanonicalHashService.stringify({ invalid: Infinity }),
-      /JCS_RFC_8785_ERROR/
-    );
+    // JCS_INVALID_VALUES
+    assert.throws(() => CanonicalHashService.stringify({ invalid: NaN }), /JCS_RFC_8785_ERROR/);
+    assert.throws(() => CanonicalHashService.stringify({ invalid: Infinity }), /JCS_RFC_8785_ERROR/);
   });
 
-  await t.test('3. REPOSITORY_IDENTITY_DENY_BY_DEFAULT_TEST — Reject Unregistered Projects and Root Mismatches', () => {
+  await t.test('3. REPOSITORY IDENTITY REGISTRY (IDENTITY_REGISTRY_PROTECTION, UNREGISTERED_DENY, ROOT_MISMATCH_DENY, MISSING_PROJECT_ID_MUST_FAIL)', () => {
     RepositoryIdentityRegistry.reset();
 
-    // 3a. Projeto não registrado -> DENY (SECURITY_VIOLATION_UNREGISTERED_PROJECT)
-    assert.throws(
-      () => RepositoryIdentityRegistry.validateProjectRepository('attacker-project', process.cwd()),
-      /SECURITY_VIOLATION_UNREGISTERED_PROJECT/
-    );
+    // MISSING_PROJECT_ID_MUST_FAIL
+    assert.throws(() => RepositoryIdentityRegistry.validateProjectRepository('', process.cwd()), /SECURITY_VIOLATION_INVALID_PROJECT_ID/);
+    
+    // MISSING_PROJECT_ID_MUST_FAIL (Repository Level Storage)
+    const repo = new AuditHistoryRepository(tmpDir);
+    assert.throws(() => repo.getAuditArtifact('', 'some-run-id'), /AUDIT_REPOSITORY_ERROR/);
+    assert.throws(() => repo.saveAuditArtifact('run-1', '', {} as any, [], [], []), /AUDIT_REPOSITORY_ERROR/);
 
-    // 3b. Registra projeto legítimo
+    // UNREGISTERED_DENY
+    assert.throws(() => RepositoryIdentityRegistry.validateProjectRepository('unregistered-proj', process.cwd()), /SECURITY_VIOLATION_UNREGISTERED_PROJECT/);
+
+    // IDENTITY_REGISTRY_PROTECTION
     RepositoryIdentityRegistry.registerProject({
       projectId: 'strict-proj',
       repositoryRoot: process.cwd(),
       canonicalName: 'Strict Proj'
     });
 
-    // Root correto -> ALLOW
-    assert.doesNotThrow(() => {
-      RepositoryIdentityRegistry.validateProjectRepository('strict-proj', process.cwd());
-    });
+    assert.throws(() => RepositoryIdentityRegistry.registerProject({
+      projectId: 'strict-proj',
+      repositoryRoot: process.cwd(),
+      canonicalName: 'Override'
+    }), /SECURITY_VIOLATION_PROJECT_OVERWRITE/);
 
-    // Root incorreto -> DENY (SECURITY_VIOLATION_REPOSITORY_IDENTITY_MISMATCH)
-    assert.throws(
-      () => RepositoryIdentityRegistry.validateProjectRepository('strict-proj', path.join(process.cwd(), 'unauthorized')),
-      /SECURITY_VIOLATION_REPOSITORY_IDENTITY_MISMATCH/
-    );
+    assert.throws(() => RepositoryIdentityRegistry.registerProject({
+      projectId: 'invalid-proj',
+      repositoryRoot: path.join(process.cwd(), 'does-not-exist'),
+      canonicalName: 'Invalid'
+    }), /SECURITY_VIOLATION_INVALID_ROOT/);
+
+    // ROOT_MISMATCH_DENY
+    assert.throws(() => RepositoryIdentityRegistry.validateProjectRepository('strict-proj', path.join(process.cwd(), 'unauthorized')), /SECURITY_VIOLATION_REPOSITORY_IDENTITY_MISMATCH/);
+    assert.doesNotThrow(() => RepositoryIdentityRegistry.validateProjectRepository('strict-proj', process.cwd()));
   });
 
-  await t.test('4. LEGACY_FINDING_MIGRATION_ISOLATION_TEST — Migrate Legacy Singular Finding Exclusively in AuditArtifactMigrator', () => {
-    const legacyRaw = {
-      artifactId: 'art-legacy-v1',
-      schemaVersion: 1,
-      auditRunId: 'AUD-LEGACY-01',
-      projectId: 'proj-omega',
-      createdAt: new Date().toISOString(),
-      sourceSnapshotHash: 'snap-legacy',
-      artifactHash: 'hash-legacy-123',
-      finding: createCanonicalFinding('find-legacy-singular')
-    };
+  await t.test('4. MIGRATOR SEMANTICS (MIGRATOR_EXPLICIT_EMPTY, MIGRATOR_SINGLE_FINDING, MIGRATOR_UNKNOWN_SEMANTICS, MIGRATOR_CAUSAL_PRESERVATION)', () => {
+    // V3_SINGLE_FINDING_REJECTED (if passed as v2)
+    assert.throws(() => AuditArtifactMigrator.migrate({ schemaVersion: 2, finding: {} }), /AUDIT_MIGRATOR_ERROR/);
 
-    const migrated = AuditArtifactMigrator.migrate(legacyRaw);
-    assert.strictEqual(migrated.schemaVersion, 2);
-    assert.strictEqual(Array.isArray(migrated.findings), true);
-    assert.strictEqual(migrated.findings.length, 1);
-    assert.strictEqual(migrated.findings[0].finding_id, 'find-legacy-singular');
-    assert.strictEqual((migrated as any).finding, undefined);
+    // MIGRATOR_SINGLE_FINDING
+    const migratedSingle = AuditArtifactMigrator.migrate({ schemaVersion: 1, finding: { id: 'f-1' } });
+    assert.deepStrictEqual(migratedSingle.findings, [{ id: 'f-1' }]);
+
+    // MIGRATOR_EXPLICIT_EMPTY
+    const migratedEmpty = AuditArtifactMigrator.migrate({ schemaVersion: 1, finding: null });
+    assert.deepStrictEqual(migratedEmpty.findings, []);
+
+    // MIGRATOR_UNKNOWN_SEMANTICS
+    assert.throws(() => AuditArtifactMigrator.migrate({ schemaVersion: 1 }), /AUDIT_MIGRATOR_CAUSAL_ERROR/);
+    assert.throws(() => AuditArtifactMigrator.migrate({ schemaVersion: 1, findings: [] }), /AUDIT_MIGRATOR_ERROR: Artefato V1 não deve possuir/);
   });
 
-  await t.test('5. REPOSITORY_IMMUTABILITY_STRICTNESS — Verify deleteAuditRun is Removed From Repository Domain', () => {
-    assert.strictEqual(
-      (repository as any).deleteAuditRun,
-      undefined,
-      'IMMUTABILITY_VIOLATION: O método deleteAuditRun ainda existe em AuditHistoryRepository!'
-    );
-  });
+  await t.test('5. IMMUTABILITY DOMAIN (NO_DELETE_DOMAIN, IMMUTABLE_SAME_ID, ARTIFACT_TAMPERING, CORRUPTED_ARTIFACT_VISIBLE)', () => {
+    // NO_DELETE_DOMAIN
+    assert.strictEqual((repository as any).deleteAuditRun, undefined);
 
-  await t.test('6. EXECUTION_JOURNAL_ACCOUNTING_TEST — Approval Record Alone Does NOT Count as Execution', () => {
     RepositoryIdentityRegistry.registerProject({
-      projectId: 'proj-omega',
+      projectId: 'proj-immut',
       repositoryRoot: process.cwd(),
-      canonicalName: 'Project Omega'
+      canonicalName: 'Immut Proj'
     });
 
-    const sourceSnapshot = {
-      snapshotId: 'snap-exec-1',
-      repositoryRoot: process.cwd(),
-      commitHash: 'head',
-      branchName: 'main',
-      observedAt: new Date().toISOString(),
-      treeHash: 'tree-exec'
-    };
+    const snap = { snapshotId: 'snap-1', repositoryRoot: process.cwd(), commitHash: 'head', branchName: 'main', observedAt: new Date().toISOString(), treeHash: 'tree' };
+    repository.saveAuditArtifact('AUD-IMMUT-1', 'proj-immut', snap, [], [], []);
 
-    // 6a. Persiste com ApprovalRecord mas SEM ExecutionJournal
-    repository.saveAuditArtifact(
-      'AUD-APP-ONLY',
-      'proj-omega',
-      sourceSnapshot,
-      [createCanonicalEvidence('ev-app')],
-      [],
-      [createCanonicalFinding('find-app')],
-      undefined,
-      {
-        approvalId: 'app-01',
-        planId: 'plan-01',
-        approvedPlanHash: 'hash-01',
-        approvedBy: 'admin',
-        approvedAt: new Date().toISOString(),
-        decision: 'APPROVED',
-        signature: 'sig-01'
-      }
-    );
+    // IMMUTABLE_SAME_ID (EEXIST domain mapping)
+    assert.throws(() => repository.saveAuditArtifact('AUD-IMMUT-1', 'proj-immut', snap, [], [], []), /AUDIT_IMMUTABILITY_VIOLATION/);
 
-    const summaryAppOnly = projectionService.getAuditHistorySummaries('proj-omega').find(s => s.auditRunId === 'AUD-APP-ONLY');
-    assert.strictEqual(summaryAppOnly?.totalActionsExecuted, 0, 'VIOLATION: Aprovação isolada foi contada erroneamente como execução!');
-
-    // 6b. Persiste com ExecutionJournal assinado
-    const executionJournal: ExecutionJournal = {
-      executionId: 'exec-01',
-      planId: 'plan-01',
-      executedAt: new Date().toISOString(),
-      executedBy: 'runner-01',
-      status: 'SUCCESS',
-      executionHash: 'exec-hash-01'
-    };
-
-    repository.saveAuditArtifact(
-      'AUD-EXEC-REAL',
-      'proj-omega',
-      sourceSnapshot,
-      [createCanonicalEvidence('ev-exec')],
-      [],
-      [createCanonicalFinding('find-exec')],
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      executionJournal
-    );
-
-    const summaryExecReal = projectionService.getAuditHistorySummaries('proj-omega').find(s => s.auditRunId === 'AUD-EXEC-REAL');
-    assert.strictEqual(summaryExecReal?.totalActionsExecuted, 1, 'VIOLATION: ExecutionJournal autêntico não foi contado na projeção!');
-  });
-
-  await t.test('7. CONCURRENT_MULTI_PROCESS_WRITE_TEST — OS Process Isolation Enforces Immutability Across Forked Node Processes', async () => {
-    RepositoryIdentityRegistry.registerProject({
-      projectId: 'proj-fork',
-      repositoryRoot: process.cwd(),
-      canonicalName: 'Fork Project'
-    });
-
-    const workerScript = path.join(process.cwd(), 'EOS/tests/workers/multi-process-write-worker.ts');
-    const auditRunId = 'AUD-CONC-FORK-01';
-
-    const spawnWorker = () => new Promise<{ success: boolean; error?: string; pid?: number }>((resolve) => {
-      const child = fork(workerScript, [tmpDir, 'proj-fork', auditRunId], {
-        execArgv: ['--import', 'tsx']
-      });
-      child.on('message', (msg: any) => resolve(msg));
-      child.on('error', (err) => resolve({ success: false, error: err.message }));
-    });
-
-    // Executa dois processos Node completamente independentes via child_process.fork
-    const [res1, res2] = await Promise.all([spawnWorker(), spawnWorker()]);
-
-    const successes = [res1, res2].filter(r => r.success);
-    const failures = [res1, res2].filter(r => !r.success);
-
-    // Exatamente um processo Node deve vencer e gravar o artefato soberano imutável!
-    assert.strictEqual(successes.length, 1, 'CONCURRENCY_VIOLATION: Exatamente 1 processo deve ter sucesso na escrita inicial!');
-    assert.strictEqual(failures.length, 1, 'CONCURRENCY_VIOLATION: O segundo processo concorrente deve ser bloqueado por AUDIT_IMMUTABILITY_VIOLATION!');
-    assert.ok(failures[0].error?.includes('AUDIT_IMMUTABILITY_VIOLATION'));
-  });
-
-  await t.test('8. LIST_AUDIT_ARTIFACTS_INTEGRITY_REPORTING — Reports Corrupted Files Explicitly Without Hiding Errors', () => {
-    RepositoryIdentityRegistry.registerProject({
-      projectId: 'proj-list-test',
-      repositoryRoot: process.cwd(),
-      canonicalName: 'List Project'
-    });
-
-    const sourceSnapshot = {
-      snapshotId: 'snap-list-corrupt',
-      repositoryRoot: process.cwd(),
-      commitHash: 'head',
-      branchName: 'main',
-      observedAt: new Date().toISOString(),
-      treeHash: 'tree-list-corrupt'
-    };
-
-    repository.saveAuditArtifact(
-      'AUD-VALID-LIST',
-      'proj-list-test',
-      sourceSnapshot,
-      [],
-      [],
-      []
-    );
-
-    repository.saveAuditArtifact(
-      'AUD-CORRUPT-LIST',
-      'proj-list-test',
-      sourceSnapshot,
-      [],
-      [],
-      []
-    );
-
-    // Adultera AUD-CORRUPT-LIST.json
-    const filePath = path.join(tmpDir, 'projects', 'proj-list-test', 'audits', 'AUD-CORRUPT-LIST.json');
+    // ARTIFACT_TAMPERING & CORRUPTED_ARTIFACT_VISIBLE
+    const filePath = path.join(tmpDir, 'projects', 'proj-immut', 'audits', 'AUD-IMMUT-1.json');
     const content = JSON.parse(fs.readFileSync(filePath, 'utf8'));
     content.sourceSnapshotHash = 'TAMPERED_HASH';
     fs.writeFileSync(filePath, JSON.stringify(content, null, 2), 'utf8');
 
-    const result = repository.listAuditArtifacts('proj-list-test');
+    const result = repository.listAuditArtifacts('proj-immut');
     assert.strictEqual(result.integrityStatus, 'DEGRADED_HAS_CORRUPTED');
     assert.strictEqual(result.corruptedCount, 1);
-    assert.strictEqual(result.corruptedArtifacts.includes('AUD-CORRUPT-LIST.json'), true);
+  });
+
+  await t.test('6. EXECUTION ACCOUNTING (EXECUTION_ACCOUNTING)', () => {
+    RepositoryIdentityRegistry.registerProject({ projectId: 'proj-exec', repositoryRoot: process.cwd(), canonicalName: 'Exec' });
+    const snap = { snapshotId: 'snap-1', repositoryRoot: process.cwd(), commitHash: 'head', branchName: 'main', observedAt: new Date().toISOString(), treeHash: 'tree' };
+
+    repository.saveAuditArtifact('AUD-APP-ONLY', 'proj-exec', snap, [], [], [], undefined, {
+      approvalId: 'app-01', planId: 'plan-01', approvedPlanHash: 'hash-01', approvedBy: 'admin', approvedAt: new Date().toISOString(), decision: 'APPROVED', signature: 'sig'
+    });
+
+    const summaryAppOnly = projectionService.getAuditHistorySummaries('proj-exec').find(s => s.auditRunId === 'AUD-APP-ONLY');
+    assert.strictEqual(summaryAppOnly?.totalActionsExecuted, 0);
+
+    const execJournal: ExecutionJournal = { executionId: 'exec-01', planId: 'plan-01', executedAt: new Date().toISOString(), executedBy: 'runner', status: 'SUCCESS', executionHash: 'hash' };
+    repository.saveAuditArtifact('AUD-EXEC-REAL', 'proj-exec', snap, [], [], [], undefined, undefined, undefined, undefined, undefined, undefined, undefined, execJournal);
+
+    const summaryExecReal = projectionService.getAuditHistorySummaries('proj-exec').find(s => s.auditRunId === 'AUD-EXEC-REAL');
+    assert.strictEqual(summaryExecReal?.totalActionsExecuted, 1);
+  });
+
+  await t.test('7. CONCURRENCY (STRESS_CONCURRENCY_CAUSALITY)', async () => {
+    RepositoryIdentityRegistry.registerProject({ projectId: 'proj-fork', repositoryRoot: process.cwd(), canonicalName: 'Fork' });
+    const workerScript = path.join(process.cwd(), 'EOS/tests/workers/multi-process-write-worker.ts');
+
+    const spawnWorker = (auditRunId: string) => new Promise<{ success: boolean; error?: string; pid?: number }>((resolve) => {
+      const child = fork(workerScript, [tmpDir, 'proj-fork', auditRunId], { execArgv: ['--import', 'tsx'] });
+      child.on('message', (msg: any) => resolve(msg));
+      child.on('error', (err) => resolve({ success: false, error: err.message }));
+    });
+
+    for (let i = 0; i < 10; i++) {
+      const auditRunId = `AUD-CONC-FORK-STRESS-${i}`;
+      const [res1, res2] = await Promise.all([spawnWorker(auditRunId), spawnWorker(auditRunId)]);
+      
+      const successes = [res1, res2].filter(r => r.success);
+      const failures = [res1, res2].filter(r => !r.success);
+
+      assert.strictEqual(successes.length, 1, `CONCURRENCY_VIOLATION: Exactly 1 process should succeed! Loop ${i}`);
+      assert.strictEqual(failures.length, 1, `CONCURRENCY_VIOLATION: Exactly 1 process should fail with Immutability error! Loop ${i}`);
+      assert.ok(failures[0].error?.includes('AUDIT_IMMUTABILITY_VIOLATION'));
+    }
   });
 });

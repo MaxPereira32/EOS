@@ -40,13 +40,12 @@ export const SAMPLE_TEST_FINDING: Finding = {
   rule_id: 'SEC-RULE-309-HTTP-TRACE-PREFIX',
   severity: 'CRITICAL',
   cvss_v4_score: 9.1,
-  stride_category: 'INFO_DISCLOSURE',
-  owasp_top10: ['A05:2021-Security Misconfiguration'],
-  cwe_id: 'CWE-693',
-  nist_sp800_53: ['SC-8', 'SC-28'],
-  mitre_attack: ['T1190'],
-  title: 'Cross-Site Tracing (XST) via HTTP TRACE & Cookie Inseguro',
-  description: 'Gateway expõe verbo HTTP TRACE e emite cookies sem prefixo __Host-.',
-  remediation_summary: 'Desabilitar TRACE no Ingress NGINX e adicionar prefixo __Host- nos cookies de sessão.',
-  status: 'OPEN',
+  cvss_v4_vector: 'CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:N/VA:N/SC:H/SI:N/SA:N',
+  taxonomy: {
+    owasp_category: 'A05:2021-Security Misconfiguration',
+    cwe_id: 'CWE-693',
+    nist_sp_800_53: 'SC-8',
+    mitre_attack_id: 'T1190'
+  },
+  title: 'Cross-Site Tracing (XST) via HTTP TRACE & Cookie Inseguro'
 };

@@ -42,7 +42,7 @@ export class AuditHistoryProjectionService {
       throw new Error('AUDIT_SERVICE_ERROR: projectId é obrigatório.');
     }
     const auditRunId = projection.revalidationProof?.auditRunId || `AUD-${Date.now()}`;
-    const findingsArray = projection.findings || (projection.finding ? [projection.finding] : []);
+    const findingsArray = projection.findings || [];
     this.repository.saveAuditArtifact(
       auditRunId,
       projectId,
@@ -66,7 +66,7 @@ export class AuditHistoryProjectionService {
    * Converte um AuditArtifact em uma projeção Read Model (CausalRemediationAuditProjection).
    */
   public projectArtifactToCausalView(artifact: AuditArtifact): CausalRemediationAuditProjection {
-    const findingsArray = artifact.findings || ((artifact as any).finding ? [(artifact as any).finding] : []);
+    const findingsArray = artifact.findings || [];
     return {
       remediationId: artifact.proposedActionPlan?.planId || artifact.artifactId,
       sourceSnapshot: artifact.sourceSnapshot,
@@ -94,7 +94,7 @@ export class AuditHistoryProjectionService {
 
     for (const artifact of queryResult.artifacts) {
       const isResolved = artifact.revalidationProof?.isResolved ?? false;
-      const findingsList = artifact.findings || ((artifact as any).finding ? [(artifact as any).finding] : []);
+      const findingsList = artifact.findings || [];
       const totalFindings = findingsList.length;
       const totalActionsProposed = artifact.proposedActionPlan ? 1 : 0;
       

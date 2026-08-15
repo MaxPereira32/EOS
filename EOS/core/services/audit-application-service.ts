@@ -1,6 +1,7 @@
 import * as crypto from 'crypto';
 import * as path from 'path';
-import { TargetResolver } from '../domain/target-resolver';
+import { FilesystemTargetResolver } from '../adapters/filesystem-target-resolver';
+
 import { FilesystemCollector } from '../collectors/filesystem-collector';
 import { TypescriptAstCollector } from '../collectors/typescript-ast-collector';
 import { FileStructureFactProvider } from '../fact-providers/file-structure-fact-provider';
@@ -26,7 +27,8 @@ export class AuditApplicationService {
     const governorIntegrity = governorVerifier.verifyGovernorIntegrity(eosCorePath);
 
     // 1. Resolver Target
-    const target = TargetResolver.resolve(targetPath);
+    const targetResolver = new FilesystemTargetResolver();
+    const target = targetResolver.resolve(targetPath);
 
     // 2. Coletar do Filesystem Real
     const fsCollector = new FilesystemCollector();

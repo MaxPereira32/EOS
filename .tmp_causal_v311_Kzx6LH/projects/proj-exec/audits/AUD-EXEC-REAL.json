@@ -1,0 +1,28 @@
+{
+  "artifactId": "art-AUD-EXEC-REAL-1786833729915",
+  "schemaVersion": 2,
+  "auditRunId": "AUD-EXEC-REAL",
+  "projectId": "proj-exec",
+  "createdAt": "2026-08-15T22:42:09.915Z",
+  "sourceSnapshotHash": "snap-1",
+  "sourceSnapshot": {
+    "snapshotId": "snap-1",
+    "repositoryRoot": "C:\\Users\\Max\\Desktop\\Projeto\\EOS",
+    "commitHash": "head",
+    "branchName": "main",
+    "observedAt": "2026-08-15T22:42:09.859Z",
+    "treeHash": "tree"
+  },
+  "evidences": [],
+  "facts": [],
+  "findings": [],
+  "executionJournal": {
+    "executionId": "exec-01",
+    "planId": "plan-01",
+    "executedAt": "2026-08-15T22:42:09.915Z",
+    "executedBy": "runner",
+    "status": "SUCCESS",
+    "executionHash": "hash"
+  },
+  "artifactHash": "9dfa1ddaa68e954a1d468d2239b0c692a44dee66badac47ef21d8c7a63b087aa"
+}

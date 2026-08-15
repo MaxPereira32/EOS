@@ -3,8 +3,10 @@ import * as assert from 'assert';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
-import { SemanticPolicyEngine, FileExecutionJournalService } from '../core/domain/semantic-policy-engine';
+import { SemanticPolicyEngine } from '../core/domain/semantic-policy-engine';
 import { ActionPlan } from '../core/domain/action-plan';
+import { FileExecutionJournalAdapter } from '../core/adapters/file-execution-journal-adapter';
+import { NativeFileOperationAdapter } from '../core/adapters/file-operation-adapter';
 
 describe('EOS Phase 1.4 — Semantic Authorization Policy & Operational Resilience Suite', () => {
 
@@ -53,7 +55,8 @@ describe('EOS Phase 1.4 — Semantic Authorization Policy & Operational Resilien
         planHash: 'hash-123'
       };
 
-      const isApplied = SemanticPolicyEngine.isPlanAlreadyApplied(plan, tmpDir);
+      const adapter = new NativeFileOperationAdapter();
+      const isApplied = SemanticPolicyEngine.isPlanAlreadyApplied(plan, tmpDir, adapter);
       assert.strictEqual(isApplied, true);
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true });
@@ -71,8 +74,9 @@ describe('EOS Phase 1.4 — Semantic Authorization Policy & Operational Resilien
       // Modifica o arquivo simulando evento de mutação no disco
       fs.writeFileSync(file, 'const secret = "tampered-by-attacker";', 'utf8');
 
+      const adapter = new NativeFileOperationAdapter();
       assert.throws(
-        () => SemanticPolicyEngine.validateTOCTOUAndExecute(file, originalHash, () => {
+        () => SemanticPolicyEngine.validateTOCTOUAndExecute(file, originalHash, adapter, () => {
           fs.writeFileSync(file, 'const secret = "new";', 'utf8');
         }),
         (err: any) => err.message.includes('TOCTOU_VIOLATION_FILE_MODIFIED')
@@ -121,7 +125,7 @@ describe('EOS Phase 1.4 — Semantic Authorization Policy & Operational Resilien
   test('6. CRASH RECOVERY — Recuperação Segura de Interrupção no Meio da Execução com ExecutionJournal Persistente', () => {
     const tmpJournalDir = fs.mkdtempSync(path.join(process.cwd(), '.eos-test-journal-'));
     try {
-      const journalService = new FileExecutionJournalService(tmpJournalDir);
+      const journalService = new FileExecutionJournalAdapter(tmpJournalDir);
 
       const plan: ActionPlan = {
         planId: 'plan-crash-recovery-999',

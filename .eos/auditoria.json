@@ -1,11 +1,11 @@
 {
   "$schema": "https://eos.architecture/schemas/v3/stage05-trend-knowledge.json",
   "exporterVersion": "3.1.1",
-  "artifactId": "art-AUD-1786824124402-1786824124402",
-  "artifactHash": "7a862295a1e2c42ecddfc4f7e11c4bd4c5af95fd32003ffa66daba6781fa0695",
-  "auditRunId": "AUD-1786824124402",
+  "artifactId": "art-AUD-1786836649367-1786836649367",
+  "artifactHash": "d652dacc9f50690295c37ca07c271b8cccaeb6ae8326e3589e78972d0a378060",
+  "auditRunId": "AUD-1786836649367",
   "projectId": "proj-omega",
-  "createdAt": "2026-08-15T20:02:04.402Z",
+  "createdAt": "2026-08-15T23:30:49.367Z",
   "sourceSnapshotHash": "snap-clean-1",
   "summary": {
     "sourceSnapshot": {
@@ -13,7 +13,7 @@
       "repositoryRoot": "C:\\Users\\Max\\Desktop\\Projeto\\EOS",
       "commitHash": "head",
       "branchName": "main",
-      "observedAt": "2026-08-15T20:02:04.399Z",
+      "observedAt": "2026-08-15T23:30:49.363Z",
       "treeHash": "tree-clean-1"
     },
     "findingCount": 0,
