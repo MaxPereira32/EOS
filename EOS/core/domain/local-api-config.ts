@@ -4,8 +4,8 @@
  */
 
 export interface LocalApplicationApiConfig {
-  readonly bindAddress: '127.0.0.1'; // Strict localhost bind (never 0.0.0.0)
-  readonly defaultPort: 5180;
+  readonly bindAddress: string; // Strict localhost bind ('127.0.0.1')
+  readonly defaultPort: number; // e.g. 5180, 5195
   readonly portLockFilePath: string; // .eos/api.port
   readonly sessionTokenPath: string; // .eos/session.token
   readonly allowedOrigins: readonly string[]; // ["http://localhost:5173", "http://localhost:5174"]
