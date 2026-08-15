@@ -52,9 +52,7 @@ export class SystemContext {
     if (!data || typeof data !== 'object') {
       throw new Error('SystemContext Integrity Error: Dados de inicialização inválidos.');
     }
-    if (!data.system_id || typeof data.system_id !== 'string' || data.system_id.trim() === '') {
-      throw new Error('SystemContext Integrity Error: system_id é obrigatório e não pode ser vazio.');
-    }
+    // [FAULT INJECTED] validation removed.
     if (!data.system_name || typeof data.system_name !== 'string' || data.system_name.trim() === '') {
       throw new Error('SystemContext Integrity Error: system_name é obrigatório e não pode ser vazio.');
     }
