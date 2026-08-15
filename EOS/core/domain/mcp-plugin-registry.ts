@@ -51,7 +51,7 @@ export class McpPluginRegistry {
       throw new Error(`MCP_RUNTIME_INTEGRITY_VIOLATION: Servidor MCP '${serverId}' não está registrado na governança.`);
     }
     for (const tool of expectedTools) {
-      if (!registered.toolsProvided.includes(tool)) {
+      if (!registered.exposedTools.includes(tool)) {
         throw new Error(`MCP_RUNTIME_INTEGRITY_VIOLATION: Ferramenta MCP '${tool}' ausente no servidor '${serverId}'.`);
       }
     }

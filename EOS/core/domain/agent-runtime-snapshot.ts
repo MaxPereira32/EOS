@@ -1,5 +1,5 @@
 /**
- * EOS CORE DOMAIN — AGENT RUNTIME SNAPSHOT CONTRACT
+ * EOS CORE DOMAIN — AGENT RUNTIME SNAPSHOT CONTRACT (v3.0.0 SOVEREIGN)
  * Captures exact immutable provenance of Agents, Prompts, Context Policies,
  * Model Configurations, Skills, Plugins, MCP Servers and LLM models participating in execution.
  */
@@ -19,17 +19,20 @@ export interface PluginProvenance {
   readonly configHash?: string;
   readonly permissionSetHash?: string;
   readonly permissions: readonly string[];
-  readonly toolsProvided: readonly string[];
+  readonly exposedTools: readonly string[];
   readonly actualToolsUsed?: readonly string[];
+  readonly activatedAt?: string;
+  readonly deactivatedAt?: string;
 }
 
 export interface McpServerProvenance {
   readonly serverId: string;
   readonly version: string;
-  readonly toolsProvided: readonly string[];
+  readonly exposedTools: readonly string[];
   readonly actualToolsUsed?: readonly string[];
   readonly resourcesProvided: readonly string[];
   readonly authenticated: boolean;
+  readonly activatedAt?: string;
 }
 
 export interface AgentRuntimeSnapshot {
@@ -40,13 +43,13 @@ export interface AgentRuntimeSnapshot {
   readonly agentVersion: string;
   readonly agentCommitHash?: string;
   
-  // Proveniência Expandida de IA, Modelo e Contexto (Itens 5 & 9)
+  // Proveniência Expandida de IA, Modelo e Contexto
   readonly promptVersion: string;
   readonly promptHash: string;
   readonly contextPolicyHash: string;
   readonly modelConfigurationHash: string;
 
-  // Parâmetros de Inferência e Raciocínio (Item 9)
+  // Parâmetros de Inferência e Raciocínio
   readonly temperature?: number;
   readonly maxTokens?: number;
   readonly responseFormat?: string;

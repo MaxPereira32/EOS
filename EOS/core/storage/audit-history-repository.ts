@@ -1,9 +1,12 @@
 /**
- * EOS CORE STORAGE — AUDIT HISTORY REPOSITORY
+ * EOS CORE STORAGE — AUDIT HISTORY REPOSITORY (v3.0.0 SOVEREIGN)
  * Materializes and retrieves real AuditArtifact objects from disk
  * (.eos/projects/{projectId}/audits/{auditRunId}.json).
- * Computes deterministic artifactHash using JCS RFC 8785 canonical hash.
- * ZERO MOCK POLICY: Sovereign disk persistence of primary domain entities.
+ * 
+ * ATOMIC WRITE POLICY: Write to .tmp -> fsyncSync -> atomic fs.renameSync
+ * CANONICAL HASH: Uses CanonicalHashService (JCS RFC 8785 SHA-256).
+ * STRICT LINEAGE: Enforces parentArtifactHash matching parent artifact on disk.
+ * IMMUTABLE POLICY: Rejects overwriting existing artifacts; updates produce new linked artifacts.
  */
 
 import * as fs from 'fs';
@@ -13,7 +16,8 @@ import { Finding, Evidence, Fact } from '../domain/types';
 import { ActionPlan } from '../domain/action-plan';
 import { ApprovalRecord } from '../domain/approval-record';
 import { AgentRuntimeSnapshot } from '../domain/agent-runtime-snapshot';
-import { canonicalHash } from '../utils/canonical-json';
+import { CanonicalHashService } from '../services/canonical-hash-service';
+import { AuditArtifactMigrator } from './audit-artifact-migrator';
 
 export interface AuditArtifact {
   readonly artifactId: string;
@@ -79,11 +83,26 @@ export class AuditHistoryRepository {
       throw new Error('AUDIT_REPOSITORY_ERROR: auditRunId e projectId são obrigatórios.');
     }
 
+    // Validação estrita de linhagem causal: parentArtifactHash é OBRIGATÓRIO se parentArtifactId estiver presente
+    if (parentArtifactId && !parentArtifactHash) {
+      throw new Error('AUDIT_LINEAGE_VIOLATION: parentArtifactHash é obrigatório quando parentArtifactId é fornecido.');
+    }
+
+    if (parentArtifactId && parentArtifactHash) {
+      const parentArtifact = this.getAuditArtifact(projectId, parentArtifactId);
+      if (!parentArtifact) {
+        throw new Error(`AUDIT_LINEAGE_VIOLATION: Artefato pai '${parentArtifactId}' não foi encontrado no projeto '${projectId}'.`);
+      }
+      if (parentArtifact.artifactHash !== parentArtifactHash) {
+        throw new Error(`AUDIT_LINEAGE_VIOLATION: Hash do artefato pai retornado (${parentArtifact.artifactHash}) difere do parentArtifactHash esperado (${parentArtifactHash}).`);
+      }
+    }
+
     const artifactId = `art-${auditRunId}-${Date.now()}`;
     const createdAt = new Date().toISOString();
-    const sourceSnapshotHash = sourceSnapshot.snapshotId || 'unknown-snapshot';
+    const sourceSnapshotHash = sourceSnapshot?.snapshotId || 'unknown-snapshot';
 
-    // Content payload without artifactHash for deterministic JCS canonicalization
+    // Payload sem artifactHash para canonicalização determinística JCS RFC 8785
     const payloadToCanonicalize = {
       artifactId,
       schemaVersion: 1,
@@ -104,7 +123,7 @@ export class AuditHistoryRepository {
       runtimeSnapshot: runtimeSnapshot || null
     };
 
-    const artifactHash = canonicalHash(payloadToCanonicalize);
+    const artifactHash = CanonicalHashService.hash(payloadToCanonicalize);
 
     const artifact: AuditArtifact = {
       ...payloadToCanonicalize,
@@ -119,25 +138,49 @@ export class AuditHistoryRepository {
     };
 
     const dir = this.getProjectAuditDir(projectId);
-    const filePath = path.join(dir, `${auditRunId}.json`);
+    const finalFilePath = path.join(dir, `${auditRunId}.json`);
+    const tempFilePath = path.join(dir, `${auditRunId}.tmp.${Date.now()}`);
 
-    fs.writeFileSync(filePath, JSON.stringify(artifact, null, 2), 'utf8');
+    // POLÍTICA DE IMUTABILIDADE: Rejeita sobrescrita direta de artefatos existentes
+    if (fs.existsSync(finalFilePath)) {
+      throw new Error(`AUDIT_IMMUTABILITY_VIOLATION: O AuditArtifact '${auditRunId}' já existe e é imutável! Crie um novo AuditArtifact encadeado por parentArtifactId.`);
+    }
 
-    // Ensure fsync for storage durability
-    const fd = fs.openSync(filePath, 'r+');
+    // ESCRITA ATÔMICA: Temp File -> Fsync -> Atomic Rename
+    fs.writeFileSync(tempFilePath, JSON.stringify(artifact, null, 2), 'utf8');
+    const fd = fs.openSync(tempFilePath, 'r+');
     try {
       fs.fsyncSync(fd);
     } finally {
       fs.closeSync(fd);
     }
 
+    fs.renameSync(tempFilePath, finalFilePath);
+
     return artifact;
   }
 
-  public getAuditArtifact(projectId: string, auditRunId: string): AuditArtifact | null {
+  public getAuditArtifact(projectId: string, auditRunOrArtifactId: string): AuditArtifact | null {
     const safeProjectId = path.basename(projectId);
-    const safeAuditRunId = path.basename(auditRunId);
-    const filePath = path.join(this.baseDir, 'projects', safeProjectId, 'audits', `${safeAuditRunId}.json`);
+    const safeId = path.basename(auditRunOrArtifactId);
+    let filePath = path.join(this.baseDir, 'projects', safeProjectId, 'audits', `${safeId}.json`);
+
+    if (!fs.existsSync(filePath)) {
+      // Fallback: busca por artifactId varrendo a pasta do projeto se safeId for um artifactId
+      const dir = path.join(this.baseDir, 'projects', safeProjectId, 'audits');
+      if (fs.existsSync(dir)) {
+        const files = fs.readdirSync(dir).filter(f => f.endsWith('.json'));
+        for (const file of files) {
+          try {
+            const raw = JSON.parse(fs.readFileSync(path.join(dir, file), 'utf8'));
+            if (raw.artifactId === auditRunOrArtifactId || raw.auditRunId === auditRunOrArtifactId) {
+              filePath = path.join(dir, file);
+              break;
+            }
+          } catch {}
+        }
+      }
+    }
 
     if (!fs.existsSync(filePath)) {
       return null;
@@ -145,9 +188,12 @@ export class AuditHistoryRepository {
 
     try {
       const content = fs.readFileSync(filePath, 'utf8');
-      const artifact = JSON.parse(content) as AuditArtifact;
+      const raw = JSON.parse(content);
       
-      // Verify JCS RFC 8785 artifactHash integrity
+      // Aplicar Migração de Schema se necessário
+      const artifact = AuditArtifactMigrator.migrate(raw);
+
+      // Validação de Integridade do Hash Canônico JCS RFC 8785
       if (artifact && artifact.artifactHash) {
         const payloadToVerify = {
           artifactId: artifact.artifactId,
@@ -169,9 +215,9 @@ export class AuditHistoryRepository {
           runtimeSnapshot: artifact.runtimeSnapshot || null
         };
 
-        const recomputed = canonicalHash(payloadToVerify);
+        const recomputed = CanonicalHashService.hash(payloadToVerify);
         if (recomputed !== artifact.artifactHash) {
-          throw new Error(`AUDIT_STORAGE_INTEGRITY_VIOLATION: O hash canônico JCS do artefato '${auditRunId}' teve seu conteúdo adulterado no disco! (Esperado ${artifact.artifactHash}, calculado ${recomputed})`);
+          throw new Error(`AUDIT_STORAGE_INTEGRITY_VIOLATION: O hash canônico JCS do artefato '${auditRunOrArtifactId}' teve seu conteúdo adulterado no disco! (Esperado ${artifact.artifactHash}, calculado ${recomputed})`);
         }
       }
 
@@ -198,9 +244,10 @@ export class AuditHistoryRepository {
     for (const file of files) {
       try {
         const content = fs.readFileSync(path.join(dir, file), 'utf8');
-        const parsed = JSON.parse(content) as AuditArtifact;
-        if (parsed && parsed.auditRunId) {
-          artifacts.push(parsed);
+        const raw = JSON.parse(content);
+        const artifact = AuditArtifactMigrator.migrate(raw);
+        if (artifact && artifact.auditRunId) {
+          artifacts.push(artifact);
         }
       } catch {
         // Skip corrupted entries

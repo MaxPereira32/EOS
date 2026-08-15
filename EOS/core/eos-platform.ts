@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 
 /**
- * EOS ENTERPRISE PLATFORM ORCHESTRATOR (v2.5.0 SOVEREIGN)
+ * EOS ENTERPRISE PLATFORM ORCHESTRATOR (v3.0.0 SOVEREIGN)
  * 
  * Orchestrates the complete 5-stage pipeline using Sovereign AuditArtifact persistence.
  * PURE REAL EVIDENCE POLICY: Zero hardcoded sample fixtures in production orchestrator.
  * STRICT CONTEXT POLICY: Requires mandatory AuditExecutionContext (No unauthenticated fallback).
+ * BOUNDARY VALIDATION: Enforces RepositoryIdentity mapping between projectId and repositoryRoot.
  */
 
 import * as fs from 'fs';
@@ -26,6 +27,7 @@ import { AuditHistoryRepository, AuditArtifact } from './storage/audit-history-r
 import { JsonAuditExporter } from './reporters/json-audit-exporter';
 
 export interface AuditExecutionContext {
+  readonly contextId: string;
   readonly projectId: string;
   readonly repositoryRoot: string;
   readonly assets: readonly Asset[];
@@ -46,13 +48,27 @@ export class EosPlatformV2 {
     this.auditRepo = new AuditHistoryRepository(customBaseDir);
   }
 
-  public async runPipeline(context: AuditExecutionContext): Promise<AuditArtifact> {
-    if (!context || !context.projectId || !context.sourceSnapshot || !context.runtimeSnapshot) {
-      throw new Error('AUDIT_PIPELINE_ERROR: Contexto de auditoria AuditExecutionContext é obrigatório e deve ser assinado e tipado.');
+  /**
+   * Valida no boundary a identidade do projeto e a integridade do caminho do repositório.
+   */
+  private validateContextBoundary(context: AuditExecutionContext): void {
+    if (!context || !context.projectId || !context.repositoryRoot || !context.sourceSnapshot || !context.runtimeSnapshot) {
+      throw new Error('AUDIT_PIPELINE_ERROR: Contexto de auditoria AuditExecutionContext é obrigatório, imutável, canonicalizado e verificável.');
     }
 
+    const normalizedRepo = path.normalize(context.repositoryRoot).toLowerCase();
+    const normalizedSnapshotRoot = path.normalize(context.sourceSnapshot.repositoryRoot).toLowerCase();
+
+    if (normalizedRepo !== normalizedSnapshotRoot) {
+      throw new Error(`SECURITY_VIOLATION_CONTEXT_MISMATCH: O repositoryRoot do contexto ('${normalizedRepo}') difere do repositoryRoot do SourceSnapshot ('${normalizedSnapshotRoot}').`);
+    }
+  }
+
+  public async runPipeline(context: AuditExecutionContext): Promise<AuditArtifact> {
+    this.validateContextBoundary(context);
+
     console.log('╔══════════════════════════════════════════════════════════════╗');
-    console.log(`║   EOS Platform v2.5.0 Sovereign Start [${context.projectId}]   ║`);
+    console.log(`║   EOS Platform v3.0.0 Sovereign Start [${context.projectId}]   ║`);
     console.log('╚══════════════════════════════════════════════════════════════╝\n');
 
     // ── ESTÁGIO 01: Ingestão de Ativos & Governança via Swarm ────────────────────────
@@ -76,7 +92,7 @@ export class EosPlatformV2 {
     const primaryFinding: CanonicalFinding = rawFinding ? {
       finding_id: rawFinding.finding_id,
       rule_id: rawFinding.rule_id,
-      rule_version: '2.5.0',
+      rule_version: '3.0.0',
       fact_ids: rawFinding.fact_ids || [],
       evidence_ids: ['ev-pass'],
       target_id: context.projectId,
@@ -90,7 +106,7 @@ export class EosPlatformV2 {
     } : {
       finding_id: `find-empty-${Date.now()}`,
       rule_id: 'RULE-PASS',
-      rule_version: '2.5.0',
+      rule_version: '3.0.0',
       fact_ids: [],
       evidence_ids: ['ev-pass'],
       target_id: context.projectId,
@@ -126,7 +142,7 @@ export class EosPlatformV2 {
     // Exportação derivada (sem symlink)
     JsonAuditExporter.exportAuditReport(artifact);
 
-    console.log('\n[🟢] PIPELINE EOS v2.5 SOVEREIGN CONCLUÍDO COM SUCESSO!');
+    console.log('\n[🟢] PIPELINE EOS v3.0 SOVEREIGN CONCLUÍDO COM SUCESSO!');
     console.log(`  └─ AuditArtifact: ${artifact.artifactId} (Hash JCS: ${artifact.artifactHash})\n`);
 
     return artifact;
