@@ -1,6 +1,6 @@
 {
-  "audit_run_id": "RUN-233b9f5b3ad4",
-  "timestamp": "2026-08-15T01:43:54.913Z",
+  "audit_run_id": "RUN-fcf0d691a6f5",
+  "timestamp": "2026-08-15T01:44:52.878Z",
   "target": {
     "target_id": "TGT-93f757f06c42caa8",
     "root_path": "C:\\Users\\Max\\Desktop\\Projeto\\EOS\\EOS\\core",
@@ -8,7 +8,7 @@
     "commit_hash": null,
     "branch": null,
     "metadata": {
-      "resolved_at": "2026-08-15T01:43:54.242Z"
+      "resolved_at": "2026-08-15T01:44:52.322Z"
     }
   },
   "coverage": {
@@ -24,11 +24,11 @@
   },
   "findings": [
     {
-      "finding_id": "FND-ARCH-ae71057cf8",
+      "finding_id": "FND-ARCH-4b2047121a",
       "rule_id": "ARCH-RULE-001-MANDATORY-DOMAIN-DIR",
       "rule_version": "3.0.0",
       "fact_ids": [
-        "FCT-FS-5f3e5773ca8b"
+        "FCT-FS-02f1f69a7f19"
       ],
       "evidence_ids": [
         "EVD-FS-0032cfc307ce",
@@ -49,7 +49,7 @@
       "severity": "HIGH",
       "confidence": 1,
       "status": "OPEN",
-      "timestamp": "2026-08-15T01:43:54.910Z"
+      "timestamp": "2026-08-15T01:44:52.876Z"
     }
   ],
   "rule_results": [
@@ -59,7 +59,7 @@
       "status": "FAIL",
       "rationale": "Violação Arquitetural: O diretório obrigatório de domínio 'src/domain' não existe no repositório auditado.",
       "facts_used": [
-        "FCT-FS-5f3e5773ca8b"
+        "FCT-FS-02f1f69a7f19"
       ]
     },
     {
@@ -78,7 +78,7 @@
   ],
   "facts": [
     {
-      "fact_id": "FCT-FS-5f3e5773ca8b",
+      "fact_id": "FCT-FS-02f1f69a7f19",
       "schema_version": "1.0",
       "fact_type": "FILE_STRUCTURE",
       "provider_id": "file-structure-fact-provider",
@@ -95,7 +95,7 @@
         "EVD-FS-097b779a37cd",
         "EVD-FS-09cecfcccc04"
       ],
-      "input_hash": "d2f287198729f670a15a253d89a9a24843be745b505ba90faf97460a1e76c6ea",
+      "input_hash": "467ae8db4a926024c319d66daf875bdd6415ee4be505a0f4a2f715d94c971ac4",
       "semantic_hash": "c5fc8d108c8751319e7df36530e472b74a1b738ff2796e9bc9e5a23ed764c74d",
       "lifecycle_status": "VALID",
       "payload": {
@@ -105,7 +105,7 @@
         "status": "ABSENCE_VERIFIED"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.884Z"
+      "created_at": "2026-08-15T01:44:52.857Z"
     },
     {
       "fact_id": "FCT-DEP-0b0f30350e5d",
@@ -128,7 +128,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.903Z"
+      "created_at": "2026-08-15T01:44:52.869Z"
     },
     {
       "fact_id": "FCT-DEP-0948f03cfd38",
@@ -151,7 +151,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.903Z"
+      "created_at": "2026-08-15T01:44:52.869Z"
     },
     {
       "fact_id": "FCT-DEP-c766303e7d4b",
@@ -174,7 +174,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.903Z"
+      "created_at": "2026-08-15T01:44:52.869Z"
     },
     {
       "fact_id": "FCT-DEP-57c7bb050e89",
@@ -197,7 +197,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.903Z"
+      "created_at": "2026-08-15T01:44:52.869Z"
     },
     {
       "fact_id": "FCT-DEP-347197bda33c",
@@ -220,7 +220,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.903Z"
+      "created_at": "2026-08-15T01:44:52.869Z"
     },
     {
       "fact_id": "FCT-DEP-8cb1248bc498",
@@ -243,7 +243,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.903Z"
+      "created_at": "2026-08-15T01:44:52.869Z"
     },
     {
       "fact_id": "FCT-DEP-344a2c29db97",
@@ -266,7 +266,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.903Z"
+      "created_at": "2026-08-15T01:44:52.869Z"
     },
     {
       "fact_id": "FCT-DEP-98f23c394546",
@@ -289,7 +289,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.903Z"
+      "created_at": "2026-08-15T01:44:52.869Z"
     },
     {
       "fact_id": "FCT-DEP-67d3ecf02e50",
@@ -312,7 +312,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.903Z"
+      "created_at": "2026-08-15T01:44:52.869Z"
     },
     {
       "fact_id": "FCT-DEP-942cf7e29b33",
@@ -335,7 +335,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.903Z"
+      "created_at": "2026-08-15T01:44:52.869Z"
     },
     {
       "fact_id": "FCT-DEP-04170fb3b825",
@@ -358,7 +358,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.903Z"
+      "created_at": "2026-08-15T01:44:52.870Z"
     },
     {
       "fact_id": "FCT-DEP-f24bc7b0939f",
@@ -381,7 +381,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.903Z"
+      "created_at": "2026-08-15T01:44:52.870Z"
     },
     {
       "fact_id": "FCT-DEP-84ea00e22480",
@@ -404,7 +404,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.903Z"
+      "created_at": "2026-08-15T01:44:52.870Z"
     },
     {
       "fact_id": "FCT-DEP-0037a19959d2",
@@ -427,7 +427,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.903Z"
+      "created_at": "2026-08-15T01:44:52.870Z"
     },
     {
       "fact_id": "FCT-DEP-ce701bb79ca4",
@@ -450,7 +450,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.903Z"
+      "created_at": "2026-08-15T01:44:52.870Z"
     },
     {
       "fact_id": "FCT-DEP-4750ffb63332",
@@ -473,7 +473,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.903Z"
+      "created_at": "2026-08-15T01:44:52.870Z"
     },
     {
       "fact_id": "FCT-DEP-e2c671adc492",
@@ -496,7 +496,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.904Z"
+      "created_at": "2026-08-15T01:44:52.870Z"
     },
     {
       "fact_id": "FCT-DEP-8cd3f0573737",
@@ -519,7 +519,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.904Z"
+      "created_at": "2026-08-15T01:44:52.870Z"
     },
     {
       "fact_id": "FCT-DEP-89bcded3e366",
@@ -542,7 +542,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.904Z"
+      "created_at": "2026-08-15T01:44:52.870Z"
     },
     {
       "fact_id": "FCT-DEP-0a8b5e1f2da2",
@@ -565,7 +565,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.904Z"
+      "created_at": "2026-08-15T01:44:52.870Z"
     },
     {
       "fact_id": "FCT-DEP-2c64e495fe3e",
@@ -588,7 +588,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.904Z"
+      "created_at": "2026-08-15T01:44:52.870Z"
     },
     {
       "fact_id": "FCT-DEP-4af386f5342d",
@@ -611,7 +611,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.904Z"
+      "created_at": "2026-08-15T01:44:52.870Z"
     },
     {
       "fact_id": "FCT-DEP-c06c8d2cc8ea",
@@ -634,7 +634,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.904Z"
+      "created_at": "2026-08-15T01:44:52.870Z"
     },
     {
       "fact_id": "FCT-DEP-57b7245622f8",
@@ -657,7 +657,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.904Z"
+      "created_at": "2026-08-15T01:44:52.870Z"
     },
     {
       "fact_id": "FCT-DEP-298d23bbce71",
@@ -680,7 +680,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.904Z"
+      "created_at": "2026-08-15T01:44:52.870Z"
     },
     {
       "fact_id": "FCT-DEP-58b6f4dafe50",
@@ -703,7 +703,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.904Z"
+      "created_at": "2026-08-15T01:44:52.870Z"
     },
     {
       "fact_id": "FCT-DEP-4a2f6298a407",
@@ -726,7 +726,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.904Z"
+      "created_at": "2026-08-15T01:44:52.870Z"
     },
     {
       "fact_id": "FCT-DEP-9db970f991ab",
@@ -749,7 +749,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.904Z"
+      "created_at": "2026-08-15T01:44:52.870Z"
     },
     {
       "fact_id": "FCT-DEP-12fea295f715",
@@ -772,7 +772,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.904Z"
+      "created_at": "2026-08-15T01:44:52.870Z"
     },
     {
       "fact_id": "FCT-DEP-186004b8cec2",
@@ -795,7 +795,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.904Z"
+      "created_at": "2026-08-15T01:44:52.870Z"
     },
     {
       "fact_id": "FCT-DEP-94e9abbd9e09",
@@ -818,7 +818,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.904Z"
+      "created_at": "2026-08-15T01:44:52.870Z"
     },
     {
       "fact_id": "FCT-DEP-f13c32fa6a6c",
@@ -841,7 +841,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.904Z"
+      "created_at": "2026-08-15T01:44:52.871Z"
     },
     {
       "fact_id": "FCT-DEP-7d597461ed0c",
@@ -864,7 +864,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.904Z"
+      "created_at": "2026-08-15T01:44:52.871Z"
     },
     {
       "fact_id": "FCT-DEP-b32db23c7648",
@@ -887,7 +887,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.904Z"
+      "created_at": "2026-08-15T01:44:52.871Z"
     },
     {
       "fact_id": "FCT-DEP-411faf8208f0",
@@ -910,7 +910,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.904Z"
+      "created_at": "2026-08-15T01:44:52.871Z"
     },
     {
       "fact_id": "FCT-DEP-291a6b3de473",
@@ -933,7 +933,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.904Z"
+      "created_at": "2026-08-15T01:44:52.871Z"
     },
     {
       "fact_id": "FCT-DEP-fc6f88fd23f5",
@@ -956,7 +956,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.904Z"
+      "created_at": "2026-08-15T01:44:52.871Z"
     },
     {
       "fact_id": "FCT-DEP-4819cc4e4c8b",
@@ -979,7 +979,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.904Z"
+      "created_at": "2026-08-15T01:44:52.871Z"
     },
     {
       "fact_id": "FCT-DEP-45450abf216a",
@@ -1002,7 +1002,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.904Z"
+      "created_at": "2026-08-15T01:44:52.871Z"
     },
     {
       "fact_id": "FCT-DEP-3be494336033",
@@ -1025,7 +1025,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.904Z"
+      "created_at": "2026-08-15T01:44:52.871Z"
     },
     {
       "fact_id": "FCT-DEP-e6e06c98b5df",
@@ -1048,7 +1048,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.904Z"
+      "created_at": "2026-08-15T01:44:52.871Z"
     },
     {
       "fact_id": "FCT-DEP-58be111de358",
@@ -1071,7 +1071,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.905Z"
+      "created_at": "2026-08-15T01:44:52.871Z"
     },
     {
       "fact_id": "FCT-DEP-92e1c35edabc",
@@ -1094,7 +1094,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.905Z"
+      "created_at": "2026-08-15T01:44:52.871Z"
     },
     {
       "fact_id": "FCT-DEP-9958a4aed04f",
@@ -1117,7 +1117,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.905Z"
+      "created_at": "2026-08-15T01:44:52.871Z"
     },
     {
       "fact_id": "FCT-DEP-8affa869c0c3",
@@ -1140,7 +1140,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.905Z"
+      "created_at": "2026-08-15T01:44:52.871Z"
     },
     {
       "fact_id": "FCT-DEP-41e436e9fba0",
@@ -1163,7 +1163,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.905Z"
+      "created_at": "2026-08-15T01:44:52.871Z"
     },
     {
       "fact_id": "FCT-DEP-09ec0aff083e",
@@ -1186,7 +1186,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.905Z"
+      "created_at": "2026-08-15T01:44:52.871Z"
     },
     {
       "fact_id": "FCT-DEP-4884fe34d048",
@@ -1209,7 +1209,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.905Z"
+      "created_at": "2026-08-15T01:44:52.871Z"
     },
     {
       "fact_id": "FCT-DEP-79de6310e746",
@@ -1232,7 +1232,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.905Z"
+      "created_at": "2026-08-15T01:44:52.871Z"
     },
     {
       "fact_id": "FCT-DEP-1158bd7fc2ef",
@@ -1255,7 +1255,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.905Z"
+      "created_at": "2026-08-15T01:44:52.871Z"
     },
     {
       "fact_id": "FCT-DEP-6b13532c256d",
@@ -1278,7 +1278,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.905Z"
+      "created_at": "2026-08-15T01:44:52.871Z"
     },
     {
       "fact_id": "FCT-DEP-5a6e043c0bf8",
@@ -1301,7 +1301,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.905Z"
+      "created_at": "2026-08-15T01:44:52.871Z"
     },
     {
       "fact_id": "FCT-DEP-173ebe014a5d",
@@ -1324,7 +1324,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.905Z"
+      "created_at": "2026-08-15T01:44:52.871Z"
     },
     {
       "fact_id": "FCT-DEP-93687fe93b0b",
@@ -1347,7 +1347,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.905Z"
+      "created_at": "2026-08-15T01:44:52.872Z"
     },
     {
       "fact_id": "FCT-DEP-69ea997001ec",
@@ -1370,7 +1370,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.905Z"
+      "created_at": "2026-08-15T01:44:52.872Z"
     },
     {
       "fact_id": "FCT-DEP-d7d9098be49b",
@@ -1393,7 +1393,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.905Z"
+      "created_at": "2026-08-15T01:44:52.872Z"
     },
     {
       "fact_id": "FCT-DEP-28acb1b84549",
@@ -1416,7 +1416,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.905Z"
+      "created_at": "2026-08-15T01:44:52.872Z"
     },
     {
       "fact_id": "FCT-DEP-4b9d498d5229",
@@ -1439,7 +1439,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.905Z"
+      "created_at": "2026-08-15T01:44:52.872Z"
     },
     {
       "fact_id": "FCT-DEP-fe71dcf65806",
@@ -1462,7 +1462,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.905Z"
+      "created_at": "2026-08-15T01:44:52.872Z"
     },
     {
       "fact_id": "FCT-DEP-6f56fa3185ff",
@@ -1485,7 +1485,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.905Z"
+      "created_at": "2026-08-15T01:44:52.872Z"
     },
     {
       "fact_id": "FCT-DEP-3dc693388ca6",
@@ -1508,7 +1508,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.905Z"
+      "created_at": "2026-08-15T01:44:52.872Z"
     },
     {
       "fact_id": "FCT-DEP-57ec5d19cdb7",
@@ -1531,7 +1531,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.905Z"
+      "created_at": "2026-08-15T01:44:52.872Z"
     },
     {
       "fact_id": "FCT-DEP-88d67a64f97f",
@@ -1554,7 +1554,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.905Z"
+      "created_at": "2026-08-15T01:44:52.872Z"
     },
     {
       "fact_id": "FCT-DEP-e1cce31c4086",
@@ -1577,7 +1577,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.906Z"
+      "created_at": "2026-08-15T01:44:52.872Z"
     },
     {
       "fact_id": "FCT-DEP-fe67b6e6dc3e",
@@ -1600,7 +1600,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.906Z"
+      "created_at": "2026-08-15T01:44:52.872Z"
     },
     {
       "fact_id": "FCT-DEP-ea41be99af29",
@@ -1623,7 +1623,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.906Z"
+      "created_at": "2026-08-15T01:44:52.872Z"
     },
     {
       "fact_id": "FCT-DEP-b0696a5a0712",
@@ -1646,7 +1646,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.906Z"
+      "created_at": "2026-08-15T01:44:52.872Z"
     },
     {
       "fact_id": "FCT-DEP-50ed784994cb",
@@ -1669,7 +1669,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.906Z"
+      "created_at": "2026-08-15T01:44:52.872Z"
     },
     {
       "fact_id": "FCT-DEP-87fdaebd25d7",
@@ -1692,7 +1692,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.906Z"
+      "created_at": "2026-08-15T01:44:52.872Z"
     },
     {
       "fact_id": "FCT-DEP-a15bcfb0320b",
@@ -1715,7 +1715,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.906Z"
+      "created_at": "2026-08-15T01:44:52.872Z"
     },
     {
       "fact_id": "FCT-DEP-681d7e494533",
@@ -1738,7 +1738,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.906Z"
+      "created_at": "2026-08-15T01:44:52.872Z"
     },
     {
       "fact_id": "FCT-DEP-2e9ce7a76c2c",
@@ -1761,7 +1761,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.906Z"
+      "created_at": "2026-08-15T01:44:52.872Z"
     },
     {
       "fact_id": "FCT-DEP-3f3564b4fd12",
@@ -1784,7 +1784,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.906Z"
+      "created_at": "2026-08-15T01:44:52.872Z"
     },
     {
       "fact_id": "FCT-DEP-f26b10d46300",
@@ -1807,7 +1807,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.906Z"
+      "created_at": "2026-08-15T01:44:52.872Z"
     },
     {
       "fact_id": "FCT-DEP-4ba75c6a02d8",
@@ -1830,7 +1830,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.906Z"
+      "created_at": "2026-08-15T01:44:52.872Z"
     },
     {
       "fact_id": "FCT-DEP-59a514637cb0",
@@ -1853,7 +1853,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.906Z"
+      "created_at": "2026-08-15T01:44:52.872Z"
     },
     {
       "fact_id": "FCT-DEP-43bcf41a3ea6",
@@ -1876,7 +1876,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.906Z"
+      "created_at": "2026-08-15T01:44:52.872Z"
     },
     {
       "fact_id": "FCT-DEP-4ad5b470c9c8",
@@ -1899,7 +1899,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.906Z"
+      "created_at": "2026-08-15T01:44:52.873Z"
     },
     {
       "fact_id": "FCT-DEP-f4cf93f84f83",
@@ -1922,7 +1922,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.906Z"
+      "created_at": "2026-08-15T01:44:52.873Z"
     },
     {
       "fact_id": "FCT-DEP-c31c52ccde2a",
@@ -1945,7 +1945,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.906Z"
+      "created_at": "2026-08-15T01:44:52.873Z"
     },
     {
       "fact_id": "FCT-DEP-65bfc82916a4",
@@ -1968,7 +1968,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.906Z"
+      "created_at": "2026-08-15T01:44:52.873Z"
     },
     {
       "fact_id": "FCT-DEP-4543a84aa365",
@@ -1991,7 +1991,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.906Z"
+      "created_at": "2026-08-15T01:44:52.873Z"
     },
     {
       "fact_id": "FCT-DEP-e3a352f69430",
@@ -2014,7 +2014,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.906Z"
+      "created_at": "2026-08-15T01:44:52.873Z"
     },
     {
       "fact_id": "FCT-DEP-fc0bed1b4065",
@@ -2037,7 +2037,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.906Z"
+      "created_at": "2026-08-15T01:44:52.873Z"
     },
     {
       "fact_id": "FCT-DEP-5ff65ae25eac",
@@ -2060,7 +2060,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.907Z"
+      "created_at": "2026-08-15T01:44:52.873Z"
     },
     {
       "fact_id": "FCT-DEP-c89b1a609377",
@@ -2083,7 +2083,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.907Z"
+      "created_at": "2026-08-15T01:44:52.873Z"
     },
     {
       "fact_id": "FCT-DEP-2908a850264a",
@@ -2106,7 +2106,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.907Z"
+      "created_at": "2026-08-15T01:44:52.873Z"
     },
     {
       "fact_id": "FCT-DEP-14dc8a6138e3",
@@ -2129,7 +2129,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.907Z"
+      "created_at": "2026-08-15T01:44:52.873Z"
     },
     {
       "fact_id": "FCT-DEP-260c646c8b6d",
@@ -2152,7 +2152,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.907Z"
+      "created_at": "2026-08-15T01:44:52.873Z"
     },
     {
       "fact_id": "FCT-DEP-3cf35554bb34",
@@ -2175,7 +2175,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.907Z"
+      "created_at": "2026-08-15T01:44:52.873Z"
     },
     {
       "fact_id": "FCT-DEP-ca67d41c2172",
@@ -2198,7 +2198,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.907Z"
+      "created_at": "2026-08-15T01:44:52.873Z"
     },
     {
       "fact_id": "FCT-DEP-499befb166cc",
@@ -2221,7 +2221,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.907Z"
+      "created_at": "2026-08-15T01:44:52.873Z"
     },
     {
       "fact_id": "FCT-DEP-425a90ac93d8",
@@ -2244,7 +2244,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.907Z"
+      "created_at": "2026-08-15T01:44:52.873Z"
     },
     {
       "fact_id": "FCT-DEP-344dc12fa469",
@@ -2267,7 +2267,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.907Z"
+      "created_at": "2026-08-15T01:44:52.873Z"
     },
     {
       "fact_id": "FCT-DEP-17d568c62ffc",
@@ -2290,7 +2290,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.907Z"
+      "created_at": "2026-08-15T01:44:52.873Z"
     },
     {
       "fact_id": "FCT-DEP-9cb1e4b3394e",
@@ -2313,7 +2313,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.907Z"
+      "created_at": "2026-08-15T01:44:52.873Z"
     },
     {
       "fact_id": "FCT-DEP-ad4e8f11297a",
@@ -2336,7 +2336,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.907Z"
+      "created_at": "2026-08-15T01:44:52.873Z"
     },
     {
       "fact_id": "FCT-DEP-67764650da12",
@@ -2359,7 +2359,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.907Z"
+      "created_at": "2026-08-15T01:44:52.873Z"
     },
     {
       "fact_id": "FCT-DEP-5c311314d7df",
@@ -2382,7 +2382,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.907Z"
+      "created_at": "2026-08-15T01:44:52.873Z"
     },
     {
       "fact_id": "FCT-DEP-1ea2ccbdab1e",
@@ -2405,7 +2405,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.907Z"
+      "created_at": "2026-08-15T01:44:52.873Z"
     },
     {
       "fact_id": "FCT-DEP-237455bc22cb",
@@ -2428,7 +2428,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.907Z"
+      "created_at": "2026-08-15T01:44:52.874Z"
     },
     {
       "fact_id": "FCT-DEP-3f88092c7463",
@@ -2451,7 +2451,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.907Z"
+      "created_at": "2026-08-15T01:44:52.874Z"
     },
     {
       "fact_id": "FCT-DEP-f7dc24e1d149",
@@ -2474,7 +2474,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.907Z"
+      "created_at": "2026-08-15T01:44:52.874Z"
     },
     {
       "fact_id": "FCT-DEP-e6236c3904b2",
@@ -2497,7 +2497,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.907Z"
+      "created_at": "2026-08-15T01:44:52.874Z"
     },
     {
       "fact_id": "FCT-DEP-67685233244e",
@@ -2520,7 +2520,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.907Z"
+      "created_at": "2026-08-15T01:44:52.874Z"
     },
     {
       "fact_id": "FCT-DEP-b738987c03db",
@@ -2543,7 +2543,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.907Z"
+      "created_at": "2026-08-15T01:44:52.874Z"
     },
     {
       "fact_id": "FCT-DEP-18bd39f46074",
@@ -2566,7 +2566,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.908Z"
+      "created_at": "2026-08-15T01:44:52.874Z"
     },
     {
       "fact_id": "FCT-DEP-0b89e213034a",
@@ -2589,7 +2589,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.908Z"
+      "created_at": "2026-08-15T01:44:52.874Z"
     },
     {
       "fact_id": "FCT-DEP-11924b03af56",
@@ -2612,7 +2612,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.908Z"
+      "created_at": "2026-08-15T01:44:52.874Z"
     },
     {
       "fact_id": "FCT-DEP-eaac008671bd",
@@ -2635,7 +2635,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.908Z"
+      "created_at": "2026-08-15T01:44:52.874Z"
     },
     {
       "fact_id": "FCT-DEP-460a685fbf2d",
@@ -2658,7 +2658,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.908Z"
+      "created_at": "2026-08-15T01:44:52.874Z"
     },
     {
       "fact_id": "FCT-DEP-97577979f5e1",
@@ -2681,7 +2681,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.908Z"
+      "created_at": "2026-08-15T01:44:52.874Z"
     },
     {
       "fact_id": "FCT-DEP-dcda2a9c33c0",
@@ -2704,7 +2704,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.908Z"
+      "created_at": "2026-08-15T01:44:52.875Z"
     },
     {
       "fact_id": "FCT-DEP-e00cd70751cd",
@@ -2727,7 +2727,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.908Z"
+      "created_at": "2026-08-15T01:44:52.875Z"
     },
     {
       "fact_id": "FCT-DEP-eedf7e2710e6",
@@ -2750,7 +2750,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.908Z"
+      "created_at": "2026-08-15T01:44:52.875Z"
     },
     {
       "fact_id": "FCT-DEP-c4e25fc6b8ad",
@@ -2773,7 +2773,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.908Z"
+      "created_at": "2026-08-15T01:44:52.875Z"
     },
     {
       "fact_id": "FCT-DEP-94735cb52adf",
@@ -2796,7 +2796,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.908Z"
+      "created_at": "2026-08-15T01:44:52.875Z"
     },
     {
       "fact_id": "FCT-DEP-b42cbf36610e",
@@ -2819,7 +2819,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.908Z"
+      "created_at": "2026-08-15T01:44:52.875Z"
     },
     {
       "fact_id": "FCT-DEP-a399608041c5",
@@ -2842,7 +2842,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.908Z"
+      "created_at": "2026-08-15T01:44:52.875Z"
     },
     {
       "fact_id": "FCT-DEP-8340006db7ce",
@@ -2865,7 +2865,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.908Z"
+      "created_at": "2026-08-15T01:44:52.875Z"
     },
     {
       "fact_id": "FCT-DEP-18d76467bf5a",
@@ -2888,7 +2888,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.909Z"
+      "created_at": "2026-08-15T01:44:52.875Z"
     },
     {
       "fact_id": "FCT-DEP-83da1ce5b5db",
@@ -2911,7 +2911,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.909Z"
+      "created_at": "2026-08-15T01:44:52.875Z"
     },
     {
       "fact_id": "FCT-DEP-1d5d5e28d983",
@@ -2934,7 +2934,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.909Z"
+      "created_at": "2026-08-15T01:44:52.875Z"
     },
     {
       "fact_id": "FCT-DEP-9b26ce8e19e7",
@@ -2957,7 +2957,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.909Z"
+      "created_at": "2026-08-15T01:44:52.875Z"
     },
     {
       "fact_id": "FCT-DEP-065abe1c9be2",
@@ -2980,7 +2980,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.909Z"
+      "created_at": "2026-08-15T01:44:52.875Z"
     },
     {
       "fact_id": "FCT-DEP-1d6cae6a8020",
@@ -3003,7 +3003,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.909Z"
+      "created_at": "2026-08-15T01:44:52.875Z"
     },
     {
       "fact_id": "FCT-DEP-5e066428ee81",
@@ -3026,7 +3026,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.909Z"
+      "created_at": "2026-08-15T01:44:52.875Z"
     },
     {
       "fact_id": "FCT-DEP-215ef825c567",
@@ -3049,7 +3049,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.909Z"
+      "created_at": "2026-08-15T01:44:52.875Z"
     },
     {
       "fact_id": "FCT-DEP-1e6e15c4c769",
@@ -3072,7 +3072,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.909Z"
+      "created_at": "2026-08-15T01:44:52.875Z"
     },
     {
       "fact_id": "FCT-DEP-e361409be2c8",
@@ -3095,7 +3095,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.909Z"
+      "created_at": "2026-08-15T01:44:52.875Z"
     },
     {
       "fact_id": "FCT-DEP-40d665e1f7bf",
@@ -3118,7 +3118,7 @@
         "resolution_strategy": "RELATIVE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.909Z"
+      "created_at": "2026-08-15T01:44:52.875Z"
     },
     {
       "fact_id": "FCT-DEP-1566db5fd7a3",
@@ -3141,7 +3141,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.909Z"
+      "created_at": "2026-08-15T01:44:52.875Z"
     },
     {
       "fact_id": "FCT-DEP-403448c04ea6",
@@ -3164,7 +3164,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.909Z"
+      "created_at": "2026-08-15T01:44:52.875Z"
     },
     {
       "fact_id": "FCT-DEP-904c2ffeba9c",
@@ -3187,7 +3187,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.909Z"
+      "created_at": "2026-08-15T01:44:52.875Z"
     },
     {
       "fact_id": "FCT-DEP-e4c1db05ac56",
@@ -3210,7 +3210,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.909Z"
+      "created_at": "2026-08-15T01:44:52.875Z"
     },
     {
       "fact_id": "FCT-DEP-34216a4ef655",
@@ -3233,7 +3233,7 @@
         "resolution_strategy": "PACKAGE"
       },
       "composite_confidence": 1,
-      "created_at": "2026-08-15T01:43:54.909Z"
+      "created_at": "2026-08-15T01:44:52.875Z"
     }
   ],
   "evidences": [
@@ -4020,16 +4020,16 @@
       }
     },
     {
-      "evidence_id": "EVD-FS-7e060c40f28d",
+      "evidence_id": "EVD-FS-75af3c57f0d3",
       "observation_id": "OBS-FS-1da34774dca1",
       "collector_id": "filesystem-collector-v3",
       "source_reference": "domain/system-context.ts",
       "locator": {
         "relative_path": "domain/system-context.ts"
       },
-      "source_hash": "75db664a56145f6b69e4c9cf2ab9fd0cae051044e421fec39127b075c7d7a356",
-      "content_hash": "75db664a56145f6b69e4c9cf2ab9fd0cae051044e421fec39127b075c7d7a356",
-      "snippet": "File: domain/system-context.ts (Size: 5078 bytes, SHA256: 75db664a5614...)",
+      "source_hash": "86576b9bbede7644acfd6baee186923f332cf093a0f613a99b881201178381bf",
+      "content_hash": "86576b9bbede7644acfd6baee186923f332cf093a0f613a99b881201178381bf",
+      "snippet": "File: domain/system-context.ts (Size: 4913 bytes, SHA256: 86576b9bbede...)",
       "confidence": 1,
       "provenance": {
         "target_id": "TGT-93f757f06c42caa8",
@@ -8188,5 +8188,5 @@
   "formal_evidences": [],
   "security_claims": [],
   "overall_phase_status": "GREEN",
-  "integrity_signature": "d86405af987ae96df96d299133837b768684b4d46fe4e9c00e398c12ecd46d00"
+  "integrity_signature": "b34a44368a3fc70c2193f03f8a0f893b0ad3d7b43484e2929910b89738e9e229"
 }

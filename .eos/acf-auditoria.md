@@ -1,7 +1,7 @@
 # RELATÓRIO DE AUDITORIA DE ARQUITETURA CONTINUA (EOS v3.0)
 
-**Audit Run ID:** `RUN-233b9f5b3ad4`  
-**Data / Hora:** `2026-08-15T01:43:54.913Z`  
+**Audit Run ID:** `RUN-fcf0d691a6f5`  
+**Data / Hora:** `2026-08-15T01:44:52.878Z`  
 **Target ID:** `TGT-93f757f06c42caa8`  
 **Caminho Alvo:** `C:\Users\Max\Desktop\Projeto\EOS\EOS\core`  
 **Branch / Commit:** `N/A` / `N/A`  
@@ -25,7 +25,7 @@
 ### Rule: `ARCH-RULE-001-MANDATORY-DOMAIN-DIR` (❌ FAIL)
 - **Versão:** `3.0.0`
 - **Justificativa:** Violação Arquitetural: O diretório obrigatório de domínio 'src/domain' não existe no repositório auditado.
-- **Fatos Utilizados:** `FCT-FS-5f3e5773ca8b`
+- **Fatos Utilizados:** `FCT-FS-02f1f69a7f19`
 
 ### Rule: `ARCH-RULE-002-NO-DOMAIN-TO-INFRA-DEPENDENCY` (⚠️ INSUFFICIENT_EVIDENCE)
 - **Versão:** `4.6.0`
@@ -35,10 +35,10 @@
 ## 3. ACHADOS (FINDINGS)
 
 ### [HIGH] Diretório Crítico de Domínio Ausente (src/domain)
-- **ID do Achado:** `FND-ARCH-ae71057cf8`
+- **ID do Achado:** `FND-ARCH-4b2047121a`
 - **Localização:** `src/domain`
 - **Descrição:** Conforme a convenção Clean Architecture, o projeto DEVE possuir a camada de domínio isolada na pasta 'src/domain'.
-- **Fatos de Origem:** `FCT-FS-5f3e5773ca8b`
+- **Fatos de Origem:** `FCT-FS-02f1f69a7f19`
 - **Evidências Rastreáveis:** `EVD-FS-0032cfc307ce`, `EVD-FS-004ce3148f1f`, `EVD-FS-01f7fa2c944b`, `EVD-FS-025f5cc0248f`, `EVD-FS-04883830046f`, `EVD-FS-062b4f9bf3f2`, `EVD-FS-07a7ab3e42a4`, `EVD-FS-0961097f6d0c`, `EVD-FS-097b779a37cd`, `EVD-FS-09cecfcccc04`
 
 ## 4. PROVENIÊNCIA & RASTREABILIDADE

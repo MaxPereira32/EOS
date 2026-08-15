@@ -20,3 +20,10 @@
 - **BASELINE_TESTS**: 44 PASS
 - **BASELINE_FINDINGS**: 1 (preexistente irrelevante ao alvo)
 - **BASELINE_EVIDENCE**: RUN-233b9f5b3ad4 (Arquivos analisados: 107/107)
+
+## Fault Injection
+- **FAULT_CLASS**: DOMAIN_INVARIANT
+- **PROPERTY_VIOLATED**: `typeof system_id === "string" AND system_id.trim() !== ""`
+- **FILE**: `EOS/core/domain/system-context.ts`
+- **CHANGE**: Remoção exata do bloco `if (!data.system_id || typeof data.system_id !== 'string' || data.system_id.trim() === '')`
+- **FAULT_COMMIT**: `168aac69403a5ca47f6ad0d96ae6b598ea1c0263`
