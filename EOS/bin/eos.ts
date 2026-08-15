@@ -94,6 +94,15 @@ async function main() {
 
       // Setup do Mock determinístico (apenas para o EXPERIMENT-0002)
       const mockExecutor = new MockAgentExecutor();
+      mockExecutor.registerMock('IMPLEMENTER', { 
+        run_id: 'CLI', agent_id: 'CLI-IMP', role: 'IMPLEMENTER', status: 'SUCCESS' 
+      });
+      mockExecutor.registerMock('REVIEWER', { 
+        run_id: 'CLI', agent_id: 'CLI-REV', role: 'REVIEWER', status: 'SUCCESS' 
+      });
+      mockExecutor.registerMock('EVIDENCE_AUDITOR', { 
+        run_id: 'CLI', agent_id: 'CLI-EVI', role: 'EVIDENCE_AUDITOR', status: 'SUCCESS', evidence_ids: ['EVI-123'] 
+      });
       
       const engine = new MultiAgentOrchestrationEngine(findingId, 'TGT-SYS', mockExecutor);
       

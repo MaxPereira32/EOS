@@ -27,10 +27,8 @@ export class MockAgentExecutor implements IAgentExecutor {
       run_id: request.run_id,
       agent_id: `mock-agent-${Date.now()}`,
       role: request.role,
-      status: 'SUCCESS',
-      verdict_claim: 'VERIFIED',
-      artifacts: [],
-      evidence_ids: ['EVIDENCE-MOCK']
+      status: 'FAILURE',
+      challenges: ['NO_CONFIGURED_RESULT: MockAgentExecutor must be explicitly configured to prevent artificial GREENs.']
     };
   }
 }

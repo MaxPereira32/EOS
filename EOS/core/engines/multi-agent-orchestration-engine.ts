@@ -144,7 +144,7 @@ export class MultiAgentOrchestrationEngine {
   }
 
   private reconcile(impl: AgentResult, rev: AgentResult, aud: AgentResult): OrchestrationVerdict {
-    // 1. Worker claim authority check: A worker can claim "VERIFIED", but if evidence is empty, EOS blocks.
+    // 1. Worker claim authority check: Worker claims VERIFIED without evidence -> Blocked.
     const allRuns = [impl, rev, aud];
     for (const res of allRuns) {
       if (res.verdict_claim === 'VERIFIED') {
@@ -155,13 +155,19 @@ export class MultiAgentOrchestrationEngine {
       }
     }
 
-    // 2. Structural Conflict check: 
+    // 2. Strict Evidence Gate: SUCCESS requires valid evidence from the Auditor
+    if (aud.status === 'SUCCESS' && (!aud.evidence_ids || aud.evidence_ids.length === 0)) {
+      this.transitionTo('BLOCKED', 'INSUFFICIENT EVIDENCE: Evidence Auditor returned SUCCESS without evidence payload');
+      return this.finishWithVerdict('BLOCKED', 'EVIDENCE_GATE_FAILED: Missing or empty evidence_ids');
+    }
+
+    // 3. Structural Conflict check: 
     if (impl.status !== 'SUCCESS' || rev.status !== 'SUCCESS' || aud.status !== 'SUCCESS') {
       this.transitionTo('BLOCKED', 'CONFLICT OR FAILED WORKER IN RECONCILIATION');
       return this.finishWithVerdict('BLOCKED', 'AGENTS NOT IN CONSENSUS');
     }
 
-    // 3. If all good -> Verified
+    // 4. If all good -> Verified
     this.transitionTo('VERIFIED', 'All Agents SUCCEEDED and Evidence Validated');
     return this.finishWithVerdict('VERIFIED', 'EOS ORCHESTRATION VERIFIED');
   }

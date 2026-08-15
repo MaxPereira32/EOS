@@ -21,7 +21,8 @@ Foram executados 7 cenários automatizados na suíte `phase-nist-3-orchestration
 
 ## 4. Conclusão Operacional
 **WHO CONTROLLED THE FLOW?** -> `EOS`
-A automação alcançou 100% dos estágios orquestrados nativamente. O protocolo multiagente agora é governado estruturalmente pelo EOS, impedindo by-passes através de contratos e estados estritos.
+O Orchestration Core controlou deterministicamente as transições de estado e reconciliação nativamente, bloqueando by-passes através de contratos estritos e testes validados via MockAgentExecutor.
+*Nota*: A integração e lifecycle de executores reais/LLM é o próximo marco arquitetural.
 
 ## 5. Veredito Final
-`GREEN — EOS ORCHESTRATION VERIFIED`
+`GREEN — ORCHESTRATION CORE VERIFIED`

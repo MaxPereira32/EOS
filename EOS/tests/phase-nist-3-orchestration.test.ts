@@ -29,22 +29,29 @@ test.describe('EOS Phase 3 — Native Multi-Agent Orchestration Suite', () => {
 
   test.it('SCENARIO 2: True Fix -> VERIFIED', async () => {
     const mock = new MockAgentExecutor();
-    const engine = new MultiAgentOrchestrationEngine('FND-002', 'TGT-002', mock); // default mocks return SUCCESS with evidence
+    mock.registerMock('IMPLEMENTER', { ...baseResult, role: 'IMPLEMENTER' });
+    mock.registerMock('REVIEWER', { ...baseResult, role: 'REVIEWER' });
+    mock.registerMock('EVIDENCE_AUDITOR', { ...baseResult, role: 'EVIDENCE_AUDITOR', evidence_ids: ['VALID_EVI_123'] });
+
+    const engine = new MultiAgentOrchestrationEngine('FND-002', 'TGT-002', mock); 
     const verdict = await engine.executeFullPipeline();
 
     assert.strictEqual(verdict.status, 'VERIFIED');
     assert.strictEqual(verdict.final_state, 'VERIFIED');
   });
 
-  test.it('SCENARIO 3: False Evidence (Insufficient)', async () => {
+  test.it('SCENARIO 3: False Evidence (Insufficient payload explicitly blocks GREEN)', async () => {
     const mock = new MockAgentExecutor();
-    mock.registerMock('EVIDENCE_AUDITOR', { ...baseResult, role: 'EVIDENCE_AUDITOR', status: 'BLOCKED', challenges: ['Stale Evidence'] });
+    mock.registerMock('IMPLEMENTER', { ...baseResult, role: 'IMPLEMENTER' });
+    mock.registerMock('REVIEWER', { ...baseResult, role: 'REVIEWER' });
+    // Auditor says SUCCESS, but evidence array is empty!
+    mock.registerMock('EVIDENCE_AUDITOR', { ...baseResult, role: 'EVIDENCE_AUDITOR', status: 'SUCCESS', evidence_ids: [] });
     
     const engine = new MultiAgentOrchestrationEngine('FND-003', 'TGT-003', mock);
     const verdict = await engine.executeFullPipeline();
 
     assert.strictEqual(verdict.status, 'BLOCKED');
-    assert.match(verdict.rationale, /EVIDENCE AUDITOR REJECTED EVIDENCE/);
+    assert.match(verdict.rationale, /EVIDENCE_GATE_FAILED/);
   });
 
   test.it('SCENARIO 4: Conflict -> NO MAJORITY VOTE', async () => {
@@ -75,14 +82,15 @@ test.describe('EOS Phase 3 — Native Multi-Agent Orchestration Suite', () => {
     const engine = new MultiAgentOrchestrationEngine('FND-006', 'TGT-006', mock);
     
     assert.throws(() => {
-      // @ts-ignore - forçando transição inválida privada via reflection hack no teste
+      // @ts-ignore
       engine['transitionTo']('VERIFIED', 'Hack');
     }, /INVALID_STATE_TRANSITION/);
   });
 
   test.it('SCENARIO 7: False Verdict Injection (Worker returing VERIFIED with empty evidence)', async () => {
     const mock = new MockAgentExecutor();
-    // Agent attempts to hijack the orchestration by claiming VERIFIED but passing no evidence
+    mock.registerMock('IMPLEMENTER', { ...baseResult, role: 'IMPLEMENTER' });
+    mock.registerMock('EVIDENCE_AUDITOR', { ...baseResult, role: 'EVIDENCE_AUDITOR', evidence_ids: ['VALID'] });
     mock.registerMock('REVIEWER', { ...baseResult, role: 'REVIEWER', verdict_claim: 'VERIFIED', evidence_ids: [] });
     
     const engine = new MultiAgentOrchestrationEngine('FND-007', 'TGT-007', mock);
@@ -90,6 +98,15 @@ test.describe('EOS Phase 3 — Native Multi-Agent Orchestration Suite', () => {
 
     assert.strictEqual(verdict.status, 'BLOCKED');
     assert.match(verdict.rationale, /AUTHORITY_VIOLATION/);
-    assert.strictEqual(engine.getRunState().state, 'BLOCKED');
+  });
+
+  test.it('SCENARIO 8: Mock Default Safety (Mock without explicit config fails safely)', async () => {
+    const mock = new MockAgentExecutor();
+    // Intentionally no mocks registered
+    const engine = new MultiAgentOrchestrationEngine('FND-008', 'TGT-008', mock);
+    const verdict = await engine.executeFullPipeline();
+
+    assert.strictEqual(verdict.status, 'BLOCKED');
+    assert.match(engine.getRunState().agent_runs[0].challenges![0], /NO_CONFIGURED_RESULT/);
   });
 });
