@@ -421,7 +421,7 @@ test.describe('EOS Phase 3 — NIST Assessment Engine & Invariants Suite (SSDF P
   });
 
   test.it('22. AFTER status is derived exclusively by NistAssessmentEngine', async () => {
-    const realEvidences = service.executeRealValidation('TGT-SYS', '95925f8d52ed9f616e973b3ba7f0d5b23a6a70e6');
+    const realEvidences = service.executeSemanticValidationForCriteria('TGT-SYS', '95925f8d52ed9f616e973b3ba7f0d5b23a6a70e6');
     const assessment = engine.assessRequirement({
       requirement: pw82Req,
       applicability: validApplicability,
@@ -463,6 +463,28 @@ test.describe('EOS Phase 3 — NIST Assessment Engine & Invariants Suite (SSDF P
 
     assert.strictEqual(result.finding_materialization_status, 'FINDING_REFERENCE_ONLY');
     assert.strictEqual(result.finding_reference, 'FND-NST-PW.8.2');
+  });
+
+  test.it('25. False Evidence Misuse Attack (Evidence PASS of C2 injected as C3 yields NOT_VERIFIED for C3)', () => {
+    // Attempt to pass evidence of C2 as if it satisfied C3 without C3-specific evidence
+    const misplacedEvidences: EvidencePayload[] = [
+      { evidence_id: 'EVI-C1', target_id: 'T1', timestamp: new Date().toISOString(), status: 'PASS', criterion_id: 'C1', provenance: validProvenance },
+      { evidence_id: 'EVI-C2', target_id: 'T1', timestamp: new Date().toISOString(), status: 'PASS', criterion_id: 'C2', provenance: validProvenance },
+      { evidence_id: 'EVI-C2-MISPLACED', target_id: 'T1', timestamp: new Date().toISOString(), status: 'PASS', criterion_id: 'C2', provenance: validProvenance } // C2 evidence repeated, NO C3 or C4!
+    ];
+
+    const result = engine.assessRequirement({
+      requirement: pw82Req,
+      applicability: validApplicability,
+      mapping: authorizedMapping,
+      facts: ['FACT-1'],
+      evidence: misplacedEvidences,
+      target_id: 'T1'
+    });
+
+    assert.strictEqual(result.status, 'NOT_VERIFIED');
+    assert.strictEqual(result.criterion_evaluations.find(c => c.criterion_id === 'C3')?.status, 'NOT_VERIFIED');
+    assert.match(result.rationale, /Incomplete Criterion Evaluation/);
   });
 
 });

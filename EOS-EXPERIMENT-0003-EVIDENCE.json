@@ -8,10 +8,10 @@
     "title": "Test Executable Code to Identify Vulnerabilities and Verify Compliance"
   },
   "criteria_matrix": [
-    { "criterion_id": "C1", "description": "Executable code tests defined", "status_before": "FAILED", "status_after": "SATISFIED", "evidence_source": "Real test process execution (exit_code=0)" },
-    { "criterion_id": "C2", "description": "Tests executed and documented", "status_before": "FAILED", "status_after": "SATISFIED", "evidence_source": "Real test process execution (exit_code=0)" },
-    { "criterion_id": "C3", "description": "Issues recorded and triaged", "status_before": "FAILED", "status_after": "SATISFIED", "evidence_source": "Real test process execution (exit_code=0)" },
-    { "criterion_id": "C4", "description": "Remediation verified", "status_before": "NOT_VERIFIED", "status_after": "SATISFIED", "evidence_source": "Real test process execution (exit_code=0)" }
+    { "criterion_id": "C1", "description": "Executable code tests defined", "validation_method": "fs.existsSync(phase-nist-1-system-context.test.ts)", "status_before": "FAILED", "status_after": "SATISFIED" },
+    { "criterion_id": "C2", "description": "Tests executed and documented", "validation_method": "npx tsx phase-nist-1-system-context.test.ts (exit_code=0)", "status_before": "FAILED", "status_after": "SATISFIED" },
+    { "criterion_id": "C3", "description": "Issues recorded and triaged", "validation_method": "EOS Governance Finding Logger (FND-NST-PW.8.2)", "status_before": "FAILED", "status_after": "SATISFIED" },
+    { "criterion_id": "C4", "description": "Remediation verified", "validation_method": "Snapshot Diff Comparison & Reassessment", "status_before": "NOT_VERIFIED", "status_after": "SATISFIED" }
   ],
   "pipeline_execution": {
     "target_id": "TGT-SYS",
@@ -47,6 +47,7 @@
     { "invariant": "Missing provenance rejected", "status": "VERIFIED" },
     { "invariant": "Fact without evidence rejected", "status": "VERIFIED" },
     { "invariant": "AFTER status derived exclusively by NistAssessmentEngine", "status": "VERIFIED" },
-    { "invariant": "Service cannot force VERIFIED on failing evidence", "status": "VERIFIED" }
+    { "invariant": "Service cannot force VERIFIED on failing evidence", "status": "VERIFIED" },
+    { "invariant": "Cross-criterion evidence injection attack blocked (Test 25)", "status": "VERIFIED" }
   ]
 }
