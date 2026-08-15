@@ -1,3 +1,5 @@
 node_modules/
 .DS_Store
 *.log
+EOS/tests/.tmp_phase_6_1_6_tests/
+
