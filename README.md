@@ -103,9 +103,13 @@ EOS/
 │   ├── prompts/                    # Prompts operacionais e assistentes
 │   └── templates/                  # Templates reutilizáveis (ADRs, RFCs)
 │
-├── documentação/                   # Histórico de evolução e relatórios de entrega
-│   ├── genesis-prompt.md           # Prompt de fundação
-│   └── evolucao-eos-v0.x.x.md      # Histórico de lançamentos da v0.1.2 à v2.2.0+
+├── docs/                           # Histórico de evolução, ADRs e especificações
+│   ├── adr/                        # Architectural Decision Records
+│   ├── architecture/               # Diagramas e especificações (ex: genesis-prompt.md)
+│   ├── audits/                     # Relatórios de auditoria
+│   ├── history/                    # Histórico de lançamentos da v0.1.4 à v2.2.0+
+│   ├── specifications/             # Especificações técnicas formais
+│   └── tests_archive/              # Arquivos de testes e experimentos
 │
 ├── Age/                            # Agentes de inteligência e skills para auditorias de segurança
 ├── .agents/                        # Configurações locais e definições de skills (ex: eos-governance)
@@ -174,7 +178,7 @@ Para adotar o **EOS** em seu projeto de software:
 
 ## 📚 Documentação e Evolução
 
-Acesse a pasta [`documentação/`](documentação/) para visualizar o histórico completo de evolução da plataforma, incluindo especificações detalhadas de cada versão lançada.
+Acesse a pasta [`docs/`](docs/) para visualizar o histórico completo de evolução da plataforma, incluindo especificações detalhadas de cada versão lançada.
 
 ---
 
