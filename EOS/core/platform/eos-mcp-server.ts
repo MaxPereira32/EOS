@@ -128,6 +128,12 @@ export class EosMcpServer {
               description: 'Active governance, security, and quality rules in the EOS system',
               mimeType: 'application/json',
             },
+            {
+              uri: 'eos://governance/senior-reviewer-prompt',
+              name: 'EOS Senior Software Engineering Reviewer Prompt',
+              description: 'Canonical master prompt for senior/staff engineering reviews and adversarial auditing',
+              mimeType: 'text/markdown',
+            },
           ],
         });
         break;
@@ -381,6 +387,21 @@ export class EosMcpServer {
             uri,
             mimeType: 'application/json',
             text: JSON.stringify({ version: '2.2.0', rules_count: 3 }, null, 2),
+          },
+        ],
+      });
+    } else if (uri === 'eos://governance/senior-reviewer-prompt') {
+      const promptPath = path.resolve(__dirname, '../../prompts/06-senior-software-engineering-reviewer.md');
+      let promptText = 'Prompt mestre não encontrado no disco.';
+      if (fs.existsSync(promptPath)) {
+        promptText = fs.readFileSync(promptPath, 'utf8');
+      }
+      this.sendResult(id, {
+        contents: [
+          {
+            uri,
+            mimeType: 'text/markdown',
+            text: promptText,
           },
         ],
       });

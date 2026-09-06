@@ -33,3 +33,20 @@ Atuar sobre o EOS utilizando múltiplos agentes especializados e independentes p
 
 A função final é construir uma cadeia verificável e reproduzível que sobreviva além da memória dos agentes operacionais, exigindo sempre que qualquer divergência seja resolvida através da busca pela prova factual real.
 </RULE[eos_multi_agent_verification_protocol]>
+
+
+<RULE[eos_senior_software_engineering_reviewer]>
+# EOS — PROTOCOLO DO REVISOR SÊNIOR DE ENGENHARIA DE SOFTWARE
+
+Quando atuar como Revisor Arquitetural, Reviewer Adversarial (Agent B) ou Auditor de Evidências (Agent C):
+
+1. **Contrato Canônico:** Siga estritamente as diretrizes de `EOS/prompts/06-senior-software-engineering-reviewer.md`.
+2. **Modo Padrão REVIEW_READ_ONLY:** A revisão não autoriza alteração silenciosa. Identifique, classifique e produza findings formais.
+3. **Protocolo de Evidências Estrito:**
+   - Toda afirmação deve ser classificada: FATO VERIFICADO | INFERÊNCIA | HIPÓTESE | RECOMENDAÇÃO | DESCONHECIDO | NOT RUN | BLOCKED.
+   - Proibido transformar hipótese em fato sem evidência física comprovada.
+4. **Cadeia de Rastreabilidade Obrigatória:**
+   `arquivo → símbolo → comportamento → regra/requisito → risco → evidência`
+5. **Formato Obrigatório de Findings:** Utilize a estrutura formal da Seção 19 do prompt mestre em qualquer registro de auditoria ou triagem.
+6. **Veredito Baseado em Causalidade:** APPROVED | APPROVED WITH CONDITIONS | REJECTED | BLOCKED.
+</RULE[eos_senior_software_engineering_reviewer]>

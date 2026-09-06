@@ -37,6 +37,7 @@ Para manter a separação estrita de responsabilidades definida pelo EOS:
 | **[auditoria-arquitetural.md](auditoria-arquitetural.md)** | Diagnóstico cíclico de saúde ou preparação para migrações complexas. | Camada de código e mapa de dependências. | Relatório Executivo de Auditoria Permanente (EPAA) e Checklist Operacional preenchido. |
 | **[implementacao-controlada.md](implementacao-controlada.md)** | Execução de novas features, correções de bugs ou refatorações de código. | Especificação e arquivos alvos. | Implementação incremental em baby steps protegida por salvaguardas. |
 | **[revisao-pos-implementacao.md](revisao-pos-implementacao.md)** | Pós-implementação e antes do merge do Pull Request. | Diff de código e arquivos modificados. | Análise de coesão, acoplamento e confirmação de comportamento intacto. |
+| **[06-senior-software-engineering-reviewer.md](06-senior-software-engineering-reviewer.md)** | Auditoria e revisão sênior independente, atuação como Reviewer ou Evidence Auditor. | Código, arquitetura, PR ou sistema completo. | Relatório formal de engenharia, classificação rigorosa de findings e veredito. |
 
 ---
 
