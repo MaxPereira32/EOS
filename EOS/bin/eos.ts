@@ -28,6 +28,14 @@ async function main() {
   const targetPath = args[1] || '.';
 
   switch (command) {
+    case 'mcp': {
+      // Protocolo MCP requer exclusivamente JSON-RPC no stdout (sem banners de terminal)
+      const { EosMcpServer } = require('../core/platform/eos-mcp-server');
+      const server = new EosMcpServer();
+      server.start();
+      break;
+    }
+
     case 'audit': {
       printBanner();
       console.log(`[EOS Audit] Iniciando auditoria em modo AUDIT no caminho: '${targetPath}'...`);
@@ -67,9 +75,10 @@ async function main() {
       console.log('  - .eos/acf-auditoria.md\n');
 
       const isBlockedOrRed = report.overall_phase_status === 'BLOCKED' || report.overall_phase_status === 'RED';
+      const hasInconclusiveRules = report.rule_results.some(r => r.status === 'INSUFFICIENT_EVIDENCE' || r.status === 'ERROR');
       const hasRuleFailures = report.rule_results.some(r => r.status === 'FAIL');
 
-      if (isBlockedOrRed || hasRuleFailures) {
+      if (isBlockedOrRed || hasRuleFailures || hasInconclusiveRules) {
         console.error(`💥 AUDITORIA REPROVADA / TRAVADA! Status: ${report.overall_phase_status}`);
         process.exitCode = 1;
       } else {

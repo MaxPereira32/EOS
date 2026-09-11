@@ -46,7 +46,20 @@ export class MarkdownReporter {
       mdLines.push(``);
     }
 
-    mdLines.push(`## 3. ACHADOS (FINDINGS)`);
+    mdLines.push(`## 3. VALIDAÇÕES EXECUTADAS`);
+    mdLines.push(``);
+    if (!report.execution_evidences || report.execution_evidences.length === 0) {
+      mdLines.push(`*Nenhuma validação executável foi registrada.*`);
+    } else {
+      mdLines.push(`| Comando | Resultado | Código | Duração |`);
+      mdLines.push(`|---|---:|---:|---:|`);
+      for (const check of report.execution_evidences) {
+        mdLines.push(`| \`${check.command_line}\` | ${check.state} | ${check.exit_code} | ${check.duration_ms} ms |`);
+      }
+    }
+    mdLines.push(``);
+
+    mdLines.push(`## 4. ACHADOS (FINDINGS)`);
     mdLines.push(``);
 
     if (report.findings.length === 0) {
@@ -63,9 +76,9 @@ export class MarkdownReporter {
       }
     }
 
-    mdLines.push(`## 4. PROVENIÊNCIA & RASTREABILIDADE`);
+    mdLines.push(`## 5. PROVENIÊNCIA & RASTREABILIDADE`);
     mdLines.push(``);
-    mdLines.push(`Este relatório foi gerado deterministicamente sem injeção de dados de demonstração ou fixtures.`);
+    mdLines.push(`Este relatório registra somente evidências coletadas e validações executadas no alvo; ausência de execução é identificada como evidência insuficiente.`);
     mdLines.push(`Todos os achados derivam de Evidências com hashes SHA-256 verificáveis contra o sistema de arquivos real.`);
 
     fs.writeFileSync(outputPath, mdLines.join('\n'), 'utf-8');

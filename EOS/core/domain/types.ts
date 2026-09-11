@@ -206,6 +206,19 @@ export interface SecurityClaimEvaluation {
   readonly blocking_reasons: readonly string[];
 }
 
+/** Evidência de uma validação realmente executada durante a auditoria. */
+export interface ExecutionEvidence {
+  readonly check_id: string;
+  readonly command_line: string;
+  readonly working_directory: string;
+  readonly exit_code: number;
+  readonly state: 'PASS' | 'FAIL' | 'NOT_AVAILABLE';
+  readonly duration_ms: number;
+  readonly stdout_sha256: string;
+  readonly stderr_sha256: string;
+  readonly output_excerpt: string;
+}
+
 export interface AuditReport {
   readonly audit_run_id: string;
   readonly timestamp: string;
@@ -216,6 +229,7 @@ export interface AuditReport {
   readonly facts?: readonly Fact[];
   readonly evidences?: readonly Evidence[];
   readonly formal_evidences?: readonly FormalEvidence[];
+  readonly execution_evidences?: readonly ExecutionEvidence[];
   readonly security_claims?: readonly SecurityClaimEvaluation[];
   readonly overall_phase_status?: GatePhaseStatus;
 }
