@@ -3,7 +3,18 @@ import { Fact, RuleEvaluationResult, Finding, AuditTarget } from '../domain/type
 
 export class MandatoryDirectoryRule {
   public static readonly ruleId = 'ARCH-RULE-001-MANDATORY-DOMAIN-DIR';
-  public static readonly ruleVersion = '3.0.0';
+  public static readonly ruleVersion = '3.1.0';
+
+  private readonly expectedDomainDir: string;
+
+  /**
+   * Diretório de domínio esperado. Padrão 'src/domain' preserva o comportamento
+   * original; projetos podem declarar a convenção real via eos.risk.yml
+   * (architecture.domain_directory).
+   */
+  constructor(expectedDomainDir: string = 'src/domain') {
+    this.expectedDomainDir = expectedDomainDir;
+  }
 
   public evaluate(facts: readonly Fact[], target: AuditTarget): { evaluation: RuleEvaluationResult; finding?: Finding } {
     const fsFacts = facts.filter(f => f.payload.fact_type === 'FILE_STRUCTURE');
@@ -19,7 +30,7 @@ export class MandatoryDirectoryRule {
       return { evaluation };
     }
 
-    const domainFact = fsFacts.find(f => f.payload.fact_type === 'FILE_STRUCTURE' && f.payload.directory === 'src/domain') || fsFacts[0];
+    const domainFact = fsFacts.find(f => f.payload.fact_type === 'FILE_STRUCTURE' && f.payload.directory === this.expectedDomainDir) || fsFacts[0];
     if (domainFact.payload.fact_type !== 'FILE_STRUCTURE') {
       return {
         evaluation: {

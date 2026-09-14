@@ -18,6 +18,23 @@ import { ReportIntegritySigner } from '../utils/report-integrity-signer';
 import { FirestoreDomainAdapter } from '../adapters/firestore/firestore-domain-adapter';
 import { EvidenceEnvelope } from '../domain/universal-contracts';
 
+/**
+ * Lê a convenção arquitetural declarada pelo projeto em eos.risk.yml
+ * (chave: architecture.domain_directory). Parsing mínimo por regex, sem
+ * dependência de biblioteca YAML. Ausente/inválido => default 'src/domain'.
+ */
+function readDeclaredDomainDirectory(rootPath: string): string {
+  try {
+    const riskPath = path.join(rootPath, 'eos.risk.yml');
+    if (!require('fs').existsSync(riskPath)) return 'src/domain';
+    const content = require('fs').readFileSync(riskPath, 'utf8');
+    const match = content.match(/domain_directory\s*:\s*["']?([^"'\s#]+)/);
+    return match ? match[1] : 'src/domain';
+  } catch {
+    return 'src/domain';
+  }
+}
+
 export class AuditApplicationService {
   private executeProjectChecks(rootPath: string): ExecutionEvidence[] {
     const packagePath = path.join(rootPath, 'package.json');
@@ -83,8 +100,11 @@ export class AuditApplicationService {
     const eosCorePath = path.resolve(__dirname, '..');
     const governorIntegrity = governorVerifier.verifyGovernorIntegrity(eosCorePath);
 
-    // 1. Resolver Target
+// 1. Resolver Target
     const target = TargetResolver.resolve(targetPath);
+
+    // Diretório de domínio declarado pelo projeto (eos.risk.yml), default 'src/domain'
+    const declaredDomainDir = readDeclaredDomainDirectory(target.root_path);
 
     // Executa primeiro as validações declaradas pelo projeto. A coleta estática
     // posterior representa o estado observado após os comandos terminarem.
@@ -103,7 +123,7 @@ export class AuditApplicationService {
 
     // 4. Provedores de Fatos Semânticos
     const fsFactProvider = new FileStructureFactProvider();
-    const fsFacts = fsFactProvider.generateFacts(fsCollectionResult.evidences, 'src/domain');
+    const fsFacts = fsFactProvider.generateFacts(fsCollectionResult.evidences, declaredDomainDir);
 
     const depFactProvider = new DependencyFactProvider();
     const depFacts = depFactProvider.generateFacts(allEvidences);
@@ -115,7 +135,7 @@ export class AuditApplicationService {
     const findings: Finding[] = [];
 
     // Rule 1: Estrutura de Diretórios Obrigatória
-    const mandatoryDirRule = new MandatoryDirectoryRule();
+    const mandatoryDirRule = new MandatoryDirectoryRule(declaredDomainDir);
     const res1 = mandatoryDirRule.evaluate(fsFacts, target);
     ruleResults.push(res1.evaluation);
     if (res1.finding) findings.push(res1.finding);
