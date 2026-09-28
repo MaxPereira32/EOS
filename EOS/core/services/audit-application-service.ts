@@ -3,6 +3,7 @@ import * as path from 'path';
 import { TargetResolver } from '../domain/target-resolver';
 import { FilesystemCollector } from '../collectors/filesystem-collector';
 import { TypescriptAstCollector } from '../collectors/typescript-ast-collector';
+import { ProjectManifestCollector } from '../collectors/project-manifest-collector';
 import { FileStructureFactProvider } from '../fact-providers/file-structure-fact-provider';
 import { DependencyFactProvider } from '../fact-providers/dependency-fact-provider';
 import { MandatoryDirectoryRule } from '../rules/mandatory-directory-rule';
@@ -35,8 +36,125 @@ function readDeclaredDomainDirectory(rootPath: string): string {
   }
 }
 
+function readDeclaredProductionValidationScript(rootPath: string): string | null {
+  try {
+    const riskPath = path.join(rootPath, 'eos.risk.yml');
+    if (!require('fs').existsSync(riskPath)) return null;
+    const content = require('fs').readFileSync(riskPath, 'utf8');
+    const match = content.match(/release_validation_script\s*:\s*["']?([^"'\s#]+)/);
+    return match ? match[1] : null;
+  } catch {
+    return null;
+  }
+}
+
 export class AuditApplicationService {
-  private executeProjectChecks(rootPath: string): ExecutionEvidence[] {
+  private async executeProjectCheck(rootPath: string, check: string): Promise<ExecutionEvidence> {
+    const childProcess = require('child_process');
+    const startedAt = Date.now();
+    const isWindows = process.platform === 'win32';
+    const command = isWindows ? (process.env.ComSpec || 'cmd.exe') : 'npm';
+    const args = isWindows ? ['/d', '/s', '/c', 'npm.cmd', 'run', check] : ['run', check];
+    const commandLine = `npm run ${check}`;
+    const timeoutMs = Number(process.env.EOS_CHECK_TIMEOUT_MS || 120000);
+    const heartbeatMs = Math.max(250, Number(process.env.EOS_CHECK_HEARTBEAT_MS || 15000));
+    const maxCapturedBytes = 10 * 1024 * 1024;
+
+    console.log(`[EOS][CHECK] ▶ ${commandLine}`);
+
+    return await new Promise<ExecutionEvidence>((resolve) => {
+      let stdout = '';
+      let stderr = '';
+      let settled = false;
+      let timedOut = false;
+      let spawnError: Error | null = null;
+
+      const appendBounded = (current: string, chunk: unknown): string => {
+        const next = current + String(chunk ?? '');
+        if (Buffer.byteLength(next, 'utf8') <= maxCapturedBytes) return next;
+        return next.slice(-maxCapturedBytes);
+      };
+
+      const child = childProcess.spawn(command, args, {
+        cwd: rootPath,
+        shell: false,
+        windowsHide: true,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+
+      child.stdout?.on('data', (chunk: unknown) => {
+        stdout = appendBounded(stdout, chunk);
+      });
+      child.stderr?.on('data', (chunk: unknown) => {
+        stderr = appendBounded(stderr, chunk);
+      });
+
+      const heartbeat = setInterval(() => {
+        const elapsedSeconds = Math.floor((Date.now() - startedAt) / 1000);
+        console.log(`[EOS][CHECK] … ${commandLine} em execução — ${elapsedSeconds}s`);
+      }, heartbeatMs);
+
+      const terminateTree = () => {
+        try {
+          if (isWindows && child.pid) {
+            childProcess.spawnSync('taskkill.exe', ['/PID', String(child.pid), '/T', '/F'], {
+              windowsHide: true,
+              stdio: 'ignore',
+            });
+          } else {
+            child.kill('SIGTERM');
+          }
+        } catch {
+          try { child.kill(); } catch { /* processo já encerrado */ }
+        }
+      };
+
+      const timeout = setTimeout(() => {
+        timedOut = true;
+        stderr = appendBounded(stderr, `\nTempo limite excedido após ${timeoutMs} ms.`);
+        console.error(`[EOS][CHECK] ✗ ${commandLine} TIMEOUT — ${Math.floor(timeoutMs / 1000)}s`);
+        terminateTree();
+      }, timeoutMs);
+
+      const finalize = (code: number | null) => {
+        if (settled) return;
+        settled = true;
+        clearInterval(heartbeat);
+        clearTimeout(timeout);
+
+        if (spawnError) {
+          stderr = appendBounded(stderr, `\n${spawnError.message}`);
+        }
+
+        const exitCode = timedOut || spawnError ? -1 : (typeof code === 'number' ? code : -1);
+        const state = exitCode === 0 ? 'PASS' : 'FAIL';
+        const durationMs = Date.now() - startedAt;
+        const output = `${stdout}\n${stderr}`.replace(/\s+/g, ' ').trim();
+        const symbol = state === 'PASS' ? '✓' : '✗';
+        console.log(`[EOS][CHECK] ${symbol} ${commandLine} ${state} — ${(durationMs / 1000).toFixed(1)}s`);
+
+        resolve({
+          check_id: `EOS-EXEC-${check.toUpperCase()}`,
+          command_line: commandLine,
+          working_directory: rootPath,
+          exit_code: exitCode,
+          state,
+          duration_ms: durationMs,
+          stdout_sha256: crypto.createHash('sha256').update(stdout).digest('hex'),
+          stderr_sha256: crypto.createHash('sha256').update(stderr).digest('hex'),
+          output_excerpt: output.slice(0, 500) || '(sem saída)'
+        });
+      };
+
+      child.once('error', (error: Error) => {
+        spawnError = error;
+        finalize(null);
+      });
+      child.once('close', (code: number | null) => finalize(code));
+    });
+  }
+
+  private async executeProjectChecks(rootPath: string): Promise<ExecutionEvidence[]> {
     const packagePath = path.join(rootPath, 'package.json');
     if (!require('fs').existsSync(packagePath)) {
       return [{
@@ -56,8 +174,12 @@ export class AuditApplicationService {
       }];
     }
 
+    const productionCheck = readDeclaredProductionValidationScript(rootPath);
     const checks = ['typecheck', 'lint', 'test', 'build'].filter(name => typeof scripts[name] === 'string');
-    if (checks.length === 0) {
+    if (productionCheck && typeof scripts[productionCheck] === 'string' && !checks.includes(productionCheck)) {
+      checks.push(productionCheck);
+    }
+    if (checks.length === 0 && !productionCheck) {
       return [{
         check_id: 'EOS-EXEC-001', command_line: 'npm scripts', working_directory: rootPath,
         exit_code: -1, state: 'NOT_AVAILABLE', duration_ms: 0,
@@ -65,33 +187,25 @@ export class AuditApplicationService {
       }];
     }
 
-    const childProcess = require('child_process');
-    return checks.map(check => {
-      const startedAt = Date.now();
-      const isWindows = process.platform === 'win32';
-      const command = isWindows ? (process.env.ComSpec || 'cmd.exe') : 'npm';
-      const args = isWindows ? ['/d', '/s', '/c', 'npm.cmd', 'run', check] : ['run', check];
-      const result = childProcess.spawnSync(command, args, {
-        // npm.cmd é executado pelo interpretador do Windows sem shell implícito.
-        // Os argumentos são controlados pelo EOS e a lista de checks é fechada.
-        cwd: rootPath, encoding: 'utf8', timeout: 120000, maxBuffer: 10 * 1024 * 1024,
-        shell: false
-      });
-      const stdout = result.stdout || '';
-      const stderr = `${result.stderr || ''}${result.error ? `\n${result.error.message}` : ''}`;
-      const output = `${stdout}\n${stderr}`.replace(/\s+/g, ' ').trim();
-      return {
-        check_id: `EOS-EXEC-${check.toUpperCase()}`,
-        command_line: `npm run ${check}`,
+    const results: ExecutionEvidence[] = [];
+    for (const check of checks) {
+      results.push(await this.executeProjectCheck(rootPath, check));
+    }
+
+    if (productionCheck && typeof scripts[productionCheck] !== 'string') {
+      results.push({
+        check_id: 'EOS-EXEC-PRODUCTION',
+        command_line: `npm run ${productionCheck}`,
         working_directory: rootPath,
-        exit_code: result.status === 0 ? 0 : (result.status ?? -1),
-        state: result.status === 0 ? 'PASS' : 'FAIL',
-        duration_ms: Date.now() - startedAt,
-        stdout_sha256: crypto.createHash('sha256').update(stdout).digest('hex'),
-        stderr_sha256: crypto.createHash('sha256').update(stderr).digest('hex'),
-        output_excerpt: output.slice(0, 500) || '(sem saída)'
-      };
-    });
+        exit_code: -1,
+        state: 'NOT_AVAILABLE',
+        duration_ms: 0,
+        stdout_sha256: '',
+        stderr_sha256: '',
+        output_excerpt: `O perfil de produção exige o script '${productionCheck}', mas ele não existe no package.json.`
+      });
+    }
+    return results;
   }
 
   public async executeAudit(targetPath: string, outputDir: string = '.eos'): Promise<AuditReport> {
@@ -108,7 +222,7 @@ export class AuditApplicationService {
 
     // Executa primeiro as validações declaradas pelo projeto. A coleta estática
     // posterior representa o estado observado após os comandos terminarem.
-    const executionEvidences = this.executeProjectChecks(target.root_path);
+    const executionEvidences = await this.executeProjectChecks(target.root_path);
 
     // 2. Coletar do Filesystem Real
     const fsCollector = new FilesystemCollector();
@@ -119,13 +233,22 @@ export class AuditApplicationService {
     const astEvidences = await astCollector.collectFromArtifacts(target, fsCollectionResult.artifacts);
 
     // Evidências agregadas
-    const allEvidences: Evidence[] = [...fsCollectionResult.evidences, ...astEvidences];
+    // 3.5 Coletar Manifestos de Projeto e TsConfig
+    const manifestCollector = new ProjectManifestCollector();
+    const manifestResult = manifestCollector.collect(target);
+
+    // Evidências agregadas
+    const allEvidences: Evidence[] = [
+      ...fsCollectionResult.evidences,
+      ...astEvidences,
+      manifestResult.manifestEvidence,
+    ];
 
     // 4. Provedores de Fatos Semânticos
     const fsFactProvider = new FileStructureFactProvider();
     const fsFacts = fsFactProvider.generateFacts(fsCollectionResult.evidences, declaredDomainDir);
 
-    const depFactProvider = new DependencyFactProvider();
+    const depFactProvider = new DependencyFactProvider(manifestResult.evidenceContext);
     const depFacts = depFactProvider.generateFacts(allEvidences);
 
     const allFacts: Fact[] = [...fsFacts, ...depFacts];
@@ -141,7 +264,7 @@ export class AuditApplicationService {
     if (res1.finding) findings.push(res1.finding);
 
     // Rule 2: Dependências Proibidas de Módulos (Domain -> Infra)
-    const noDisallowedDepRule = new NoDisallowedDependencyRule();
+    const noDisallowedDepRule = new NoDisallowedDependencyRule(declaredDomainDir);
     const res2 = noDisallowedDepRule.evaluate(depFacts, target);
     ruleResults.push(res2.evaluation);
     if (res2.findings && res2.findings.length > 0) {
@@ -170,6 +293,23 @@ export class AuditApplicationService {
           : `Validações executadas e aprovadas: ${executionEvidences.map(check => check.command_line).join(', ')}.`,
       facts_used: []
     });
+
+    const productionScript = readDeclaredProductionValidationScript(target.root_path);
+    if (productionScript) {
+      const productionCommand = `npm run ${productionScript}`;
+      const productionEvidence = executionEvidences.find(check => check.command_line === productionCommand);
+      const productionStatus = !productionEvidence || productionEvidence.state === 'NOT_AVAILABLE'
+        ? 'INSUFFICIENT_EVIDENCE'
+        : productionEvidence.state === 'PASS' ? 'PASS' : 'FAIL';
+      ruleResults.push({
+        rule_id: 'EOS-PRODUCTION-001', rule_version: '1.0',
+        status: productionStatus,
+        rationale: productionEvidence
+          ? `Validação de produção '${productionCommand}': ${productionEvidence.state}. ${productionEvidence.output_excerpt}`
+          : `O perfil de produção declarou '${productionScript}', mas nenhuma evidência de execução foi produzida.`,
+        facts_used: []
+      });
+    }
 
     // 6. Execução via Domain Adapters Universais (Decoupled Architecture)
     const envelopes: EvidenceEnvelope[] = [];

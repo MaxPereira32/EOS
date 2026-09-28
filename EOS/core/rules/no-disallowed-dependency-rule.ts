@@ -13,7 +13,9 @@ export function normalizeModuleIdentity(modulePath: string): string {
 
 export class NoDisallowedDependencyRule {
   public static readonly ruleId = 'ARCH-RULE-002-NO-DOMAIN-TO-INFRA-DEPENDENCY';
-  public static readonly ruleVersion = '4.6.0';
+  public static readonly ruleVersion = '4.6.1';
+
+  constructor(private readonly declaredDomainDir: string = 'src/domain') {}
 
   public evaluate(facts: readonly Fact[], target: AuditTarget): { evaluation: RuleEvaluationResult; findings: Finding[] } {
     const depFacts = facts.filter(f => f.payload.fact_type === 'MODULE_DEPENDENCY');
@@ -33,22 +35,34 @@ export class NoDisallowedDependencyRule {
 
     const violations: Fact[] = [];
     const uncertainFacts: Fact[] = [];
+    const normDeclared = normalizeModuleIdentity(this.declaredDomainDir);
 
     for (const fact of depFacts) {
       if (fact.payload.fact_type !== 'MODULE_DEPENDENCY') continue;
       const { source_module, target_module, resolution_kind } = fact.payload;
 
-      // Preservação da Incerteza: UNRESOLVED / AMBIGUOUS não pode gerar PASS
-      if (resolution_kind === 'UNRESOLVED' || resolution_kind === 'AMBIGUOUS') {
+      const canonicalSource = normalizeModuleIdentity(source_module);
+      const canonicalTarget = normalizeModuleIdentity(target_module);
+
+      // Clean Architecture: Domínio NUNCA pode depender de Infraestrutura
+      const isSourceDomain = (
+        (normDeclared && canonicalSource.startsWith(normDeclared)) ||
+        canonicalSource.includes('/dominio/') ||
+        canonicalSource.includes('/domain/') ||
+        canonicalSource.startsWith('dominio/') ||
+        canonicalSource.startsWith('domain/') ||
+        canonicalSource.startsWith('src/dominio/') ||
+        canonicalSource.startsWith('src/domain/') ||
+        canonicalSource.startsWith('src/nucleo/dominio/') ||
+        canonicalSource.startsWith('backend/src/domain/')
+      );
+
+      // Preservação da Incerteza (Fail-Closed): UNRESOLVED / AMBIGUOUS no DOMÍNIO não pode gerar PASS
+      if (isSourceDomain && (resolution_kind === 'UNRESOLVED' || resolution_kind === 'AMBIGUOUS')) {
         uncertainFacts.push(fact);
         continue;
       }
 
-      const canonicalSource = normalizeModuleIdentity(source_module);
-      const canonicalTarget = normalizeModuleIdentity(target_module);
-
-      // Clean Architecture: Domínio (src/domain/...) NUNCA pode depender de Infraestrutura (src/infrastructure/..., src/infra/..., src/collectors/...)
-      const isSourceDomain = canonicalSource.includes('/domain/') || canonicalSource.startsWith('domain/') || canonicalSource.startsWith('src/domain/');
       const isTargetInfra = (
         canonicalTarget.includes('/infrastructure/') ||
         canonicalTarget.includes('/infra/') ||
@@ -58,7 +72,9 @@ export class NoDisallowedDependencyRule {
         canonicalTarget.startsWith('collectors/') ||
         canonicalTarget.startsWith('src/infrastructure/') ||
         canonicalTarget.startsWith('src/infra/') ||
-        canonicalTarget.startsWith('src/collectors/')
+        canonicalTarget.startsWith('src/collectors/') ||
+        canonicalTarget.startsWith('backend/src/infrastructure/') ||
+        canonicalTarget.startsWith('backend/src/infra/')
       );
 
       if (isSourceDomain && isTargetInfra) {
@@ -70,15 +86,15 @@ export class NoDisallowedDependencyRule {
       const findings: Finding[] = violations.map(v => {
         const payload = v.payload as Extract<Fact['payload'], { fact_type: 'MODULE_DEPENDENCY' }>;
         return {
-          finding_id: `FND-DEP-${v.fact_id.slice(-8)}`,
+          finding_id: 'FND-DEP-' + v.fact_id.slice(-8),
           rule_id: NoDisallowedDependencyRule.ruleId,
           rule_version: NoDisallowedDependencyRule.ruleVersion,
           fact_ids: [v.fact_id],
           evidence_ids: [...v.evidence_ids],
           target_id: target.target_id,
           location: payload.source_module,
-          title: `Violação de Camada: Domínio depende de Infraestrutura (${payload.source_module} -> ${payload.target_module})`,
-          description: `A Clean Architecture proíbe que a camada de Domínio (${payload.source_module}) dependa de detalhes de Infraestrutura (${payload.target_module}).`,
+          title: 'Violação de Camada: Domínio depende de Infraestrutura (' + payload.source_module + ' -> ' + payload.target_module + ')',
+          description: 'A Clean Architecture proíbe que a camada de Domínio (' + payload.source_module + ') dependa de detalhes de Infraestrutura (' + payload.target_module + ').',
           severity: 'HIGH',
           confidence: 1.0,
           status: 'OPEN',
@@ -91,21 +107,21 @@ export class NoDisallowedDependencyRule {
           rule_id: NoDisallowedDependencyRule.ruleId,
           rule_version: NoDisallowedDependencyRule.ruleVersion,
           status: 'FAIL',
-          rationale: `Violação Arquitetural: ${violations.length} dependência(s) proibida(s) de Domínio para Infraestrutura foram encontradas.`,
+          rationale: 'Violação Arquitetural: ' + violations.length + ' dependência(s) proibida(s) de Domínio para Infraestrutura foram encontradas.',
           facts_used: violations.map(v => v.fact_id),
         },
         findings: findings,
       };
     }
 
-    // Se houver fatos incertos (UNRESOLVED ou AMBIGUOUS) e nenhuma violação explícita, retorne INSUFFICIENT_EVIDENCE
+    // Se houver fatos incertos no domínio (UNRESOLVED ou AMBIGUOUS) e nenhuma violação explícita, retorne INSUFFICIENT_EVIDENCE
     if (uncertainFacts.length > 0) {
       return {
         evaluation: {
           rule_id: NoDisallowedDependencyRule.ruleId,
           rule_version: NoDisallowedDependencyRule.ruleVersion,
           status: 'INSUFFICIENT_EVIDENCE',
-          rationale: `Evidência Insuficiente: Existem ${uncertainFacts.length} dependência(s) com resolução incerta (UNRESOLVED ou AMBIGUOUS) que não puderam ser verificadas com certeza semântica.`,
+          rationale: 'Evidência Insuficiente: Existem ' + uncertainFacts.length + ' dependência(s) no domínio com resolução incerta (UNRESOLVED ou AMBIGUOUS) que não puderam ser verificadas com certeza semântica.',
           facts_used: uncertainFacts.map(f => f.fact_id),
         },
         findings: [],
