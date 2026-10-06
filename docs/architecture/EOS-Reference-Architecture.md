@@ -24,14 +24,14 @@ Engineering-Operating-System/
 No projeto cliente (ex: `MeuProjeto`), o EOS injeta e consome metadados através de:
 ```
 Projeto-Cliente/
+├── eos.risk.yml                 # Política declarativa do projeto (opcional)
 └── .eos/
     ├── decisoes/                # Histórico de ADRs e Exceções arquiteturais
     │   ├── decisoes-historico.json
     │   └── exceptions.json
-    ├── auditorias/              # Relatórios consolidados gerados em pipelines
-    │   ├── acf-auditoria.md
-    │   └── auditoria.json
-    └── eos.risk.yml             # Mapeamento de camadas e pesos de risco
+    └── auditorias/              # Relatórios consolidados gerados em pipelines
+        ├── acf-auditoria.md
+        └── auditoria.json
 ```
 
 ---
@@ -68,3 +68,40 @@ O EOS valida e bloqueia o commit através de limiares (Thresholds) programático
 * **CON (Consistência)**: Mínimo 90/100 (Avalia ausência de arquivos órfãos ou estilos não-vinculados).
 
 Qualquer violação abaixo desses patamares resulta em `exit 1` no pré-push do Git, direcionando o projeto para o estado de **QUARENTENA** na máquina de estados do EOS.
+
+
+---
+
+## 5. Aplicabilidade Arquitetural
+
+O EOS não deve transformar uma convenção arquitetural em regra universal. Antes de aplicar regras de domínio, o comando `eos audit` executa uma avaliação de aplicabilidade e registra no relatório:
+
+- perfil declarado, quando houver;
+- perfil inferido a partir de evidências do projeto;
+- perfil efetivo usado para recomendação;
+- política de domínio (`REQUIRED`, `OPTIONAL` ou `NOT_APPLICABLE`);
+- sinais observados e confiança da inferência;
+- recomendação arquitetural proporcional ao contexto.
+
+A inferência serve para **orientar**, não para reprovar. A ausência de `src/domain` só deve produzir finding bloqueante quando o projeto declarar explicitamente uma arquitetura que exige domínio ou `domain_required: true`.
+
+Exemplo de Clean Architecture declarada:
+
+```yaml
+architecture:
+  profile: clean-architecture
+  domain_required: true
+  domain_directory: src/domain
+```
+
+Exemplo de frontend simples, onde domínio não se aplica:
+
+```yaml
+architecture:
+  profile: static-frontend
+  domain_required: false
+```
+
+Perfis reconhecidos incluem `clean-architecture`, `hexagonal`, `ddd`, `modular-monolith`, `layered-application`, `static-frontend`, `component-library`, `cli-or-script` e `infrastructure-as-code`.
+
+Se nenhuma política for declarada, o EOS analisa sinais como framework frontend, backend, persistência, módulos de negócio, CLI e Infrastructure as Code. Quando a evidência não for suficiente, o perfil permanece `UNKNOWN` e nenhuma arquitetura específica deve ser imposta como hard gate.

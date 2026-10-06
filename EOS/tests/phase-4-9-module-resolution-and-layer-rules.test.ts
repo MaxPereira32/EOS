@@ -67,8 +67,10 @@ describe('EOS Phase 4.9 — Module Resolution & Architecture Layer Rules Suite',
     const target: AuditTarget = {
       target_id: 'TGT-TEST',
       root_path: '.',
-      package_info: { name: 'test', version: '1.0.0' },
-      manifest_hash: 'hash-test',
+      repository: null,
+      commit_hash: null,
+      branch: null,
+      metadata: {},
     };
 
     const facts: Fact[] = [{
@@ -104,8 +106,10 @@ describe('EOS Phase 4.9 — Module Resolution & Architecture Layer Rules Suite',
     const target: AuditTarget = {
       target_id: 'TGT-TEST',
       root_path: '.',
-      package_info: { name: 'test', version: '1.0.0' },
-      manifest_hash: 'hash-test',
+      repository: null,
+      commit_hash: null,
+      branch: null,
+      metadata: {},
     };
 
     const facts: Fact[] = [{

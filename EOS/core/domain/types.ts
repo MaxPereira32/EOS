@@ -109,7 +109,33 @@ export interface Fact {
   readonly created_at: string;
 }
 
-export type RuleStatus = 'PASS' | 'FAIL' | 'INSUFFICIENT_EVIDENCE' | 'ERROR';
+export type ArchitectureProfile =
+  | 'CLEAN_ARCHITECTURE'
+  | 'HEXAGONAL'
+  | 'DDD'
+  | 'MODULAR_MONOLITH'
+  | 'LAYERED_APPLICATION'
+  | 'STATIC_FRONTEND'
+  | 'COMPONENT_LIBRARY'
+  | 'CLI_OR_SCRIPT'
+  | 'INFRASTRUCTURE_AS_CODE'
+  | 'UNKNOWN';
+
+export type DomainPolicy = 'REQUIRED' | 'OPTIONAL' | 'NOT_APPLICABLE';
+
+export interface ArchitectureAssessment {
+  readonly declared_profile: ArchitectureProfile | null;
+  readonly inferred_profile: ArchitectureProfile;
+  readonly effective_profile: ArchitectureProfile;
+  readonly domain_policy: DomainPolicy;
+  readonly domain_directory: string;
+  readonly confidence: number;
+  readonly signals: readonly string[];
+  readonly recommendation: string;
+  readonly source: 'DECLARED' | 'INFERRED' | 'DECLARED_AND_INFERRED';
+}
+
+export type RuleStatus = 'PASS' | 'FAIL' | 'NOT_APPLICABLE' | 'INSUFFICIENT_EVIDENCE' | 'ERROR';
 
 export interface RuleEvaluationResult {
   readonly rule_id: string;
@@ -251,6 +277,7 @@ export interface AuditReport {
   readonly timestamp: string;
   readonly target: AuditTarget;
   readonly coverage: CoverageMetrics;
+  readonly architecture_assessment?: ArchitectureAssessment;
   readonly findings: readonly Finding[];
   readonly rule_results: readonly RuleEvaluationResult[];
   readonly facts?: readonly Fact[];

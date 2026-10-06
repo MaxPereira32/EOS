@@ -1,25 +1,50 @@
 import * as crypto from 'crypto';
-import { Fact, RuleEvaluationResult, Finding, AuditTarget } from '../domain/types';
+import { Fact, RuleEvaluationResult, Finding, AuditTarget, DomainPolicy } from '../domain/types';
 
 export class MandatoryDirectoryRule {
   public static readonly ruleId = 'ARCH-RULE-001-MANDATORY-DOMAIN-DIR';
-  public static readonly ruleVersion = '3.1.0';
+  public static readonly ruleVersion = '3.2.0';
 
   private readonly expectedDomainDir: string;
+  private readonly domainPolicy: DomainPolicy;
 
   /**
    * Diretório de domínio esperado. Padrão 'src/domain' preserva o comportamento
    * original; projetos podem declarar a convenção real via eos.risk.yml
    * (architecture.domain_directory).
    */
-  constructor(expectedDomainDir: string = 'src/domain') {
+  constructor(expectedDomainDir: string = 'src/domain', domainPolicy: DomainPolicy = 'REQUIRED') {
     this.expectedDomainDir = expectedDomainDir;
+    this.domainPolicy = domainPolicy;
   }
 
   public evaluate(facts: readonly Fact[], target: AuditTarget): { evaluation: RuleEvaluationResult; finding?: Finding } {
     const fsFacts = facts.filter(f => f.payload.fact_type === 'FILE_STRUCTURE');
 
+    if (this.domainPolicy === 'NOT_APPLICABLE') {
+      return {
+        evaluation: {
+          rule_id: MandatoryDirectoryRule.ruleId,
+          rule_version: MandatoryDirectoryRule.ruleVersion,
+          status: 'NOT_APPLICABLE',
+          rationale: `A camada de domínio não é obrigatória para o perfil arquitetural avaliado; '${this.expectedDomainDir}' não será imposto artificialmente.`,
+          facts_used: [],
+        },
+      };
+    }
+
     if (fsFacts.length === 0) {
+      if (this.domainPolicy === 'OPTIONAL') {
+        return {
+          evaluation: {
+            rule_id: MandatoryDirectoryRule.ruleId,
+            rule_version: MandatoryDirectoryRule.ruleVersion,
+            status: 'NOT_APPLICABLE',
+            rationale: 'Domínio é opcional neste projeto e não há evidência suficiente para justificar sua imposição.',
+            facts_used: [],
+          },
+        };
+      }
       const evaluation: RuleEvaluationResult = {
         rule_id: MandatoryDirectoryRule.ruleId,
         rule_version: MandatoryDirectoryRule.ruleVersion,
@@ -57,6 +82,18 @@ export class MandatoryDirectoryRule {
     }
 
     if (payload.status === 'ABSENCE_VERIFIED') {
+      if (this.domainPolicy === 'OPTIONAL') {
+        return {
+          evaluation: {
+            rule_id: MandatoryDirectoryRule.ruleId,
+            rule_version: MandatoryDirectoryRule.ruleVersion,
+            status: 'NOT_APPLICABLE',
+            rationale: `O diretório de domínio '${payload.directory}' não existe, mas a arquitetura avaliada não exige essa camada. O EOS recomenda arquitetura proporcional em vez de criar uma pasta apenas para satisfazer o auditor.`,
+            facts_used: [domainFact.fact_id],
+          },
+        };
+      }
+
       const evaluation: RuleEvaluationResult = {
         rule_id: MandatoryDirectoryRule.ruleId,
         rule_version: MandatoryDirectoryRule.ruleVersion,

@@ -48,6 +48,10 @@ async function main() {
       console.log(`  - Target ID:            ${report.target.target_id}`);
       console.log(`  - Arquivos Analisados:  ${report.coverage.files_analyzed} / ${report.coverage.files_discovered}`);
       console.log(`  - Quality Gates:        ${report.rule_results.length}`);
+      if (report.architecture_assessment) {
+        console.log(`  - Perfil Arquitetural:  ${report.architecture_assessment.effective_profile}`);
+        console.log(`  - Política de Domínio:  ${report.architecture_assessment.domain_policy}`);
+      }
       console.log(`  - Security Claims:       ${report.security_claims?.length || 0}`);
       console.log(`  - Achados (Findings):   ${report.findings.length}`);
       console.log(`  - OVERALL PHASE STATUS:  [ ${report.overall_phase_status || 'UNKNOWN'} ]`);

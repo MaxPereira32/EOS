@@ -21,24 +21,8 @@ import { GovernorIntegrityVerifier } from '../utils/governor-integrity-verifier'
 import { redactOutput } from '../utils/output-redactor';
 import { ReportIntegritySigner } from '../utils/report-integrity-signer';
 import { FirestoreDomainAdapter } from '../adapters/firestore/firestore-domain-adapter';
+import { ArchitectureApplicabilityEngine } from '../engines/architecture-applicability-engine';
 import { EvidenceEnvelope } from '../domain/universal-contracts';
-
-/**
- * Lê a convenção arquitetural declarada pelo projeto em eos.risk.yml
- * (chave: architecture.domain_directory). Parsing mínimo por regex, sem
- * dependência de biblioteca YAML. Ausente/inválido => default 'src/domain'.
- */
-function readDeclaredDomainDirectory(rootPath: string): string {
-  try {
-    const riskPath = path.join(rootPath, 'eos.risk.yml');
-    if (!require('fs').existsSync(riskPath)) return 'src/domain';
-    const content = require('fs').readFileSync(riskPath, 'utf8');
-    const match = content.match(/domain_directory\s*:\s*["']?([^"'\s#]+)/);
-    return match ? match[1] : 'src/domain';
-  } catch {
-    return 'src/domain';
-  }
-}
 
 function readDeclaredProductionValidationScript(rootPath: string): string | null {
   try {
@@ -377,33 +361,44 @@ export class AuditApplicationService {
       const terminateTree = async (): Promise<void> => {
         const terminationGraceMs = 5_000;
         const forcedCloseGraceMs = 1_000;
+        const windowsHandleReleaseMs = 1_000;
         await new Promise<void>((resolveTermination) => {
           let finished = false;
           let killer: any = null;
           let graceTimer: ReturnType<typeof setTimeout> | null = null;
           let forcedCloseTimer: ReturnType<typeof setTimeout> | null = null;
+          let releaseTimer: ReturnType<typeof setTimeout> | null = null;
           const finish = () => {
             if (finished) return;
             finished = true;
             if (graceTimer) clearTimeout(graceTimer);
             if (forcedCloseTimer) clearTimeout(forcedCloseTimer);
+            if (releaseTimer) clearTimeout(releaseTimer);
             resolveTermination();
           };
 
-          child.once('close', finish);
           try {
             if (isWindows && child.pid) {
               killer = childProcess.spawn('taskkill.exe', ['/PID', String(child.pid), '/T', '/F'], {
                 windowsHide: true,
                 stdio: 'ignore',
               });
+              // No Windows, o processo npm pode fechar antes de seus descendentes.
+              // Mesmo após taskkill /T concluir, o SO pode manter handles de cwd por alguns ms.
+              // A janela abaixo evita devolver o gate antes da liberação efetiva desses handles.
+              killer.once('close', () => {
+                releaseTimer = setTimeout(finish, windowsHandleReleaseMs);
+              });
               killer.once('error', () => {
+                child.once('close', finish);
                 try { child.kill(); } catch { /* best effort */ }
               });
             } else {
+              child.once('close', finish);
               child.kill('SIGTERM');
             }
           } catch {
+            child.once('close', finish);
             try { child.kill(); } catch { /* processo já encerrado */ }
           }
 
@@ -463,7 +458,11 @@ export class AuditApplicationService {
         spawnError = error;
         finalize(null);
       });
-      child.once('close', (code: number | null) => finalize(code));
+      child.once('close', (code: number | null) => {
+        // Em timeout, a conclusão só pode ser publicada após terminateTree()
+        // confirmar o encerramento da árvore inteira (especialmente no Windows).
+        if (!timedOut) finalize(code);
+      });
     });
   }
 
@@ -594,8 +593,10 @@ export class AuditApplicationService {
 // 1. Resolver Target
     const target = TargetResolver.resolve(targetPath);
 
-    // Diretório de domínio declarado pelo projeto (eos.risk.yml), default 'src/domain'
-    const declaredDomainDir = readDeclaredDomainDirectory(target.root_path);
+    // 1.1 Avaliar aplicabilidade arquitetural antes de impor convenções.
+    // Inferência orienta recomendações; hard failure de domínio só ocorre por declaração explícita.
+    const architectureAssessment = new ArchitectureApplicabilityEngine().assess(target.root_path);
+    const declaredDomainDir = architectureAssessment.domain_directory;
     const declaredActiveSecurityClaims = readDeclaredActiveSecurityClaims(target.root_path);
     const declaredActiveSecurityClaimIds = declaredActiveSecurityClaims.map(claim => claim.id);
 
@@ -636,14 +637,40 @@ export class AuditApplicationService {
     const ruleResults: RuleEvaluationResult[] = [];
     const findings: Finding[] = [];
 
-    // Rule 1: Estrutura de Diretórios Obrigatória
-    const mandatoryDirRule = new MandatoryDirectoryRule(declaredDomainDir);
+    const domainPresent = fsFacts.some(fact =>
+      fact.payload.fact_type === 'FILE_STRUCTURE' &&
+      fact.payload.directory === declaredDomainDir &&
+      fact.payload.status === 'PRESENT'
+    );
+    const domainRulesApplicable = architectureAssessment.domain_policy === 'REQUIRED' || domainPresent;
+
+    ruleResults.push({
+      rule_id: 'EOS-ARCH-APPLICABILITY-001',
+      rule_version: '1.0.0',
+      status: 'PASS',
+      rationale: [
+        `Perfil efetivo: ${architectureAssessment.effective_profile}`,
+        `política de domínio: ${architectureAssessment.domain_policy}`,
+        `confiança: ${architectureAssessment.confidence.toFixed(2)}`,
+        `recomendação: ${architectureAssessment.recommendation}`,
+      ].join('. ') + '.',
+      facts_used: [],
+    });
+
+    // Rule 1: Diretório de domínio só é obrigatório quando a arquitetura o exige.
+    const mandatoryDirRule = new MandatoryDirectoryRule(
+      declaredDomainDir,
+      architectureAssessment.domain_policy,
+    );
     const res1 = mandatoryDirRule.evaluate(fsFacts, target);
     ruleResults.push(res1.evaluation);
     if (res1.finding) findings.push(res1.finding);
 
-    // Rule 2: Dependências Proibidas de Módulos (Domain -> Infra)
-    const noDisallowedDepRule = new NoDisallowedDependencyRule(declaredDomainDir);
+    // Rule 2: Domain -> Infra só se aplica quando há domínio real ou obrigação explícita.
+    const noDisallowedDepRule = new NoDisallowedDependencyRule(
+      declaredDomainDir,
+      domainRulesApplicable,
+    );
     const res2 = noDisallowedDepRule.evaluate(depFacts, target);
     ruleResults.push(res2.evaluation);
     if (res2.findings && res2.findings.length > 0) {
@@ -944,6 +971,7 @@ export class AuditApplicationService {
       timestamp: new Date().toISOString(),
       target,
       coverage: fsCollectionResult.coverage,
+      architecture_assessment: architectureAssessment,
       findings,
       rule_results: ruleResults,
       facts: allFacts,

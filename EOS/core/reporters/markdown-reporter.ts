@@ -19,6 +19,23 @@ export class MarkdownReporter {
       `**Caminho Alvo:** \`${report.target.root_path}\`  `,
       `**Branch / Commit:** \`${report.target.branch || 'N/A'}\` / \`${report.target.commit_hash || 'N/A'}\`  `,
       ``,
+      ...(report.architecture_assessment ? [
+        `## CONTEXTO ARQUITETURAL`,
+        ``,
+        `| Item | Avaliação |`,
+        `|---|---|`,
+        `| Perfil declarado | ${report.architecture_assessment.declared_profile || 'Não declarado'} |`,
+        `| Perfil inferido | ${report.architecture_assessment.inferred_profile} |`,
+        `| Perfil efetivo | ${report.architecture_assessment.effective_profile} |`,
+        `| Política de domínio | ${report.architecture_assessment.domain_policy} |`,
+        `| Diretório de domínio | \`${report.architecture_assessment.domain_directory}\` |`,
+        `| Confiança | ${report.architecture_assessment.confidence.toFixed(2)} |`,
+        ``,
+        `**Recomendação arquitetural:** ${report.architecture_assessment.recommendation}`,
+        ``,
+        `**Sinais observados:** ${report.architecture_assessment.signals.join('; ') || 'Nenhum sinal conclusivo'}`,
+        ``,
+      ] : []),
       `## 1. MÉTICAS DE COBERTURA DE COLETA`,
       ``,
       `| Métrica | Valor |`,
@@ -38,7 +55,7 @@ export class MarkdownReporter {
     ];
 
     for (const res of report.rule_results) {
-      const badge = res.status === 'PASS' ? '✅ PASS' : res.status === 'FAIL' ? '❌ FAIL' : '⚠️ ' + res.status;
+      const badge = res.status === 'PASS' ? '✅ PASS' : res.status === 'FAIL' ? '❌ FAIL' : res.status === 'NOT_APPLICABLE' ? '⏭️ NOT_APPLICABLE' : '⚠️ ' + res.status;
       mdLines.push(`### Rule: \`${res.rule_id}\` (${badge})`);
       mdLines.push(`- **Versão:** \`${res.rule_version}\``);
       mdLines.push(`- **Justificativa:** ${res.rationale}`);

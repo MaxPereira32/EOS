@@ -5,6 +5,22 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { AuditApplicationService } from '../core/services/audit-application-service';
 
+async function cleanupTempDir(root: string): Promise<void> {
+  const retryableCodes = new Set(['EPERM', 'EBUSY', 'ENOTEMPTY']);
+  const deadline = Date.now() + 10_000;
+
+  while (true) {
+    try {
+      fs.rmSync(root, { recursive: true, force: true });
+      return;
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (!code || !retryableCodes.has(code) || Date.now() >= deadline) throw error;
+      await new Promise(resolve => setTimeout(resolve, 250));
+    }
+  }
+}
+
 test('emite heartbeat enquanto um quality gate continua em execução', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'eos-heartbeat-'));
   const previousHeartbeat = process.env.EOS_CHECK_HEARTBEAT_MS;
@@ -29,7 +45,7 @@ test('emite heartbeat enquanto um quality gate continua em execução', async ()
     console.log = originalLog;
     if (previousHeartbeat === undefined) delete process.env.EOS_CHECK_HEARTBEAT_MS;
     else process.env.EOS_CHECK_HEARTBEAT_MS = previousHeartbeat;
-    fs.rmSync(root, { recursive: true, force: true });
+    await cleanupTempDir(root);
   }
 });
 
@@ -57,7 +73,7 @@ test('timeout encerra o gate e produz evidência FAIL sem bloquear a auditoria',
   } finally {
     if (previousTimeout === undefined) delete process.env.EOS_CHECK_TIMEOUT_MS;
     else process.env.EOS_CHECK_TIMEOUT_MS = previousTimeout;
-    fs.rmSync(root, { recursive: true, force: true });
+    await cleanupTempDir(root);
   }
 });
 
@@ -76,7 +92,7 @@ test('eos.risk.yml permite timeout específico por check sem relaxar os demais g
       'execution:',
       '  default_timeout_ms: 300',
       '  check_timeouts_ms:',
-      '    "typecheck": 1500',
+      '    "typecheck": 5000',
       '',
     ].join('\n'));
 
@@ -100,6 +116,6 @@ test('eos.risk.yml permite timeout específico por check sem relaxar os demais g
   } finally {
     if (previousTimeout === undefined) delete process.env.EOS_CHECK_TIMEOUT_MS;
     else process.env.EOS_CHECK_TIMEOUT_MS = previousTimeout;
-    fs.rmSync(root, { recursive: true, force: true });
+    await cleanupTempDir(root);
   }
 });

@@ -13,11 +13,27 @@ export function normalizeModuleIdentity(modulePath: string): string {
 
 export class NoDisallowedDependencyRule {
   public static readonly ruleId = 'ARCH-RULE-002-NO-DOMAIN-TO-INFRA-DEPENDENCY';
-  public static readonly ruleVersion = '4.6.1';
+  public static readonly ruleVersion = '4.7.0';
 
-  constructor(private readonly declaredDomainDir: string = 'src/domain') {}
+  constructor(
+    private readonly declaredDomainDir: string = 'src/domain',
+    private readonly applicable: boolean = true,
+  ) {}
 
   public evaluate(facts: readonly Fact[], target: AuditTarget): { evaluation: RuleEvaluationResult; findings: Finding[] } {
+    if (!this.applicable) {
+      return {
+        evaluation: {
+          rule_id: NoDisallowedDependencyRule.ruleId,
+          rule_version: NoDisallowedDependencyRule.ruleVersion,
+          status: 'NOT_APPLICABLE',
+          rationale: 'Não foi identificada camada de domínio aplicável; a regra Domain -> Infrastructure foi ignorada sem penalizar o projeto.',
+          facts_used: [],
+        },
+        findings: [],
+      };
+    }
+
     const depFacts = facts.filter(f => f.payload.fact_type === 'MODULE_DEPENDENCY');
 
     if (depFacts.length === 0) {
