@@ -176,6 +176,7 @@ export interface CausalityMutationResult {
   readonly original_status: 'PASS' | 'FAIL';
   readonly mutated_status: 'PASS' | 'FAIL';
   readonly causality_proven: boolean;
+  readonly validation_evidence?: Readonly<Record<string, unknown>>;
   readonly rationale: string;
 }
 

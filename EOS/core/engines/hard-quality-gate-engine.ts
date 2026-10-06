@@ -66,13 +66,14 @@ export class HardQualityGateEngine {
     }
 
     const hasHardViolations = hardViolations.length > 0;
-    const canGrantGreen = !hasHardViolations && traditionalScore >= 90;
+    const hasUnprovenSecurityClaims = securityClaims.some(claim => !claim.proven);
+    const canGrantGreen = !hasHardViolations && !hasUnprovenSecurityClaims && traditionalScore >= 90;
     const canGrantProven = !hasHardViolations && (envelopes.length > 0 ? envelopes.every(e => e.state === 'SECURITY_PROVEN' || e.state === 'CAUSALLY_VALIDATED') : securityClaims.every(c => c.proven));
 
     let overallPhaseStatus: GateStatus = 'GREEN';
     if (hasHardViolations) {
       overallPhaseStatus = 'BLOCKED';
-    } else if (traditionalScore < 90) {
+    } else if (traditionalScore < 90 || hasUnprovenSecurityClaims) {
       overallPhaseStatus = 'YELLOW';
     }
 

@@ -13,6 +13,7 @@ import { MarkdownReporter } from '../reporters/markdown-reporter';
 import { AuditReport, Finding, RuleEvaluationResult, Evidence, Fact, FormalEvidence, SecurityClaimEvaluation, ExecutionEvidence } from '../domain/types';
 import { FirestoreSecurityEngine } from '../engines/firestore-security-engine';
 import { CausalityMutationEngine } from '../engines/causality-mutation-engine';
+import { DeclaredClaimCausalityEngine } from '../engines/declared-claim-causality-engine';
 import { HardQualityGateEngine } from '../engines/hard-quality-gate-engine';
 import { GovernorIntegrityVerifier } from '../utils/governor-integrity-verifier';
 import { ReportIntegritySigner } from '../utils/report-integrity-signer';
@@ -48,14 +49,142 @@ function readDeclaredProductionValidationScript(rootPath: string): string | null
   }
 }
 
+interface DeclaredSecurityClaimConfig {
+  id: string;
+  status: string;
+  target: string;
+  validationScript: string | null;
+  causalSpecPath: string | null;
+  evidencePaths: string[];
+}
+
+function readDeclaredActiveSecurityClaims(rootPath: string): DeclaredSecurityClaimConfig[] {
+  try {
+    const riskPath = path.join(rootPath, 'eos.risk.yml');
+    if (!require('fs').existsSync(riskPath)) return [];
+    const lines = require('fs').readFileSync(riskPath, 'utf8').split(/\r?\n/);
+    const claims: DeclaredSecurityClaimConfig[] = [];
+    let inSecurityClaims = false;
+    let current: DeclaredSecurityClaimConfig | null = null;
+    let inEvidence = false;
+
+    const flush = () => {
+      if (current?.id && current.status.toUpperCase() === 'ACTIVE') {
+        claims.push({
+          ...current,
+          evidencePaths: Array.from(new Set(current.evidencePaths)),
+        });
+      }
+    };
+
+    for (const line of lines) {
+      if (/^security_claims\s*:/.test(line)) {
+        inSecurityClaims = true;
+        current = null;
+        continue;
+      }
+      if (!inSecurityClaims) continue;
+      if (/^[^\s#][^:]*\s*:/.test(line)) {
+        flush();
+        current = null;
+        inSecurityClaims = false;
+        break;
+      }
+
+      const idMatch = line.match(/^\s*-\s+id\s*:\s*["']?([^"'#]+?)["']?\s*$/);
+      if (idMatch) {
+        flush();
+        current = {
+          id: idMatch[1].trim(),
+          status: '',
+          target: '',
+          validationScript: null,
+          causalSpecPath: null,
+          evidencePaths: [],
+        };
+        inEvidence = false;
+        continue;
+      }
+      if (!current) continue;
+
+      const statusMatch = line.match(/^\s+status\s*:\s*["']?([^"'\s#]+)/);
+      if (statusMatch) {
+        current.status = statusMatch[1].trim();
+        continue;
+      }
+      const targetMatch = line.match(/^\s+target\s*:\s*["']?([^"'#]+?)["']?\s*$/);
+      if (targetMatch) {
+        current.target = targetMatch[1].trim();
+        continue;
+      }
+      if (/^\s+evidence\s*:/.test(line)) {
+        inEvidence = true;
+        continue;
+      }
+      if (inEvidence) {
+        const validationMatch = line.match(/^\s+validation_script\s*:\s*["']?([^"'\s#]+)/);
+        if (validationMatch) {
+          current.validationScript = validationMatch[1].trim();
+          continue;
+        }
+        const causalSpecMatch = line.match(/^\s+causal_spec\s*:\s*["']?([^"'\s#]+)/);
+        if (causalSpecMatch) {
+          current.causalSpecPath = causalSpecMatch[1].trim();
+          current.evidencePaths.push(causalSpecMatch[1].trim());
+          continue;
+        }
+        const evidenceMatch = line.match(/^\s+[a-zA-Z0-9_]+\s*:\s*["']?([^"'#]+?)["']?\s*$/);
+        const candidate = evidenceMatch?.[1]?.trim();
+        if (candidate && /\.(?:ts|tsx|js|mjs|sql|json|md)$/.test(candidate)) {
+          current.evidencePaths.push(candidate);
+        }
+      }
+    }
+
+    if (inSecurityClaims) flush();
+    return claims;
+  } catch {
+    return [];
+  }
+}
+
+function readDeclaredActiveSecurityClaimIds(rootPath: string): string[] {
+  return readDeclaredActiveSecurityClaims(rootPath).map(claim => claim.id);
+}
+
+function findNestedPackageManifests(rootPath: string): string[] {
+  const fs = require('fs');
+  const results: string[] = [];
+  const walk = (dir: string, depth: number) => {
+    if (depth > 3) return;
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      if (entry.name.startsWith('.') || ['node_modules', 'dist', 'build', 'release'].includes(entry.name)) continue;
+      const child = path.join(dir, entry.name);
+      const manifest = path.join(child, 'package.json');
+      if (fs.existsSync(manifest)) results.push(manifest);
+      walk(child, depth + 1);
+    }
+  };
+  walk(rootPath, 0);
+  return results;
+}
+
 export class AuditApplicationService {
-  private async executeProjectCheck(rootPath: string, check: string): Promise<ExecutionEvidence> {
+  private async executeProjectCheck(
+    rootPath: string,
+    check: string,
+    workingDirectory: string = rootPath,
+  ): Promise<ExecutionEvidence> {
     const childProcess = require('child_process');
     const startedAt = Date.now();
     const isWindows = process.platform === 'win32';
     const command = isWindows ? (process.env.ComSpec || 'cmd.exe') : 'npm';
     const args = isWindows ? ['/d', '/s', '/c', 'npm.cmd', 'run', check] : ['run', check];
-    const commandLine = `npm run ${check}`;
+    const relativeWorkingDir = path.relative(rootPath, workingDirectory).replace(/\\/g, '/');
+    const commandLine = relativeWorkingDir
+      ? `npm --prefix ${relativeWorkingDir} run ${check}`
+      : `npm run ${check}`;
     const timeoutMs = Number(process.env.EOS_CHECK_TIMEOUT_MS || 120000);
     const heartbeatMs = Math.max(250, Number(process.env.EOS_CHECK_HEARTBEAT_MS || 15000));
     const maxCapturedBytes = 10 * 1024 * 1024;
@@ -76,7 +205,7 @@ export class AuditApplicationService {
       };
 
       const child = childProcess.spawn(command, args, {
-        cwd: rootPath,
+        cwd: workingDirectory,
         shell: false,
         windowsHide: true,
         stdio: ['ignore', 'pipe', 'pipe'],
@@ -136,7 +265,7 @@ export class AuditApplicationService {
         resolve({
           check_id: `EOS-EXEC-${check.toUpperCase()}`,
           command_line: commandLine,
-          working_directory: rootPath,
+          working_directory: workingDirectory,
           exit_code: exitCode,
           state,
           duration_ms: durationMs,
@@ -175,21 +304,47 @@ export class AuditApplicationService {
     }
 
     const productionCheck = readDeclaredProductionValidationScript(rootPath);
-    const checks = ['typecheck', 'lint', 'test', 'build'].filter(name => typeof scripts[name] === 'string');
+    const declaredSecurityClaims = readDeclaredActiveSecurityClaims(rootPath);
+    const preferredTest = typeof scripts['test:all'] === 'string' ? 'test:all' : 'test';
+    const checks = ['typecheck', 'lint', preferredTest, 'build']
+      .filter((name, index, list) => list.indexOf(name) === index)
+      .filter(name => typeof scripts[name] === 'string');
+
     if (productionCheck && typeof scripts[productionCheck] === 'string' && !checks.includes(productionCheck)) {
       checks.push(productionCheck);
     }
-    if (checks.length === 0 && !productionCheck) {
-      return [{
-        check_id: 'EOS-EXEC-001', command_line: 'npm scripts', working_directory: rootPath,
-        exit_code: -1, state: 'NOT_AVAILABLE', duration_ms: 0,
-        stdout_sha256: '', stderr_sha256: '', output_excerpt: 'Não foram encontrados scripts typecheck, lint, test ou build para execução.'
-      }];
+    for (const claim of declaredSecurityClaims) {
+      if (claim.validationScript && typeof scripts[claim.validationScript] === 'string' && !checks.includes(claim.validationScript)) {
+        checks.push(claim.validationScript);
+      }
     }
 
     const results: ExecutionEvidence[] = [];
     for (const check of checks) {
       results.push(await this.executeProjectCheck(rootPath, check));
+    }
+
+    for (const manifestPath of findNestedPackageManifests(rootPath)) {
+      let nestedScripts: Record<string, string> = {};
+      try {
+        nestedScripts = JSON.parse(require('fs').readFileSync(manifestPath, 'utf8')).scripts || {};
+      } catch {
+        results.push({
+          check_id: 'EOS-EXEC-NESTED-MANIFEST',
+          command_line: path.relative(rootPath, manifestPath).replace(/\\/g, '/'),
+          working_directory: path.dirname(manifestPath),
+          exit_code: -1,
+          state: 'NOT_AVAILABLE',
+          duration_ms: 0,
+          stdout_sha256: '',
+          stderr_sha256: '',
+          output_excerpt: 'Manifesto aninhado inválido; os gates desse módulo não puderam ser determinados.'
+        });
+        continue;
+      }
+      if (typeof nestedScripts.test === 'string') {
+        results.push(await this.executeProjectCheck(rootPath, 'test', path.dirname(manifestPath)));
+      }
     }
 
     if (productionCheck && typeof scripts[productionCheck] !== 'string') {
@@ -205,6 +360,33 @@ export class AuditApplicationService {
         output_excerpt: `O perfil de produção exige o script '${productionCheck}', mas ele não existe no package.json.`
       });
     }
+
+    for (const claim of declaredSecurityClaims) {
+      if (!claim.validationScript || typeof scripts[claim.validationScript] !== 'string') {
+        const expected = claim.validationScript || '(não declarado)';
+        results.push({
+          check_id: `EOS-EXEC-SECURITY-${claim.id}`,
+          command_line: claim.validationScript ? `npm run ${claim.validationScript}` : `security-claim:${claim.id}`,
+          working_directory: rootPath,
+          exit_code: -1,
+          state: 'NOT_AVAILABLE',
+          duration_ms: 0,
+          stdout_sha256: '',
+          stderr_sha256: '',
+          output_excerpt: `Claim ACTIVE ${claim.id} exige validation_script executável; recebido: ${expected}.`
+        });
+      }
+    }
+
+    if (results.length === 0) {
+      return [{
+        check_id: 'EOS-EXEC-001', command_line: 'npm scripts', working_directory: rootPath,
+        exit_code: -1, state: 'NOT_AVAILABLE', duration_ms: 0,
+        stdout_sha256: '', stderr_sha256: '',
+        output_excerpt: 'Não foram encontrados scripts executáveis de typecheck, lint, test/test:all, build ou testes em manifests aninhados.'
+      }];
+    }
+
     return results;
   }
 
@@ -219,6 +401,8 @@ export class AuditApplicationService {
 
     // Diretório de domínio declarado pelo projeto (eos.risk.yml), default 'src/domain'
     const declaredDomainDir = readDeclaredDomainDirectory(target.root_path);
+    const declaredActiveSecurityClaims = readDeclaredActiveSecurityClaims(target.root_path);
+    const declaredActiveSecurityClaimIds = declaredActiveSecurityClaims.map(claim => claim.id);
 
     // Executa primeiro as validações declaradas pelo projeto. A coleta estática
     // posterior representa o estado observado após os comandos terminarem.
@@ -343,16 +527,165 @@ export class AuditApplicationService {
       }
     }
 
-    // Avaliação Legada de Suporte
+    // Avaliação de claims de segurança declarados + suporte legado Firestore.
     const firestoreSecEngine = new FirestoreSecurityEngine();
     const securityClaims = firestoreSecEngine.evaluateRules(target.root_path);
-    const causalityEngine = new CausalityMutationEngine();
     const formalEvidences: FormalEvidence[] = [];
+    const declaredEvaluations: SecurityClaimEvaluation[] = [];
+    const declaredCausalityEngine = new DeclaredClaimCausalityEngine();
 
+    const inferClaimType = (claimId: string): SecurityClaimEvaluation['claim_type'] => {
+      if (claimId.includes('AUTH')) return 'AUTHENTICATION';
+      if (claimId.includes('RBAC') || claimId.includes('AUTHZ')) return 'AUTHORIZATION';
+      return 'DATA_MUTABILITY';
+    };
+
+    for (const declared of declaredActiveSecurityClaims) {
+      if (securityClaims.some(claim => claim.claim_id === declared.id)) continue;
+
+      const blockingReasons: string[] = [];
+      const targetArtifact = declared.target || 'eos.risk.yml';
+      if (!declared.target || !require('fs').existsSync(path.join(target.root_path, declared.target))) {
+        blockingReasons.push(`Artefato-alvo do claim ${declared.id} não foi encontrado: ${targetArtifact}.`);
+      }
+
+      const missingEvidencePaths = declared.evidencePaths.filter(
+        evidencePath => !require('fs').existsSync(path.join(target.root_path, evidencePath))
+      );
+      if (missingEvidencePaths.length > 0) {
+        blockingReasons.push(
+          `Evidências declaradas ausentes para ${declared.id}: ${missingEvidencePaths.join(', ')}.`
+        );
+      }
+
+      const validationCommand = declared.validationScript
+        ? `npm run ${declared.validationScript}`
+        : null;
+      const validationEvidence = validationCommand
+        ? executionEvidences.find(item => item.command_line === validationCommand)
+        : undefined;
+
+      if (!declared.validationScript) {
+        blockingReasons.push(`Claim ${declared.id} não declara evidence.validation_script.`);
+      } else if (!validationEvidence || validationEvidence.state !== 'PASS') {
+        blockingReasons.push(
+          `Validação executável do claim ${declared.id} não passou: ${validationCommand}.`
+        );
+      }
+
+      const declaredMutation =
+        blockingReasons.length === 0 && declared.validationScript && declared.causalSpecPath
+          ? declaredCausalityEngine.evaluateCausality(
+              target.root_path,
+              declared.id,
+              targetArtifact,
+              declared.validationScript,
+              declared.causalSpecPath,
+            )
+          : undefined;
+      const causalProven = declaredMutation?.causality_proven === true;
+
+      const evidenceSeed = [
+        declared.id,
+        targetArtifact,
+        declared.validationScript || '',
+        ...declared.evidencePaths,
+        validationEvidence?.stdout_sha256 || '',
+        validationEvidence?.stderr_sha256 || '',
+        declared.causalSpecPath || '',
+        declaredMutation?.mutation_id || '',
+        String(declaredMutation?.causality_proven ?? false),
+      ].join('|');
+      const formalEvidence: FormalEvidence = {
+        evidence_id: `EVD-DECL-${crypto.createHash('sha256').update(evidenceSeed).digest('hex').slice(0, 16)}`,
+        category: causalProven
+          ? 'CAUSAL'
+          : declared.validationScript?.includes('postgres') || declared.validationScript?.includes('e2e')
+            ? 'RUNTIME'
+            : 'INTEGRATION',
+        source_artifact: targetArtifact,
+        test_artifact: declared.validationScript
+          ? `npm run ${declared.validationScript}`
+          : declared.evidencePaths[0],
+        runtime_environment: declared.validationScript?.includes('postgres')
+          ? 'DB_RUNTIME'
+          : declared.validationScript?.includes('e2e')
+            ? 'HTTP_RUNTIME'
+            : 'NONE',
+        causality_status: causalProven
+          ? 'PROVEN_CAUSAL'
+          : declaredMutation
+            ? 'CAUSALITY_FAILED'
+            : 'CORRELATED',
+        confidence_score: causalProven ? 1.0 : blockingReasons.length === 0 ? 0.9 : 0.4,
+        source_reliability: causalProven ? 1.0 : blockingReasons.length === 0 ? 0.9 : 0.5,
+        reproducible: Boolean(validationEvidence?.state === 'PASS'),
+        is_simulation_only: false,
+        payload: {
+          declared_validation: true,
+          claim_id: declared.id,
+          validation_script: declared.validationScript,
+          evidence_paths: declared.evidencePaths,
+          execution_state: validationEvidence?.state || 'NOT_AVAILABLE',
+          execution_stdout_sha256: validationEvidence?.stdout_sha256 || null,
+          execution_stderr_sha256: validationEvidence?.stderr_sha256 || null,
+          causal_spec: declared.causalSpecPath,
+          mutation_id: declaredMutation?.mutation_id || null,
+          mutation_original_status: declaredMutation?.original_status || null,
+          mutation_status: declaredMutation?.mutated_status || null,
+        }
+      };
+
+      const evaluation: SecurityClaimEvaluation = {
+        claim_id: declared.id,
+        claim_type: inferClaimType(declared.id),
+        target_artifact: targetArtifact,
+        evidence: formalEvidence,
+        threat_vectors: [],
+        mutation_result: declaredMutation,
+        proven: causalProven,
+        phase_status: blockingReasons.length > 0 ? 'BLOCKED' : causalProven ? 'GREEN' : 'YELLOW',
+        blocking_reasons: [
+          ...blockingReasons,
+          ...(declaredMutation && !causalProven ? [declaredMutation.rationale] : []),
+        ],
+      };
+      securityClaims.push(evaluation);
+      declaredEvaluations.push(evaluation);
+      formalEvidences.push(formalEvidence);
+    }
+
+    const evaluatedClaimIds = new Set<string>([
+      ...securityClaims.map(claim => claim.claim_id),
+      ...envelopes.map(envelope => envelope.claimId),
+    ]);
+    const missingDeclaredClaims = declaredActiveSecurityClaimIds.filter(id => !evaluatedClaimIds.has(id));
+    const blockedDeclaredClaims = declaredEvaluations.filter(claim => claim.phase_status === 'BLOCKED');
+    const provenDeclaredClaims = declaredEvaluations.filter(claim => claim.proven);
+    ruleResults.push({
+      rule_id: 'EOS-SECURITY-CLAIMS-001',
+      rule_version: '1.1',
+      status: missingDeclaredClaims.length > 0
+        ? 'INSUFFICIENT_EVIDENCE'
+        : blockedDeclaredClaims.length > 0
+          ? 'FAIL'
+          : 'PASS',
+      rationale: missingDeclaredClaims.length > 0
+        ? `Claims de segurança ACTIVE sem avaliação formal: ${missingDeclaredClaims.join(', ')}.`
+        : blockedDeclaredClaims.length > 0
+          ? `Claims ACTIVE com evidência inválida/ausente: ${blockedDeclaredClaims.map(claim => claim.claim_id).join(', ')}.`
+          : declaredActiveSecurityClaimIds.length > 0
+            ? `Todos os ${declaredActiveSecurityClaimIds.length} claim(s) ACTIVE foram materializados; ${provenDeclaredClaims.length} causalmente PROVEN e ${declaredActiveSecurityClaimIds.length - provenDeclaredClaims.length} ainda sem prova causal.`
+            : 'Nenhum claim de segurança ACTIVE foi declarado em eos.risk.yml.',
+      facts_used: []
+    });
+
+    const causalityEngine = new CausalityMutationEngine();
     for (let i = 0; i < securityClaims.length; i++) {
       const claim = securityClaims[i];
+      if (claim.evidence.payload?.declared_validation === true) continue;
+
       const mutationRes = causalityEngine.evaluateCausality(target.root_path, claim.evidence);
-      
       let updatedClaim = claim;
       if (!mutationRes.causality_proven) {
         const blocking = [...claim.blocking_reasons, mutationRes.rationale];

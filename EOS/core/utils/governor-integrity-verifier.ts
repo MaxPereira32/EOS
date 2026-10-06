@@ -19,6 +19,7 @@ export class GovernorIntegrityVerifier {
       'engines/hard-quality-gate-engine.ts',
       'engines/artifact-binding-engine.ts',
       'engines/causality-kill-ratio-engine.ts',
+      'engines/declared-claim-causality-engine.ts',
       'collectors/subprocess-execution-collector.ts'
     ];
 

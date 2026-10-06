@@ -78,4 +78,30 @@ describe('EOS — evidência de execução do projeto', () => {
     }
   });
 
+  test('prefere test:all e executa test de manifesto backend aninhado', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'eos-multimanifest-'));
+    try {
+      fs.mkdirSync(path.join(root, 'backend'));
+      fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({
+        scripts: {
+          test: 'node -e "process.exit(9)"',
+          'test:all': 'node -e "process.exit(0)"'
+        }
+      }));
+      fs.writeFileSync(path.join(root, 'backend', 'package.json'), JSON.stringify({
+        scripts: { test: 'node -e "process.exit(0)"' }
+      }));
+      const service = new AuditApplicationService() as unknown as {
+        executeProjectChecks(targetPath: string): Promise<Array<{ command_line: string; state: string }>>;
+      };
+      const checks = await service.executeProjectChecks(root);
+
+      assert.ok(checks.some(item => item.command_line === 'npm run test:all' && item.state === 'PASS'));
+      assert.ok(checks.some(item => item.command_line === 'npm --prefix backend run test' && item.state === 'PASS'));
+      assert.ok(!checks.some(item => item.command_line === 'npm run test'));
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
 });
