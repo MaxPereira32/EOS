@@ -60,3 +60,46 @@ test('timeout encerra o gate e produz evidência FAIL sem bloquear a auditoria',
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+test('eos.risk.yml permite timeout específico por check sem relaxar os demais gates', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'eos-timeout-config-'));
+  const previousTimeout = process.env.EOS_CHECK_TIMEOUT_MS;
+  try {
+    delete process.env.EOS_CHECK_TIMEOUT_MS;
+    fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({
+      scripts: {
+        typecheck: 'node -e "setTimeout(() => process.exit(0), 700)"',
+        build: 'node -e "setTimeout(() => process.exit(0), 700)"',
+      }
+    }));
+    fs.writeFileSync(path.join(root, 'eos.risk.yml'), [
+      'execution:',
+      '  default_timeout_ms: 300',
+      '  check_timeouts_ms:',
+      '    "typecheck": 1500',
+      '',
+    ].join('\n'));
+
+    const service = new AuditApplicationService() as unknown as {
+      executeProjectChecks(targetPath: string): Promise<Array<{
+        command_line: string;
+        state: string;
+        exit_code: number;
+        output_excerpt: string;
+      }>>;
+    };
+    const checks = await service.executeProjectChecks(root);
+    const typecheck = checks.find(check => check.command_line === 'npm run typecheck');
+    const build = checks.find(check => check.command_line === 'npm run build');
+
+    assert.strictEqual(typecheck?.state, 'PASS');
+    assert.strictEqual(typecheck?.exit_code, 0);
+    assert.strictEqual(build?.state, 'FAIL');
+    assert.strictEqual(build?.exit_code, -1);
+    assert.match(build?.output_excerpt ?? '', /Tempo limite excedido após 300 ms/);
+  } finally {
+    if (previousTimeout === undefined) delete process.env.EOS_CHECK_TIMEOUT_MS;
+    else process.env.EOS_CHECK_TIMEOUT_MS = previousTimeout;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});

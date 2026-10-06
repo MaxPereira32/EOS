@@ -49,6 +49,68 @@ function readDeclaredProductionValidationScript(rootPath: string): string | null
   }
 }
 
+interface DeclaredExecutionTimeoutConfig {
+  defaultTimeoutMs: number | null;
+  checkTimeoutsMs: Record<string, number>;
+}
+
+const MIN_EXECUTION_TIMEOUT_MS = 100;
+const MAX_EXECUTION_TIMEOUT_MS = 15 * 60_000;
+
+function parseExecutionTimeout(value: string | undefined): number | null {
+  if (!value) return null;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed)
+    && parsed >= MIN_EXECUTION_TIMEOUT_MS
+    && parsed <= MAX_EXECUTION_TIMEOUT_MS
+    ? parsed
+    : null;
+}
+
+function readDeclaredExecutionTimeoutConfig(rootPath: string): DeclaredExecutionTimeoutConfig {
+  const result: DeclaredExecutionTimeoutConfig = {
+    defaultTimeoutMs: null,
+    checkTimeoutsMs: {},
+  };
+  try {
+    const riskPath = path.join(rootPath, 'eos.risk.yml');
+    if (!require('fs').existsSync(riskPath)) return result;
+    const lines = require('fs').readFileSync(riskPath, 'utf8').split(/\r?\n/);
+    let inExecution = false;
+    let inCheckTimeouts = false;
+
+    for (const line of lines) {
+      if (/^execution\s*:/.test(line)) {
+        inExecution = true;
+        inCheckTimeouts = false;
+        continue;
+      }
+      if (!inExecution) continue;
+      if (/^[^\s#][^:]*\s*:/.test(line)) break;
+
+      const defaultMatch = line.match(/^\s+default_timeout_ms\s*:\s*(\d+)\s*(?:#.*)?$/);
+      if (defaultMatch) {
+        result.defaultTimeoutMs = parseExecutionTimeout(defaultMatch[1]);
+        continue;
+      }
+      if (/^\s+check_timeouts_ms\s*:/.test(line)) {
+        inCheckTimeouts = true;
+        continue;
+      }
+      if (!inCheckTimeouts) continue;
+
+      const checkMatch = line.match(/^\s+(?:"([^"]+)"|'([^']+)'|([^:#][^:]*?))\s*:\s*(\d+)\s*(?:#.*)?$/);
+      if (!checkMatch) continue;
+      const checkName = (checkMatch[1] || checkMatch[2] || checkMatch[3] || '').trim();
+      const timeout = parseExecutionTimeout(checkMatch[4]);
+      if (checkName && timeout !== null) result.checkTimeoutsMs[checkName] = timeout;
+    }
+    return result;
+  } catch {
+    return result;
+  }
+}
+
 interface DeclaredSecurityClaimConfig {
   id: string;
   status: string;
@@ -185,7 +247,11 @@ export class AuditApplicationService {
     const commandLine = relativeWorkingDir
       ? `npm --prefix ${relativeWorkingDir} run ${check}`
       : `npm run ${check}`;
-    const timeoutMs = Number(process.env.EOS_CHECK_TIMEOUT_MS || 120000);
+    const declaredTimeouts = readDeclaredExecutionTimeoutConfig(rootPath);
+    const timeoutMs = parseExecutionTimeout(process.env.EOS_CHECK_TIMEOUT_MS)
+      ?? declaredTimeouts.checkTimeoutsMs[check]
+      ?? declaredTimeouts.defaultTimeoutMs
+      ?? 120_000;
     const heartbeatMs = Math.max(250, Number(process.env.EOS_CHECK_HEARTBEAT_MS || 15000));
     const maxCapturedBytes = 10 * 1024 * 1024;
 
@@ -223,26 +289,54 @@ export class AuditApplicationService {
         console.log(`[EOS][CHECK] … ${commandLine} em execução — ${elapsedSeconds}s`);
       }, heartbeatMs);
 
-      const terminateTree = () => {
-        try {
-          if (isWindows && child.pid) {
-            childProcess.spawnSync('taskkill.exe', ['/PID', String(child.pid), '/T', '/F'], {
-              windowsHide: true,
-              stdio: 'ignore',
-            });
-          } else {
-            child.kill('SIGTERM');
+      const terminateTree = async (): Promise<void> => {
+        const terminationGraceMs = 5_000;
+        const forcedCloseGraceMs = 1_000;
+        await new Promise<void>((resolveTermination) => {
+          let finished = false;
+          let killer: any = null;
+          let graceTimer: ReturnType<typeof setTimeout> | null = null;
+          let forcedCloseTimer: ReturnType<typeof setTimeout> | null = null;
+          const finish = () => {
+            if (finished) return;
+            finished = true;
+            if (graceTimer) clearTimeout(graceTimer);
+            if (forcedCloseTimer) clearTimeout(forcedCloseTimer);
+            resolveTermination();
+          };
+
+          child.once('close', finish);
+          try {
+            if (isWindows && child.pid) {
+              killer = childProcess.spawn('taskkill.exe', ['/PID', String(child.pid), '/T', '/F'], {
+                windowsHide: true,
+                stdio: 'ignore',
+              });
+              killer.once('error', () => {
+                try { child.kill(); } catch { /* best effort */ }
+              });
+            } else {
+              child.kill('SIGTERM');
+            }
+          } catch {
+            try { child.kill(); } catch { /* processo já encerrado */ }
           }
-        } catch {
-          try { child.kill(); } catch { /* processo já encerrado */ }
-        }
+
+          graceTimer = setTimeout(() => {
+            try { killer?.kill(); } catch { /* best effort */ }
+            try { child.kill('SIGKILL'); } catch {
+              try { child.kill(); } catch { /* best effort */ }
+            }
+            forcedCloseTimer = setTimeout(finish, forcedCloseGraceMs);
+          }, terminationGraceMs);
+        });
       };
 
       const timeout = setTimeout(() => {
         timedOut = true;
         stderr = appendBounded(stderr, `\nTempo limite excedido após ${timeoutMs} ms.`);
         console.error(`[EOS][CHECK] ✗ ${commandLine} TIMEOUT — ${Math.floor(timeoutMs / 1000)}s`);
-        terminateTree();
+        void terminateTree().finally(() => finalize(null));
       }, timeoutMs);
 
       const finalize = (code: number | null) => {
