@@ -104,4 +104,20 @@ describe('EOS — evidência de execução do projeto', () => {
     }
   });
 
+  test('redige credenciais do excerpt sem alterar os hashes de saída', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'eos-redaction-'));
+    try {
+      fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({
+        scripts: { typecheck: 'node -e "console.log(\'DATABASE_URL=postgres://user:secret@localhost:5432/app\')"' }
+      }));
+      const service = new AuditApplicationService() as unknown as {
+        executeProjectChecks(targetPath: string): Promise<Array<{ output_excerpt: string; stdout_sha256: string }>>;
+      };
+      const check = (await service.executeProjectChecks(root))[0];
+      assert.doesNotMatch(check.output_excerpt, /secret|postgres:\/\/user/i);
+      assert.match(check.output_excerpt, /\[REDACTED\]/);
+      assert.match(check.stdout_sha256, /^[a-f0-9]{64}$/);
+    } finally { fs.rmSync(root, { recursive: true, force: true }); }
+  });
+
 });

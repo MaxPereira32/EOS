@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { CausalityMutationResult } from '../domain/types';
+import { redactOutput } from '../utils/output-redactor';
 
 interface TextReplaceMutation {
   readonly kind: 'TEXT_REPLACE';
@@ -12,6 +13,7 @@ interface TextReplaceMutation {
   readonly replacement: string;
   readonly expected_replacements?: number;
   readonly assertion_id: string;
+  readonly control?: string;
 }
 
 interface CausalSpecDocument {
@@ -26,6 +28,10 @@ interface ValidationResult {
   stderr_sha256: string;
   assertion_status: 'PASS' | 'FAIL' | null;
   completion_kind: 'ASSERTION' | 'INFRASTRUCTURE' | 'PASS' | null;
+  command_line: string;
+  working_directory: string;
+  duration_ms: number;
+  output_excerpt: string;
 }
 
 const COPY_EXCLUDED_SEGMENTS = new Set([
@@ -85,6 +91,7 @@ export class DeclaredClaimCausalityEngine {
     workspace: string, script: string, projectEnv: NodeJS.ProcessEnv,
     claimId: string, assertionId: string, phase: 'BASELINE' | 'MUTANT',
   ): ValidationResult {
+    const startedAt = Date.now();
     const nonce = crypto.randomUUID();
     const isWindows = process.platform === 'win32';
     const command = isWindows ? (process.env.ComSpec || 'cmd.exe') : 'npm';
@@ -127,6 +134,10 @@ export class DeclaredClaimCausalityEngine {
       assertion_status: assertion?.status === 'PASS' || assertion?.status === 'FAIL' ? assertion.status : null,
       completion_kind: completion?.kind === 'PASS' || completion?.kind === 'ASSERTION' ||
         completion?.kind === 'INFRASTRUCTURE' ? completion.kind : null,
+      command_line: `npm run ${script}`,
+      working_directory: workspace,
+      duration_ms: Date.now() - startedAt,
+      output_excerpt: redactOutput(`${stdout}\n${stderr}`).replace(/\s+/g, ' ').trim().slice(0, 500) || '(sem saída)',
     };
   }
 

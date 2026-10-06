@@ -10,12 +10,15 @@ import { MandatoryDirectoryRule } from '../rules/mandatory-directory-rule';
 import { NoDisallowedDependencyRule } from '../rules/no-disallowed-dependency-rule';
 import { JsonReporter } from '../reporters/json-reporter';
 import { MarkdownReporter } from '../reporters/markdown-reporter';
-import { AuditReport, Finding, RuleEvaluationResult, Evidence, Fact, FormalEvidence, SecurityClaimEvaluation, ExecutionEvidence } from '../domain/types';
+import { AuditReport, Finding, RuleEvaluationResult, Evidence, Fact, FormalEvidence, SecurityClaimEvaluation, ExecutionEvidence, RlsExecutionRecord } from '../domain/types';
 import { FirestoreSecurityEngine } from '../engines/firestore-security-engine';
 import { CausalityMutationEngine } from '../engines/causality-mutation-engine';
 import { DeclaredClaimCausalityEngine } from '../engines/declared-claim-causality-engine';
+import { RlsClaimEngine } from '../engines/rls-claim-engine';
+import { GeneratedAppSecurityEngine } from '../engines/generated-app-security-engine';
 import { HardQualityGateEngine } from '../engines/hard-quality-gate-engine';
 import { GovernorIntegrityVerifier } from '../utils/governor-integrity-verifier';
+import { redactOutput } from '../utils/output-redactor';
 import { ReportIntegritySigner } from '../utils/report-integrity-signer';
 import { FirestoreDomainAdapter } from '../adapters/firestore/firestore-domain-adapter';
 import { EvidenceEnvelope } from '../domain/universal-contracts';
@@ -114,9 +117,12 @@ function readDeclaredExecutionTimeoutConfig(rootPath: string): DeclaredExecution
 interface DeclaredSecurityClaimConfig {
   id: string;
   status: string;
+  claimType: string;
   target: string;
   validationScript: string | null;
   causalSpecPath: string | null;
+  rlsResource: string | null;
+  rlsIsolationAssertionId: string | null;
   evidencePaths: string[];
 }
 
@@ -159,9 +165,12 @@ function readDeclaredActiveSecurityClaims(rootPath: string): DeclaredSecurityCla
         current = {
           id: idMatch[1].trim(),
           status: '',
+          claimType: '',
           target: '',
           validationScript: null,
           causalSpecPath: null,
+          rlsResource: null,
+          rlsIsolationAssertionId: null,
           evidencePaths: [],
         };
         inEvidence = false;
@@ -179,6 +188,11 @@ function readDeclaredActiveSecurityClaims(rootPath: string): DeclaredSecurityCla
         current.target = targetMatch[1].trim();
         continue;
       }
+      const typeMatch = line.match(/^\s+type\s*:\s*["']?([^"'\s#]+)/);
+      if (typeMatch) {
+        current.claimType = typeMatch[1].trim().toUpperCase();
+        continue;
+      }
       if (/^\s+evidence\s*:/.test(line)) {
         inEvidence = true;
         continue;
@@ -193,6 +207,16 @@ function readDeclaredActiveSecurityClaims(rootPath: string): DeclaredSecurityCla
         if (causalSpecMatch) {
           current.causalSpecPath = causalSpecMatch[1].trim();
           current.evidencePaths.push(causalSpecMatch[1].trim());
+          continue;
+        }
+        const rlsResourceMatch = line.match(/^\s+rls_resource\s*:\s*["']?([^"'#]+?)["']?\s*$/);
+        if (rlsResourceMatch) {
+          current.rlsResource = rlsResourceMatch[1].trim();
+          continue;
+        }
+        const rlsAssertionMatch = line.match(/^\s+rls_isolation_assertion_id\s*:\s*["']?([^"'\s#]+)/);
+        if (rlsAssertionMatch) {
+          current.rlsIsolationAssertionId = rlsAssertionMatch[1].trim();
           continue;
         }
         const evidenceMatch = line.match(/^\s+[a-zA-Z0-9_]+\s*:\s*["']?([^"'#]+?)["']?\s*$/);
@@ -212,6 +236,60 @@ function readDeclaredActiveSecurityClaims(rootPath: string): DeclaredSecurityCla
 
 function readDeclaredActiveSecurityClaimIds(rootPath: string): string[] {
   return readDeclaredActiveSecurityClaims(rootPath).map(claim => claim.id);
+}
+
+function normalizeRlsRecord(value: unknown): RlsExecutionRecord | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  const string = (key: string): string | undefined => typeof record[key] === 'string' && record[key].length <= 160
+    ? record[key] : undefined;
+  const scenario = string('scenario');
+  const status = string('status');
+  const runtime = string('runtime');
+  const claimId = string('claim_id');
+  const nonce = string('nonce');
+  const resource = string('resource');
+  const targetHash = string('target_sha256');
+  if (record.version !== 1 || !claimId || !nonce || !resource || !targetHash
+    || !['PRETEST_RLS_CONFIGURATION', 'ALLOW_SAME_TENANT', 'DENY_CROSS_TENANT'].includes(scenario || '')
+    || !['PASS', 'FAIL'].includes(status || '') || runtime !== 'POSTGRES') return null;
+  const operations = Array.isArray(record.operations) && record.operations.every(item =>
+    typeof item === 'string' && ['SELECT', 'INSERT', 'UPDATE', 'DELETE'].includes(item))
+    ? Array.from(new Set(record.operations)) as Array<'SELECT' | 'INSERT' | 'UPDATE' | 'DELETE'>
+    : undefined;
+  const boolean = (key: string): boolean | undefined => typeof record[key] === 'boolean' ? record[key] : undefined;
+  const hash = (key: string): string | undefined => {
+    const candidate = string(key);
+    return candidate && /^[a-f0-9]{64}$/.test(candidate) ? candidate : undefined;
+  };
+  return {
+    version: 1, claim_id: claimId, nonce, scenario: scenario as RlsExecutionRecord['scenario'],
+    status: status as RlsExecutionRecord['status'], runtime: 'POSTGRES', resource, target_sha256: targetHash,
+    rls_enabled: boolean('rls_enabled'), rls_forced: boolean('rls_forced'),
+    policy_count: Number.isSafeInteger(record.policy_count) ? record.policy_count as number : undefined,
+    role_is_owner: boolean('role_is_owner'), role_has_bypassrls: boolean('role_has_bypassrls'),
+    security_definer_bypass: boolean('security_definer_bypass'),
+    actor_identity_sha256: hash('actor_identity_sha256'), actor_tenant_sha256: hash('actor_tenant_sha256'),
+    resource_tenant_sha256: hash('resource_tenant_sha256'), operations,
+  };
+}
+
+function extractRlsRecords(output: string): RlsExecutionRecord[] {
+  const records: RlsExecutionRecord[] = [];
+  for (const line of output.split(/\r?\n/)) {
+    const marker = 'EOS_RLS_RECORD ';
+    const index = line.indexOf(marker);
+    if (index < 0) continue;
+    try {
+      const record = normalizeRlsRecord(JSON.parse(line.slice(index + marker.length)));
+      if (record) records.push(record);
+    } catch { /* registro inválido não constitui evidência */ }
+  }
+  return records;
+}
+
+interface ProjectCheckOptions {
+  readonly rlsClaim?: { readonly id: string; readonly nonce: string };
 }
 
 function findNestedPackageManifests(rootPath: string): string[] {
@@ -237,6 +315,7 @@ export class AuditApplicationService {
     rootPath: string,
     check: string,
     workingDirectory: string = rootPath,
+    options: ProjectCheckOptions = {},
   ): Promise<ExecutionEvidence> {
     const childProcess = require('child_process');
     const startedAt = Date.now();
@@ -275,6 +354,12 @@ export class AuditApplicationService {
         shell: false,
         windowsHide: true,
         stdio: ['ignore', 'pipe', 'pipe'],
+        env: options.rlsClaim ? {
+          ...process.env,
+          EOS_RLS_CLAIM_ID: options.rlsClaim.id,
+          EOS_RLS_NONCE: options.rlsClaim.nonce,
+          EOS_RLS_PHASE: 'BASELINE',
+        } : undefined,
       });
 
       child.stdout?.on('data', (chunk: unknown) => {
@@ -352,7 +437,7 @@ export class AuditApplicationService {
         const exitCode = timedOut || spawnError ? -1 : (typeof code === 'number' ? code : -1);
         const state = exitCode === 0 ? 'PASS' : 'FAIL';
         const durationMs = Date.now() - startedAt;
-        const output = `${stdout}\n${stderr}`.replace(/\s+/g, ' ').trim();
+        const output = redactOutput(`${stdout}\n${stderr}`).replace(/\s+/g, ' ').trim();
         const symbol = state === 'PASS' ? '✓' : '✗';
         console.log(`[EOS][CHECK] ${symbol} ${commandLine} ${state} — ${(durationMs / 1000).toFixed(1)}s`);
 
@@ -365,7 +450,12 @@ export class AuditApplicationService {
           duration_ms: durationMs,
           stdout_sha256: crypto.createHash('sha256').update(stdout).digest('hex'),
           stderr_sha256: crypto.createHash('sha256').update(stderr).digest('hex'),
-          output_excerpt: output.slice(0, 500) || '(sem saída)'
+          output_excerpt: output.slice(0, 500) || '(sem saída)',
+          ...(options.rlsClaim ? {
+            rls_claim_id: options.rlsClaim.id,
+            rls_nonce: options.rlsClaim.nonce,
+            rls_records: extractRlsRecords(`${stdout}\n${stderr}`),
+          } : {}),
         });
       };
 
@@ -399,6 +489,7 @@ export class AuditApplicationService {
 
     const productionCheck = readDeclaredProductionValidationScript(rootPath);
     const declaredSecurityClaims = readDeclaredActiveSecurityClaims(rootPath);
+    const rlsClaims = declaredSecurityClaims.filter(claim => claim.claimType === 'RLS');
     const preferredTest = typeof scripts['test:all'] === 'string' ? 'test:all' : 'test';
     const checks = ['typecheck', 'lint', preferredTest, 'build']
       .filter((name, index, list) => list.indexOf(name) === index)
@@ -408,7 +499,7 @@ export class AuditApplicationService {
       checks.push(productionCheck);
     }
     for (const claim of declaredSecurityClaims) {
-      if (claim.validationScript && typeof scripts[claim.validationScript] === 'string' && !checks.includes(claim.validationScript)) {
+      if (claim.claimType !== 'RLS' && claim.validationScript && typeof scripts[claim.validationScript] === 'string' && !checks.includes(claim.validationScript)) {
         checks.push(claim.validationScript);
       }
     }
@@ -416,6 +507,16 @@ export class AuditApplicationService {
     const results: ExecutionEvidence[] = [];
     for (const check of checks) {
       results.push(await this.executeProjectCheck(rootPath, check));
+    }
+
+    // Claims RLS recebem nonce novo; registros de execução de uma rodada anterior
+    // não podem ser reaproveitados para conceder GREEN.
+    for (const claim of rlsClaims) {
+      if (claim.validationScript && typeof scripts[claim.validationScript] === 'string') {
+        results.push(await this.executeProjectCheck(rootPath, claim.validationScript, rootPath, {
+          rlsClaim: { id: claim.id, nonce: crypto.randomUUID() },
+        }));
+      }
     }
 
     for (const manifestPath of findNestedPackageManifests(rootPath)) {
@@ -627,8 +728,10 @@ export class AuditApplicationService {
     const formalEvidences: FormalEvidence[] = [];
     const declaredEvaluations: SecurityClaimEvaluation[] = [];
     const declaredCausalityEngine = new DeclaredClaimCausalityEngine();
+    const rlsClaimEngine = new RlsClaimEngine();
 
-    const inferClaimType = (claimId: string): SecurityClaimEvaluation['claim_type'] => {
+    const inferClaimType = (claimId: string, declaredType: string): SecurityClaimEvaluation['claim_type'] => {
+      if (declaredType === 'RLS') return 'RLS';
       if (claimId.includes('AUTH')) return 'AUTHENTICATION';
       if (claimId.includes('RBAC') || claimId.includes('AUTHZ')) return 'AUTHORIZATION';
       return 'DATA_MUTABILITY';
@@ -656,7 +759,8 @@ export class AuditApplicationService {
         ? `npm run ${declared.validationScript}`
         : null;
       const validationEvidence = validationCommand
-        ? executionEvidences.find(item => item.command_line === validationCommand)
+        ? executionEvidences.find(item => item.command_line === validationCommand
+          && (declared.claimType !== 'RLS' || item.rls_claim_id === declared.id))
         : undefined;
 
       if (!declared.validationScript) {
@@ -666,6 +770,19 @@ export class AuditApplicationService {
           `Validação executável do claim ${declared.id} não passou: ${validationCommand}.`
         );
       }
+
+      const rlsAssessment = declared.claimType === 'RLS'
+        ? rlsClaimEngine.evaluate({
+            rootPath: target.root_path,
+            claimId: declared.id,
+            targetArtifact,
+            resource: declared.rlsResource,
+            isolationAssertionId: declared.rlsIsolationAssertionId,
+            causalSpecPath: declared.causalSpecPath,
+            executionEvidence: validationEvidence,
+          })
+        : undefined;
+      if (rlsAssessment) blockingReasons.push(...rlsAssessment.blockingReasons);
 
       const declaredMutation =
         blockingReasons.length === 0 && declared.validationScript && declared.causalSpecPath
@@ -723,6 +840,10 @@ export class AuditApplicationService {
           execution_state: validationEvidence?.state || 'NOT_AVAILABLE',
           execution_stdout_sha256: validationEvidence?.stdout_sha256 || null,
           execution_stderr_sha256: validationEvidence?.stderr_sha256 || null,
+          execution_output_excerpt: validationEvidence?.output_excerpt || null,
+          execution_exit_code: validationEvidence?.exit_code ?? null,
+          execution_duration_ms: validationEvidence?.duration_ms ?? null,
+          rls_records: validationEvidence?.rls_records || null,
           causal_spec: declared.causalSpecPath,
           mutation_id: declaredMutation?.mutation_id || null,
           mutation_original_status: declaredMutation?.original_status || null,
@@ -732,10 +853,10 @@ export class AuditApplicationService {
 
       const evaluation: SecurityClaimEvaluation = {
         claim_id: declared.id,
-        claim_type: inferClaimType(declared.id),
+        claim_type: inferClaimType(declared.id, declared.claimType),
         target_artifact: targetArtifact,
         evidence: formalEvidence,
-        threat_vectors: [],
+        threat_vectors: rlsAssessment?.threatVectors || [],
         mutation_result: declaredMutation,
         proven: causalProven,
         phase_status: blockingReasons.length > 0 ? 'BLOCKED' : causalProven ? 'GREEN' : 'YELLOW',
@@ -794,6 +915,16 @@ export class AuditApplicationService {
       }
       formalEvidences.push(claim.evidence);
     }
+
+    // Revisão estática de riscos recorrentes em apps gerados por IA. A ausência
+    // de prova causal de RLS em uma integração de dados permanece inconclusiva.
+    const generatedAppSecurity = new GeneratedAppSecurityEngine().scan(
+      target.root_path,
+      target.target_id,
+      declaredEvaluations.some(claim => claim.claim_type === 'RLS' && claim.proven),
+    );
+    findings.push(...generatedAppSecurity.findings);
+    ruleResults.push(generatedAppSecurity.rule);
 
     // 7. Avaliação de Hard Quality Gates Invioláveis (Fail-Closed)
     const hardGateEngine = new HardQualityGateEngine();

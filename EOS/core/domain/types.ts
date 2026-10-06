@@ -196,7 +196,7 @@ export interface FormalEvidence {
 
 export interface SecurityClaimEvaluation {
   readonly claim_id: string;
-  readonly claim_type: 'FIRESTORE_RULES' | 'HTTP_ROUTE' | 'AUTHORIZATION' | 'AUTHENTICATION' | 'DATA_MUTABILITY';
+  readonly claim_type: 'FIRESTORE_RULES' | 'HTTP_ROUTE' | 'AUTHORIZATION' | 'AUTHENTICATION' | 'DATA_MUTABILITY' | 'RLS';
   readonly target_artifact: string;
   readonly evidence: FormalEvidence;
   readonly security_contract?: SecurityDataContract;
@@ -205,6 +205,28 @@ export interface SecurityClaimEvaluation {
   readonly proven: boolean;
   readonly phase_status: GatePhaseStatus;
   readonly blocking_reasons: readonly string[];
+}
+
+/** Registro estrutural, sem identificadores ou credenciais em claro, emitido por uma suíte de RLS. */
+export interface RlsExecutionRecord {
+  readonly version: 1;
+  readonly claim_id: string;
+  readonly nonce: string;
+  readonly scenario: 'PRETEST_RLS_CONFIGURATION' | 'ALLOW_SAME_TENANT' | 'DENY_CROSS_TENANT';
+  readonly status: 'PASS' | 'FAIL';
+  readonly runtime: 'POSTGRES';
+  readonly resource: string;
+  readonly target_sha256: string;
+  readonly rls_enabled?: boolean;
+  readonly rls_forced?: boolean;
+  readonly policy_count?: number;
+  readonly role_is_owner?: boolean;
+  readonly role_has_bypassrls?: boolean;
+  readonly security_definer_bypass?: boolean;
+  readonly actor_identity_sha256?: string;
+  readonly actor_tenant_sha256?: string;
+  readonly resource_tenant_sha256?: string;
+  readonly operations?: readonly ('SELECT' | 'INSERT' | 'UPDATE' | 'DELETE')[];
 }
 
 /** Evidência de uma validação realmente executada durante a auditoria. */
@@ -217,7 +239,11 @@ export interface ExecutionEvidence {
   readonly duration_ms: number;
   readonly stdout_sha256: string;
   readonly stderr_sha256: string;
+  /** Excerpt sanitizado; hashes são calculados sobre as saídas originais. */
   readonly output_excerpt: string;
+  readonly rls_claim_id?: string;
+  readonly rls_nonce?: string;
+  readonly rls_records?: readonly RlsExecutionRecord[];
 }
 
 export interface AuditReport {
