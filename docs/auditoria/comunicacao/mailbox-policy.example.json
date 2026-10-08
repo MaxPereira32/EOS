@@ -1,0 +1,37 @@
+{
+  "version": 2,
+  "mailbox_root": "C:\\ABSOLUTE\\PATH\\OUTSIDE\\THE\\REPOSITORY\\eos-mailbox-v2",
+  "principals": [
+    {
+      "id": "opencode-implementer",
+      "token_sha256": "REPLACE_WITH_SHA256_OF_OPENCODE_TOKEN",
+      "key_id": "opencode-key-2026-01",
+      "public_key_pem": "REPLACE_WITH_OPENCODE_ED25519_PUBLIC_KEY_PEM",
+      "actions": ["request", "list", "read"],
+      "routes": [
+        {
+          "to": "chatgpt-visual-reviewer",
+          "scopes": ["eos.review"]
+        }
+      ]
+    },
+    {
+      "id": "chatgpt-visual-reviewer",
+      "token_sha256": "REPLACE_WITH_SHA256_OF_REVIEWER_TOKEN",
+      "key_id": "chatgpt-reviewer-key-2026-01",
+      "public_key_pem": "REPLACE_WITH_REVIEWER_ED25519_PUBLIC_KEY_PEM",
+      "actions": ["ack", "status", "review", "list", "read"],
+      "routes": [
+        {
+          "to": "opencode-implementer",
+          "scopes": ["eos.review"]
+        }
+      ]
+    }
+  ],
+  "policy_signature": {
+    "algorithm": "Ed25519",
+    "key_id": "policy-authority-key-2026-01",
+    "value": "REPLACE_WITH_SIGNATURE_OF_THE_CANONICAL_POLICY_JSON"
+  }
+}

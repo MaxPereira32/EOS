@@ -1,0 +1,43 @@
+﻿# EVIDENCIA EVD-COM-005 — E2E ao vivo: opencode-implementer -> opencode-reviewer (turno LLM real) -> leitura
+DATA: 2026-10-08T12:45:18.1149267-03:00 TZ: E. South America Standard Time
+NOTA: Codex/ChatGPT inacessiveis (cota esgotada; chave OpenAI invalida; sem app CLI). Contraparte = principal independente opencode-reviewer, sem impersonation.
+
+== 1) implementer SUBMIT (exit=0) ==
+{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2024-11-05","capabilities":{"tools":{}},"serverInfo":{"name":"eos-agent-mailbox","version":"2.0.0"}}}
+{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"{\n  \"schema_version\": 2,\n  \"id\": \"MSG-e6d935277909f0b26ebacd5b59a7946c\",\n  \"kind\": \"REQUEST\",\n  \"status\": \"PENDING\",\n  \"from\": \"opencode-implementer\",\n  \"to\": \"opencode-reviewer\",\n  \"scope\": \"eos.review\",\n  \"subject\": \"E2E ao vivo: veredicto sobre o fluxo\",\n  \"body\": \"Pedido de revisao real via canal v2: a cadeia PENDING-RECEIVED-IN_PROGRESS-REVIEWED com aprovacao humana fora da mailbox e guards (maximo 2 rodadas, idempotencia, TTL 24h) e suficiente como base do fluxo automatizado? Responder com parecer em ate 120 palavras.\",\n  \"content_hash\": \"638811d63e7fdf3258a93d3ee33aec6307f4c66e47b56e8dd1981dafa82041de\",\n  \"request_id\": \"MSG-e6d935277909f0b26ebacd5b59a7946c\",\n  \"nonce_hash\": \"7449b309894c7a73c5c5297a4fff14bb3e1c7c7ce301bbc4578b4bb95455681d\",\n  \"idempotency_fingerprint\": \"e5219fe946fff680fc5a7aa3feca32e9d23219eb8bf4dd4735728e30a66bebd6\",\n  \"issued_at\": \"2026-10-08T15:45:19.203Z\",\n  \"expires_at\": \"2026-10-09T15:45:19.203Z\",\n  \"signature\": {\n    \"algorithm\": \"Ed25519\",\n    \"key_id\": \"opencode-key-1\",\n    \"value\": \"wciSqXgRbBTYi7dW70AivyHps/qqXmAKvVaslZqnKZxH0lKELjWBgJRf2KR44UU50DBfTa96tryi0tvS5P3LDg==\"\n  }\n}"}]}}
+
+
+== 2) revisor (opencode run, exit=0) ==
+REQUEST=MSG-e6d935277909f0b26ebacd5b59a7946c REVIEW=MSG-7fa68ef31338028a928cae8a70f63558
+
+opencode.exe : [0m
+No C:\Users\lindo\AppData\Roaming\npm\opencode.ps1:14 caractere:3
++   & "$basedir/node_modules/opencode-ai/bin/opencode.exe"   $args
++   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+> build · deepseek-v4.1-flash
+[0m
+[0m⚙ [0meos-mailbox_mailbox_list {"folder":"inbox"}
+[0m⚙ [0meos-mailbox_mailbox_read {"id":"MSG-e6d935277909f0b26ebacd5b59a7946c"}
+[0m⚙ [0meos-mailbox_mailbox_acknowledge 
+{"requestId":"MSG-e6d935277909f0b26ebacd5b59a7946c","status":"RECEIVED","body":"Recebido para revisao 
+tecnica.","idempotencyKey":"ack-20261008-opencode-reviewer-001"}
+[0m⚙ [0meos-mailbox_mailbox_update_status 
+{"requestId":"MSG-e6d935277909f0b26ebacd5b59a7946c","status":"IN_PROGRESS","body":"Revisao tecnica em 
+andamento.","idempotencyKey":"prog-20261008-opencode-reviewer-002"}
+[0m⚙ [0meos-mailbox_mailbox_submit_review {"requestId":"MSG-e6d935277909f0b26ebacd5b59a7946c","subject":"REVIEW 
+MSG-e6d935277909f0b26ebacd5b59a7946c","body":"Parecer: Sim, suficiente como base, com ressalvas. A cadeia 
+PENDING-RECEIVED-IN_PROGRESS-REVIEWED cobre o ciclo do agente e os guards sao adequados: idempotencia evita 
+duplicacao, TTL 24h limita janela, max 2 rodadas impede loop infinito. Porem: (1) REVIEWED nao e aprovacao humana - a 
+aprovacao fora da mailbox precisa de artefato rastreavel proprio, senao o elo humano fica sem evidencia auditavel; (2) 
+TTL expirado deve gerar estado terminal explicito (EXPIRED), nao reabertura silenciosa; (3) apos ACK nao ha retorno a 
+PENDING, mas nao ha caminho FAILED/reabertura apos RECEIVED. Recomendo estado terminal explicito e binding verificavel 
+da aprovacao humana antes de considerar o fluxo completo. Base solida para automatizado; incompleta para auditoria de 
+aprovacao.","idempotencyKey":"review-20261008-opencode-reviewer-003"}
+
+== 3) implementer le REVIEW (exit=0) ==
+{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2024-11-05","capabilities":{"tools":{}},"serverInfo":{"name":"eos-agent-mailbox","version":"2.0.0"}}}
+{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"{\n  \"schema_version\": 2,\n  \"id\": \"MSG-7fa68ef31338028a928cae8a70f63558\",\n  \"kind\": \"REVIEW\",\n  \"status\": \"REVIEWED\",\n  \"from\": \"opencode-reviewer\",\n  \"to\": \"opencode-implementer\",\n  \"scope\": \"eos.review\",\n  \"subject\": \"REVIEW MSG-e6d935277909f0b26ebacd5b59a7946c\",\n  \"body\": \"Parecer: Sim, suficiente como base, com ressalvas. A cadeia PENDING-RECEIVED-IN_PROGRESS-REVIEWED cobre o ciclo do agente e os guards sao adequados: idempotencia evita duplicacao, TTL 24h limita janela, max 2 rodadas impede loop infinito. Porem: (1) REVIEWED nao e aprovacao humana - a aprovacao fora da mailbox precisa de artefato rastreavel proprio, senao o elo humano fica sem evidencia auditavel; (2) TTL expirado deve gerar estado terminal explicito (EXPIRED), nao reabertura silenciosa; (3) apos ACK nao ha retorno a PENDING, mas nao ha caminho FAILED/reabertura apos RECEIVED. Recomendo estado terminal explicito e binding verificavel da aprovacao humana antes de considerar o fluxo completo. Base solida para automatizado; incompleta para auditoria de aprovacao.\",\n  \"content_hash\": \"cfda8d36c2502560dc87e4ebc368d5c840ff2a9b814c11c8d247e2bf443d6535\",\n  \"request_id\": \"MSG-e6d935277909f0b26ebacd5b59a7946c\",\n  \"reply_to\": \"MSG-e6d935277909f0b26ebacd5b59a7946c\",\n  \"idempotency_fingerprint\": \"c8696c1749ee994e6f35e93623a749208f782f2b288ab6831524ae4b380ed7ec\",\n  \"issued_at\": \"2026-10-08T15:47:49.927Z\",\n  \"signature\": {\n    \"algorithm\": \"Ed25519\",\n    \"key_id\": \"opencode-reviewer-key-1\",\n    \"value\": \"fzEzi67jwj5XVI+QhsegF9Insa+lhNbK82I/X/FKDrI5O2jHe0ClCecaQCwZ1pQ2lxWewMcumsQ8iIJaMfnuDA==\"\n  }\n}"}]}}
+

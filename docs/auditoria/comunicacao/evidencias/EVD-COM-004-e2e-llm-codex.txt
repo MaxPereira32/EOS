@@ -1,0 +1,12 @@
+﻿# EVIDENCIA EVD-COM-004 — E2E real: REQUEST opencode -> Codex LLM (lee, ACK, REVIEW) -> leitura opencode
+DATA: 2026-10-08T12:41:49.0893954-03:00 TZ: E. South America Standard Time
+
+== 1) opencode SUBMIT REQUEST (exit=0) ==
+{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2024-11-05","capabilities":{"tools":{}},"serverInfo":{"name":"eos-agent-mailbox","version":"2.0.0"}}}
+{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"{\n  \"schema_version\": 2,\n  \"id\": \"MSG-d2b64a201d4250e0e7775e4d5648f006\",\n  \"kind\": \"REQUEST\",\n  \"status\": \"PENDING\",\n  \"from\": \"opencode-implementer\",\n  \"to\": \"codex-headless-reviewer\",\n  \"scope\": \"eos.review\",\n  \"subject\": \"E2E real: veredicto sobre o fluxo\",\n  \"body\": \"Pedido de revisao real via canal v2: a cadeia PENDING-RECEIVED-IN_PROGRESS-REVIEWED com aprovacao humana fora da mailbox e guards (maximo 2 rodadas, idempotencia, TTL 24h) e suficiente como base do fluxo automatizado? Responder com parecer em ate 120 palavras.\",\n  \"content_hash\": \"a59a36897112d811fc7bdf3f3dd15a247615cc8ad2836d70a82e7a28eeb7aa38\",\n  \"request_id\": \"MSG-d2b64a201d4250e0e7775e4d5648f006\",\n  \"nonce_hash\": \"7a5af74c176157006f48ec35d80a327669f58daaecd3cbc540560a735a0808f9\",\n  \"idempotency_fingerprint\": \"c602a316a3450f9a8854ebc9a8629cc2b51085125e8ee0761fef73c623a51e21\",\n  \"issued_at\": \"2026-10-08T15:41:50.421Z\",\n  \"expires_at\": \"2026-10-09T15:41:50.421Z\",\n  \"signature\": {\n    \"algorithm\": \"Ed25519\",\n    \"key_id\": \"opencode-key-1\",\n    \"value\": \"ceXLuvO6Y0L8xwIXoYtLe/juLgXybJ1fWPLYjIF4xabY6NlDKu98nVQ5xuqzGnfBkI3Wu4XVvF41/7m1V/WUDw==\"\n  }\n}"}]}}
+
+
+== 2) codex exec (exit=1) ==
+== 2) codex exec — BLOQUEADO (exit=1) ==
+MOTIVO: cota do provedor Codex esgotada (mensagem do CLI: usage limit; retry sugerido 16:46). O turno LLM nao executou; nenhuma chamada MCP foi tentada pelo modelo.
+IMPACTO: verificacao com agente LLM real via canal v2 permanece PENDENTE; transporte+protocolo ja provados deterministicamente (EVD-COM-003).

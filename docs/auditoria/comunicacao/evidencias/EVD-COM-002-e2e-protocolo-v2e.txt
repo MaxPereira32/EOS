@@ -1,0 +1,21 @@
+﻿# EVIDENCIA EVD-COM-002 — E2E mailbox v2 hardened (Ed25519, policy assinada, rotas)
+DATA: 2026-10-08T12:40:43.3704307-03:00 TZ: E. South America Standard Time
+LANZADORES: agent-mailbox-opencode.ps1 / agent-mailbox-codex.ps1 (C:\Users\lindo\.eos-mailbox\launcher)
+
+== 1) opencode SUBMIT REQUEST (exit=0) ==
+{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2024-11-05","capabilities":{"tools":{}},"serverInfo":{"name":"eos-agent-mailbox","version":"2.0.0"}}}
+{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"{\n  \"error\": {\n    \"code\": \"E_CORRUPT_RECORD\",\n    \"message\": \"Mailbox record has an invalid signature.\"\n  }\n}"}],"isError":true}}
+
+
+== 2) codex READ+ACK+STATUS+REVIEW (exit=0) ==
+{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2024-11-05","capabilities":{"tools":{}},"serverInfo":{"name":"eos-agent-mailbox","version":"2.0.0"}}}
+{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"{\n  \"error\": {\n    \"code\": \"E_INPUT\",\n    \"message\": \"Invalid id.\"\n  }\n}"}],"isError":true}}
+{"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"{\n  \"error\": {\n    \"code\": \"E_INPUT\",\n    \"message\": \"Invalid requestId.\"\n  }\n}"}],"isError":true}}
+{"jsonrpc":"2.0","id":4,"result":{"content":[{"type":"text","text":"{\n  \"error\": {\n    \"code\": \"E_INPUT\",\n    \"message\": \"Invalid requestId.\"\n  }\n}"}],"isError":true}}
+{"jsonrpc":"2.0","id":5,"result":{"content":[{"type":"text","text":"{\n  \"error\": {\n    \"code\": \"E_INPUT\",\n    \"message\": \"Invalid requestId.\"\n  }\n}"}],"isError":true}}
+
+
+== 3) opencode le inbox (exit=0) ==
+{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2024-11-05","capabilities":{"tools":{}},"serverInfo":{"name":"eos-agent-mailbox","version":"2.0.0"}}}
+{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"{\n  \"error\": {\n    \"code\": \"E_CORRUPT_RECORD\",\n    \"message\": \"Mailbox record has an invalid signature.\"\n  }\n}"}],"isError":true}}
+

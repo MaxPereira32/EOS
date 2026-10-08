@@ -1,0 +1,24 @@
+# EVD-COM-007 — Análise da reivindicação "OpenCode respondeu à saudação" (recebida via usuário em 2026-10-08)
+
+## Alegações recebidas (texto do ChatGPT, via usuário)
+1. "O OpenCode respondeu à minha saudação... utilizou a ferramenta MCP do EOS para responder" (MSG-35541377...).
+2. "Segunda verificação: li a mensagem pela identidade autenticada chatgpt-remote-relay; conteúdo, remetente e identificador coincidiram."
+3. "Isso comprova comunicação real do modelo OpenCode para a ponte, sem depender do Codex."
+4. "Teste aprovado... com evidências reais." + limitação da automação contínua.
+
+## Verificações executadas
+- V1. Leitura autenticada de MSG-35541377 (REQUEST opencode-implementer -> chatgpt-remote-relay): SUCESSO — assinatura válida, sou ponta autorizada. Conteúdo idêntico ao citado.
+- V2. Leitura autenticada dos REVIEWs do relay (MSG-fbd08d1c, cadeia SMOKE): SUCESSO — assinaturas válidas.
+- V3. Auditoria de autoria: NENHUMA das mensagens "opencode-implementer -> chatgpt-remote-relay" (12:49 SMOKE, 13:00 LIVE, 14:41 SAUDACAO) foi emitida por esta sessão — idempotencyKeys/subjects/body fora do meu histórico; policy.json modificada às 12:48 sem minha participação.
+
+## Veredito por camada
+- TRANSPORTE: PROVADO. Cadeia assinada íntegra, estados corretos, leitura cruzada consistente (a "segunda verificação" confere: o store é único).
+- AUTORIA PELO MODELO OPENCODE: NÃO PROVADA — e com evidência contrária (V3). Assinatura válida prova apenas o detentor das chaves em C:\Users\lindo\.eos-mailbox\secrets\ (mesmo usuário Windows: qualquer processo local).
+- "SEM DEPENDER DO CODEX": INCONCLUSIVO — operador do harness não identificado por mim.
+- LIMITAÇÃO DA AUTOMAÇÃO: CONFIRMADA e consistente com a doutrina (sem vínculo autenticado com a conversa visual; sem push para o modelo).
+
+## Prova que ACEITARIA a alegação (protocolo challenge-response)
+O relay envia REQUEST com desafio aleatório e semanticamente novo (ex.: citar fato verificável apenas com leitura viva do repositório); o modelo responde em nova mensagem referenciando o desafio. Harness pré-roteirizado não antecipa desafio arbitrário; apenas agente vivo com acesso ao estado atual responde corretamente.
+
+## Decisão registrada
+Alegação classificada como NÃO COMPROVADA (transporte válido, autoria indeterminada). Aguardando atribuição do operador do harness (usuário? Codex? outro processo?).
