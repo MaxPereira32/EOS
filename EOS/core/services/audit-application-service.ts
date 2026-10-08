@@ -23,6 +23,7 @@ import { ReportIntegritySigner } from '../utils/report-integrity-signer';
 import { FirestoreDomainAdapter } from '../adapters/firestore/firestore-domain-adapter';
 import { ArchitectureApplicabilityEngine } from '../engines/architecture-applicability-engine';
 import { EvidenceEnvelope } from '../domain/universal-contracts';
+import { AuditRegistryService, AuditInterface, AuditRunIdentification } from './audit-registry-service';
 
 function readDeclaredProductionValidationScript(rootPath: string): string | null {
   try {
@@ -479,7 +480,7 @@ export class AuditApplicationService {
     const heartbeatMs = Math.max(250, Number(process.env.EOS_CHECK_HEARTBEAT_MS || 15000));
     const maxCapturedBytes = 10 * 1024 * 1024;
 
-    console.log(`[EOS][CHECK] ▶ ${commandLine}`);
+    console.error(`[EOS][CHECK] ▶ ${commandLine}`);
 
     return await new Promise<ExecutionEvidence>((resolve) => {
       let stdout = '';
@@ -511,7 +512,7 @@ export class AuditApplicationService {
 
       const heartbeat = setInterval(() => {
         const elapsedSeconds = Math.floor((Date.now() - startedAt) / 1000);
-        console.log(`[EOS][CHECK] … ${commandLine} em execução — ${elapsedSeconds}s`);
+        console.error(`[EOS][CHECK] … ${commandLine} em execução — ${elapsedSeconds}s`);
       }, heartbeatMs);
 
       const terminateTree = async (): Promise<void> => {
@@ -603,7 +604,7 @@ export class AuditApplicationService {
         const durationMs = Date.now() - startedAt;
         const output = redactOutput(`${stdout}\n${stderr}`).replace(/\s+/g, ' ').trim();
         const symbol = state === 'PASS' ? '✓' : '✗';
-        console.log(`[EOS][CHECK] ${symbol} ${commandLine} ${state}${failureCause ? ` [${failureCause}]` : ''} — ${(durationMs / 1000).toFixed(1)}s`);
+        console.error(`[EOS][CHECK] ${symbol} ${commandLine} ${state}${failureCause ? ` [${failureCause}]` : ''} — ${(durationMs / 1000).toFixed(1)}s`);
 
         resolve({
           check_id: checkId,
@@ -828,7 +829,11 @@ export class AuditApplicationService {
     return results;
   }
 
-  public async executeAudit(targetPath: string, outputDir: string = '.eos'): Promise<AuditReport> {
+  public async executeAudit(
+    targetPath: string,
+    outputDir?: string,
+    auditContext: { interface?: AuditInterface } = {},
+  ): Promise<AuditReport> {
     // 0. Verificação de Integridade do Próprio Governador EOS (INVARIANT-11)
     const governorVerifier = new GovernorIntegrityVerifier();
     const eosCorePath = path.resolve(__dirname, '..');
@@ -836,6 +841,9 @@ export class AuditApplicationService {
 
 // 1. Resolver Target
     const target = TargetResolver.resolve(targetPath);
+    // Ancoragem ao projeto auditado (EOS-GOV-012): o armazenamento pertence ao
+    // alvo, nunca ao cwd do processo que executa a auditoria.
+    const effectiveOutputDir = outputDir ?? path.join(target.root_path, '.eos');
 
     // 1.1 Avaliar aplicabilidade arquitetural antes de impor convenções.
     // Inferência orienta recomendações; hard failure de domínio só ocorre por declaração explícita.
@@ -1215,7 +1223,7 @@ export class AuditApplicationService {
     );
 
     // 8. Montar Relatório Final Verificável
-    const runIdSeed = `${target.target_id}:${fsCollectionResult.coverage.files_analyzed}:${allFacts.length}:${new Date().toISOString()}`;
+    const runIdSeed = `${target.target_id}:${fsCollectionResult.coverage.files_analyzed}:${allFacts.length}:${new Date().toISOString()}:${process.hrtime.bigint()}`;
     const auditRunId = `RUN-${crypto.createHash('sha256').update(runIdSeed).digest('hex').slice(0, 12)}`;
 
     const report: AuditReport = {
@@ -1245,8 +1253,62 @@ export class AuditApplicationService {
     (report as any).integrity_signature = reportSignature;
 
     // 9. Persistir Artefatos
-    JsonReporter.writeReport(report, outputDir);
-    MarkdownReporter.writeReport(report, outputDir);
+    JsonReporter.writeReport(report, effectiveOutputDir);
+    MarkdownReporter.writeReport(report, effectiveOutputDir);
+
+    // 9.1 Arquivamento imutável por execução (EOS-GOV-011): cada execução ganha
+    // sua própria pasta identificada pelo audit_run_id; execuções anteriores
+    // permanecem intactas. O caminho canônico acima é mantido para compatibilidade.
+    const archiveDir = path.join(effectiveOutputDir, 'auditorias', auditRunId);
+    JsonReporter.writeReport(report, archiveDir);
+    MarkdownReporter.writeReport(report, archiveDir);
+
+    // 9.2 Identificação da execução e histórico consultável (EOS-GOV-013/014).
+    // Uma falha de persistência aqui propaga erro — nunca há sucesso artificial.
+    const archivedReportPath = path.join(archiveDir, 'auditoria.json');
+    const archivedReportSha256 = crypto
+      .createHash('sha256')
+      .update(require('fs').readFileSync(archivedReportPath))
+      .digest('hex');
+    const gateOccurrences = AuditRegistryService.computeOccurrences(effectiveOutputDir, auditRunId, [
+      ...ruleResults
+        .filter(result => result.status !== 'PASS' && result.status !== 'NOT_APPLICABLE')
+        .map(result => ({ reference: result.rule_id, status: result.status })),
+      ...findings.map(finding => ({
+        reference: finding.rule_id,
+        location: finding.location,
+        status: (finding as { status?: string }).status || 'OPEN',
+      })),
+    ]);
+    const identification: AuditRunIdentification = {
+      audit_run_id: auditRunId,
+      project: {
+        project_id: AuditRegistryService.computeProjectId(target.root_path),
+        target_id: target.target_id,
+        root_path: target.root_path,
+        repository: target.repository,
+        commit_hash: target.commit_hash,
+        branch: target.branch,
+      },
+      timestamp: report.timestamp,
+      executor: 'EOS AuditApplicationService',
+      interface: auditContext.interface || 'UNKNOWN',
+      eos_version: '2.2.0',
+      scope: 'continuous-architecture-audit',
+      environment: {
+        platform: process.platform,
+        node_version: process.version,
+      },
+      status: report.overall_phase_status || 'UNKNOWN',
+      artifacts: {
+        auditoria_json: 'auditoria.json',
+        acf_markdown: 'acf-auditoria.md',
+        auditoria_json_sha256: archivedReportSha256,
+      },
+      gate_occurrences: gateOccurrences,
+    };
+    AuditRegistryService.writeIdentification(archiveDir, identification);
+    AuditRegistryService.rebuildIndex(effectiveOutputDir);
 
     return report;
   }

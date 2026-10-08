@@ -1,0 +1,45 @@
+﻿diff --git a/EOS/core/services/audit-application-service.ts b/EOS/core/services/audit-application-service.ts
+index 9d22047..137939b 100644
+--- a/EOS/core/services/audit-application-service.ts
++++ b/EOS/core/services/audit-application-service.ts
+@@ -479,7 +479,7 @@ export class AuditApplicationService {
+     const heartbeatMs = Math.max(250, Number(process.env.EOS_CHECK_HEARTBEAT_MS || 15000));
+     const maxCapturedBytes = 10 * 1024 * 1024;
+ 
+-    console.log(`[EOS][CHECK] ▶ ${commandLine}`);
++    console.error(`[EOS][CHECK] ▶ ${commandLine}`);
+ 
+     return await new Promise<ExecutionEvidence>((resolve) => {
+       let stdout = '';
+@@ -511,7 +511,7 @@ export class AuditApplicationService {
+ 
+       const heartbeat = setInterval(() => {
+         const elapsedSeconds = Math.floor((Date.now() - startedAt) / 1000);
+-        console.log(`[EOS][CHECK] … ${commandLine} em execução — ${elapsedSeconds}s`);
++        console.error(`[EOS][CHECK] … ${commandLine} em execução — ${elapsedSeconds}s`);
+       }, heartbeatMs);
+ 
+       const terminateTree = async (): Promise<void> => {
+@@ -603,7 +603,7 @@ export class AuditApplicationService {
+         const durationMs = Date.now() - startedAt;
+         const output = redactOutput(`${stdout}\n${stderr}`).replace(/\s+/g, ' ').trim();
+         const symbol = state === 'PASS' ? '✓' : '✗';
+-        console.log(`[EOS][CHECK] ${symbol} ${commandLine} ${state}${failureCause ? ` [${failureCause}]` : ''} — ${(durationMs / 1000).toFixed(1)}s`);
++        console.error(`[EOS][CHECK] ${symbol} ${commandLine} ${state}${failureCause ? ` [${failureCause}]` : ''} — ${(durationMs / 1000).toFixed(1)}s`);
+ 
+         resolve({
+           check_id: checkId,
+@@ -1248,6 +1248,13 @@ export class AuditApplicationService {
+     JsonReporter.writeReport(report, outputDir);
+     MarkdownReporter.writeReport(report, outputDir);
+ 
++    // 9.1 Arquivamento imutável por execução (EOS-GOV-011): cada execução ganha
++    // sua própria pasta identificada pelo audit_run_id; execuções anteriores
++    // permanecem intactas. O caminho canônico acima é mantido para compatibilidade.
++    const archiveDir = path.join(outputDir, 'auditorias', auditRunId);
++    JsonReporter.writeReport(report, archiveDir);
++    MarkdownReporter.writeReport(report, archiveDir);
++
+     return report;
+   }
+ }

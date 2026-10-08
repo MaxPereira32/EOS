@@ -1,0 +1,5 @@
+﻿BASELINE 2026-10-08 | commit 508581c | working tree modificado (eos-mcp-server.ts + iter2) | comando: Select-String .github\workflows\eos-audit.yml -Pattern "npm ci|upload-artifact|path:|signReport|verifyReport"
+25: npm ci || npm install
+50: uses: actions/upload-artifact@v4
+53: path: .eos/
+NOTA: 'npm ci || npm install' nao-deterministico (linha 25); upload de .eos/ integral (linhas 49-53); o gate do CI le overall_phase_status sem validar assinatura (signReport/verifyReport ausentes do workflow).

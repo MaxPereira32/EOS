@@ -1,0 +1,2 @@
+[EOS][CHECK] ▶ npm run test
+[EOS][CHECK] ✓ npm run test PASS — 0.4s

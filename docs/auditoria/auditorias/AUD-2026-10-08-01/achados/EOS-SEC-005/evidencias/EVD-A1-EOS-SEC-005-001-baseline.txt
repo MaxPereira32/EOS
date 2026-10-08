@@ -1,0 +1,5 @@
+﻿BASELINE 2026-10-08 | commit 508581c | working tree modificado (eos-mcp-server.ts + iter2) | comando: Select-String report-integrity-signer.ts -Pattern "SECRET_SALT|JSON.stringify"
+4: private static readonly SECRET_SALT = 'EOS_PHASE_4_1_CANONICAL_INTEGRITY_SALT_2026';
+10: const canonicalString = JSON.stringify(reportJson, Object.keys(reportJson).sort());
+12: .createHmac('sha256', this.SECRET_SALT)
+NOTA: segredo hardcoded (linha 4) e JSON.stringify com replacer de chaves de 1o nivel apenas (linha 10) -> alteracao de propriedade aninhada preserva a assinatura.

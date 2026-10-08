@@ -1,0 +1,10 @@
+﻿# EVIDENCIA EVD-A1-EOS-GOV-011-002 - Arquivamento pos-fix (2 execucoes sucessivas)
+DATA: 2026-10-08T10:54:34.7640412-03:00 TZ: E. South America Standard Time
+COMANDO (cwd=C:\Users\lindo\AppData\Local\Temp\opencode\eos-gov011-target): tsx EOS/bin/eos.ts audit .  (2x, com correcao EOS-GOV-011)
+
+run1: run_id=RUN-3f799785436e  arquivado(JSON)=True  arquivado(MD)=True
+run2: run_id=RUN-96ade1853e65
+run_ids distintos: True
+hash do arquivo da run1 apos a run2 inalterado: True
+pastas de arquivo: RUN-3f799785436e, RUN-96ade1853e65
+canonico preservado: auditoria.json=True  acf-auditoria.md=True

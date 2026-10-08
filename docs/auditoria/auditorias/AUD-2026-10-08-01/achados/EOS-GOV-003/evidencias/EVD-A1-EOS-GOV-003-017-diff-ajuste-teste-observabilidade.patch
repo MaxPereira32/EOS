@@ -1,0 +1,27 @@
+﻿diff --git a/EOS/tests/execution-observability.test.ts b/EOS/tests/execution-observability.test.ts
+index 8dd9833..e485a9d 100644
+--- a/EOS/tests/execution-observability.test.ts
++++ b/EOS/tests/execution-observability.test.ts
+@@ -24,11 +24,11 @@ async function cleanupTempDir(root: string): Promise<void> {
+ test('emite heartbeat enquanto um quality gate continua em execução', async () => {
+   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'eos-heartbeat-'));
+   const previousHeartbeat = process.env.EOS_CHECK_HEARTBEAT_MS;
+-  const originalLog = console.log;
++  const originalError = console.error;
+   const messages: string[] = [];
+   try {
+     process.env.EOS_CHECK_HEARTBEAT_MS = '250';
+-    console.log = (...args: unknown[]) => { messages.push(args.map(String).join(' ')); };
++    console.error = (...args: unknown[]) => { messages.push(args.map(String).join(' ')); };
+     fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({
+       scripts: { typecheck: 'node -e "setTimeout(() => process.exit(0), 700)"' }
+     }));
+@@ -42,7 +42,7 @@ test('emite heartbeat enquanto um quality gate continua em execução', async ()
+     assert.ok(messages.some(message => message.includes('em execução')));
+     assert.ok(messages.some(message => message.includes('npm run typecheck PASS')));
+   } finally {
+-    console.log = originalLog;
++    console.error = originalError;
+     if (previousHeartbeat === undefined) delete process.env.EOS_CHECK_HEARTBEAT_MS;
+     else process.env.EOS_CHECK_HEARTBEAT_MS = previousHeartbeat;
+     await cleanupTempDir(root);

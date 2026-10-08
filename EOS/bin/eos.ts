@@ -6,6 +6,7 @@
  */
 
 import { AuditApplicationService } from '../core/services/audit-application-service';
+import * as path from 'path';
 
 function printBanner() {
   console.log('╔══════════════════════════════════════════════════════════════╗');
@@ -40,7 +41,7 @@ async function main() {
       printBanner();
       console.log(`[EOS Audit] Iniciando auditoria em modo AUDIT no caminho: '${targetPath}'...`);
       const service = new AuditApplicationService();
-      const report = await service.executeAudit(targetPath);
+      const report = await service.executeAudit(targetPath, undefined, { interface: 'CLI' });
 
       console.log('\n======================================================');
       console.log(`  🔍 EOS GOVERNANCE AUDIT SUMMARY (${report.audit_run_id})`);
@@ -75,8 +76,9 @@ async function main() {
       }
 
       console.log('\nRelatórios gerados em:');
-      console.log('  - .eos/auditoria.json');
-      console.log('  - .eos/acf-auditoria.md\n');
+      console.log(`  - ${path.join(report.target.root_path, '.eos', 'auditoria.json')}`);
+      console.log(`  - ${path.join(report.target.root_path, '.eos', 'acf-auditoria.md')}`);
+      console.log(`  - ${path.join(report.target.root_path, '.eos', 'auditorias', report.audit_run_id)}\n`);
 
       const isBlockedOrRed = report.overall_phase_status === 'BLOCKED' || report.overall_phase_status === 'RED';
       const hasInconclusiveRules = report.rule_results.some(r => r.status === 'INSUFFICIENT_EVIDENCE' || r.status === 'ERROR');

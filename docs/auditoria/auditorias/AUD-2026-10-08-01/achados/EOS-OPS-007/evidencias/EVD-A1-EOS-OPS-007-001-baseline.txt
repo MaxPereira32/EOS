@@ -1,0 +1,5 @@
+﻿BASELINE 2026-10-08 | commit 508581c | working tree modificado (eos-mcp-server.ts + iter2) | comando: git submodule status
+fatal: no submodule mapping found in .gitmodules for path 'Age'
+exit=128
+Test-Path .gitmodules
+False

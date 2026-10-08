@@ -1,0 +1,4 @@
+﻿BASELINE 2026-10-08 | commit 508581c
+Reproducao NAO executada nesta baseline: exige rodar o detector heuristico de segredos sobre EOS/core (custo e escrita de artefatos .eos).
+Origem do achado: auditoria anterior (docs/auditoria/plano_de_correcoes_auditoria_codex.md).
+Status: Em analise - reproducao pendente antes de qualquer implementacao (Diretriz secao 4.2).

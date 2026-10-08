@@ -1,0 +1,11 @@
+﻿# MANIFEST de Evidencias — EOS-GOV-012
+
+- Auditoria: AUD-2026-10-08-01 (sequencia A1)
+- Gerado em: 2026-10-08T10:59:19.1393883-03:00 TZ E. South America Standard Time
+- Regra: append-only; cada artefato e imutavel; correcoes via arquivo -ERRATA-n.
+
+| Arquivo | Bytes | SHA-256 |
+|---|---:|---|
+| EVD-A1-EOS-GOV-012-001-baseline-ancoragem-cwd.txt | 2119 | 32E0CE5D97C329A65CC83C20F1A71A62E0DB55D608FB79C8F812E976BEFF69FB |
+| EVD-A1-EOS-GOV-012-001b-cli-stdout.txt | 1712 | F121CD9463B947184A93D6FE197EAFAB459A9F17B299B7661839E9164DB3E24F |
+| EVD-A1-EOS-GOV-012-001c-cli-stderr.txt | 814 | 73FE01A642E62A590617C969A0088A0716327A5445E6B21DB4658DD3107BE1F7 |

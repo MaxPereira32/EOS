@@ -1,0 +1,3 @@
+﻿BASELINE 2026-10-08 | commit 508581c | working tree modificado (eos-mcp-server.ts + iter2) | comando: Select-String governor-integrity-verifier.ts -Pattern "existsSync|createHash|createHmac"
+30: if (!fs.existsSync(fullPath)) {
+NOTA: nenhuma ocorrencia de createHash/createHmac no arquivo; verificacao restrita a fs.existsSync (linha 30).

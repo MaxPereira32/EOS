@@ -1,0 +1,16 @@
+﻿BASELINE 2026-10-08 | commit 508581c | working tree modificado (eos-mcp-server.ts + iter2) | comando: Get-ChildItem .eos -Force (arquivos presentes no diretorio que o workflow envia como artefato)
+auditorias
+contexto
+decisoes
+acf-auditoria.md
+api.port
+arch-typecheck.exit
+arch-typecheck.log
+auditoria.json
+contexto.md
+credentials.enc.json
+machine.key
+machine.salt
+roadmap.md
+session.token
+NOTA: .eos contem machine.key, machine.salt, credentials.enc.json, session.token; upload integral expoe material sensivel.

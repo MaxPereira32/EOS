@@ -1,0 +1,23 @@
+╔══════════════════════════════════════════════════════════════╗
+║    EOS v4.0 Self-Governed Continuous Security Audit CLI      ║
+╚══════════════════════════════════════════════════════════════╝
+
+[EOS Audit] Iniciando auditoria em modo AUDIT no caminho: 'C:\Users\lindo\AppData\Local\Temp\opencode\eos-smoke-target'...
+
+======================================================
+  🔍 EOS GOVERNANCE AUDIT SUMMARY (RUN-5e01c40cb4f3)
+======================================================
+
+  - Target ID:            TGT-64089bfc1fcb31f4
+  - Arquivos Analisados:  1 / 1
+  - Quality Gates:        8
+  - Perfil Arquitetural:  UNKNOWN
+  - Política de Domínio:  OPTIONAL
+  - Security Claims:       0
+  - Achados (Findings):   0
+  - OVERALL PHASE STATUS:  [ BLOCKED ]
+
+Relatórios gerados em:
+  - .eos/auditoria.json
+  - .eos/acf-auditoria.md
+

@@ -1,0 +1,304 @@
+
+> engineering-operating-system@2.2.0 test
+> tsx --test EOS/tests/**/*.test.ts
+
+▶ ArchitectureApplicabilityEngine
+  ✔ não exige domínio de frontend simples sem backend/persistência (10.899ms)
+  ✔ recomenda monólito modular para aplicação de negócio com backend, persistência e múltiplos módulos (13.0385ms)
+  ✔ torna domínio obrigatório quando Clean Architecture é declarada explicitamente (5.4893ms)
+  ✔ domain_required false prevalece sobre o perfil declarado (5.8862ms)
+  ✔ infere perfil de monólito modular a partir de manifesto aninhado e stack Python (23.3801ms)
+  ✔ frontend aninhado sem backend nem persistência continua STATIC_FRONTEND (6.0213ms)
+✔ ArchitectureApplicabilityEngine (66.8136ms)
+▶ EOS Phase 4.1 — Mandatory 18 Attack Matrix Suite
+  ✔ ATTACK-01: Comment Spoofing (Comentário // @firebase/rules-unit-testing) (13.0266ms)
+  ✔ ATTACK-02: Dead Import (Import sem CallExpression ativa) (4.1347ms)
+  ✔ ATTACK-03: Fake Function (Função simulada com mesmo nome da API real) (6.9027ms)
+  ✔ ATTACK-04: Renamed Mock (Mock renomeado para bypass de filtro por string) (1.3712ms)
+  ✔ ATTACK-05: Open Socket sem tráfego de teste (0.423ms)
+  ✔ ATTACK-06: Fake Artifact (Executar teste apontando para fake.rules) (7.9855ms)
+  ✔ ATTACK-07: Wrong Environment (Ambiente diferente do target) (0.3614ms)
+  ✔ ATTACK-08: Modified Hard Gate (Adulteração de HardQualityGateEngine) (0.9742ms)
+  ✔ ATTACK-09: Modified Report (Relatório alterado após a execução) (1.1864ms)
+  ✔ ATTACK-10: Modified CI (Tentativa de ignorar status no CI) (0.4743ms)
+  ✔ ATTACK-11: Modified Governor Binary (0.7005ms)
+  ✔ ATTACK-12: Modified Trust Manifest Signature (2.7631ms)
+  ✔ ATTACK-13: Symlink Substitution (5.1029ms)
+  ✔ ATTACK-14: Mutation During Execution (Alteração de arquivo durante mutação) (3.9508ms)
+  ✔ ATTACK-15: Generated Runtime Artifact Mismatch (8.0644ms)
+  ✔ ATTACK-16: Tooling Failure (Falha de subprocesso) (7.4115ms)
+  ✔ ATTACK-17: Stale Evidence (Evidência expirada) (0.2521ms)
+  ✔ ATTACK-18: Replay Attack (Reutilização de evidência legítima antiga) (0.2419ms)
+✔ EOS Phase 4.1 — Mandatory 18 Attack Matrix Suite (72.6467ms)
+✔ assertion identificada PASS -> FAIL prova causal e preserva alvo original (1937.1478ms)
+✔ não promove evidência inválida: SURVIVOR (1421.6312ms)
+✔ não promove evidência inválida: INFRA (1619.8782ms)
+✔ não promove evidência inválida: UNMARKED (1547.5333ms)
+✔ não promove evidência inválida: NO_BASELINE (861.2191ms)
+✔ não promove evidência inválida: STALE (1610.2052ms)
+✔ não promove evidência inválida: WRONG_ASSERTION (1509.0104ms)
+✔ não promove evidência inválida: FATAL (1824.5764ms)
+✔ não promove evidência inválida: DUPLICATE (1748.9658ms)
+✔ não promove evidência inválida: ZERO_EXIT (1820.6297ms)
+✔ erro de sintaxe no mutante não prova controle (1299.9373ms)
+✔ spec inválido, match ausente e path traversal falham fechados (595.8067ms)
+✔ timeout inválido é falha operacional, nunca prova (10.124ms)
+✔ JSON null é rejeitado sem lançar exceção (3.4734ms)
+﹣ symlink copiado não permite escrever no alvo original (3.1725ms) # Sistema não autoriza symlink de arquivo
+[EOS][CHECK] ▶ npm run typecheck
+[EOS][CHECK] ✓ npm run typecheck PASS — 0.9s
+[EOS][CHECK] ▶ npm run lint
+[EOS][CHECK] ✗ npm run lint FAIL [TEST_FAILED] — 0.7s
+[EOS][CHECK] ▶ npm run release:validate
+▶ EOS — evidência de execução do projeto
+  ✔ registra aprovação e falha de scripts com proveniência reproduzível (1556.86ms)
+  ✔ classifica ausência de scripts como evidência insuficiente (3.1588ms)
+[EOS][CHECK] ✓ npm run release:validate PASS — 0.7s
+[EOS][CHECK] ▶ npm run test:all
+  ✔ executa validação de produção declarada no eos.risk.yml (727.4737ms)
+  ✔ falha fechado quando o perfil de produção declara script inexistente (3.7044ms)
+[EOS][CHECK] ✓ npm run test:all PASS — 0.6s
+[EOS][CHECK] ▶ npm --prefix backend run test
+[EOS][CHECK] ✓ npm --prefix backend run test PASS — 0.7s
+[EOS][CHECK] ▶ npm run test
+  ✔ prefere test:all e executa test de manifesto backend aninhado (1308.5737ms)
+[EOS][CHECK] ✗ npm run test NOT_AVAILABLE [TOOLING_MISSING] — 0.7s
+[EOS][CHECK] ▶ npm run test
+  ✔ classifica binário ausente como ferramenta indisponível, não como teste reprovado (663.2521ms)
+[EOS][CHECK] ✗ npm run test NOT_AVAILABLE [TOOLING_MISSING] — 0.7s
+[EOS][CHECK] ▶ node -e process.exit(0)
+  ✔ gate de execução fica inconclusivo, não FAIL, quando o binário do script está ausente (711.2348ms)
+[EOS][CHECK] ✓ node -e process.exit(0) PASS — 0.1s
+[EOS][CHECK] ▶ node -e process.exit(3)
+  ✔ executa check externo declarado no eos.risk.yml e registra evidência (128.4136ms)
+[EOS][CHECK] ✗ node -e process.exit(3) FAIL [TEST_FAILED] — 0.1s
+[EOS][CHECK] ▶ eos-definitely-missing-binary-xyz --run
+[EOS][CHECK] ✗ eos-definitely-missing-binary-xyz --run NOT_AVAILABLE [TOOLING_MISSING] — 0.0s
+[EOS][CHECK] ▶ node -e process.exit(0)
+  ✔ check externo reprovado vira FAIL com causa TEST_FAILED (134.5727ms)
+  ✔ check externo com binário ausente vira NOT_AVAILABLE/TOOLING_MISSING (5.3836ms)
+[EOS][CHECK] ✓ node -e process.exit(0) PASS — 0.1s
+[EOS][CHECK] ▶ node -e process.exit(0)
+  ✔ ignora check externo sem nome válido ou sem argv e mantém os válidos (98.8886ms)
+[EOS][CHECK] ✓ node -e process.exit(0) PASS — 0.1s
+[EOS][CHECK] ▶ node -e "setTimeout(() => process.exit(0), 600)"
+  ✔ suporta argv em lista multilinha no eos.risk.yml (104.195ms)
+[EOS][CHECK] ✓ node -e "setTimeout(() => process.exit(0), 600)" PASS — 0.7s
+[EOS][CHECK] ▶ node -e "setTimeout(() => process.exit(9), 600)"
+[EOS][CHECK] ✗ node -e "setTimeout(() => process.exit(9), 600)" TIMEOUT — 0s
+[EOS][CHECK] ✗ node -e "setTimeout(() => process.exit(9), 600)" FAIL [TIMEOUT] — 1.7s
+[EOS][CHECK] ▶ node -e process.exit(0)
+  ✔ respeita timeout específico por nome de check externo (2413.1545ms)
+[EOS][CHECK] ✓ node -e process.exit(0) PASS — 0.1s
+[EOS][CHECK] ▶ npm run typecheck
+  ✔ checks externos não dependem de package.json (114.3513ms)
+[EOS][CHECK] ✓ npm run typecheck PASS — 0.6s
+  ✔ redige credenciais do excerpt sem alterar os hashes de saída (585.3551ms)
+✔ EOS — evidência de execução do projeto (8561.57ms)
+[EOS][CHECK] ▶ npm run typecheck
+[EOS][CHECK] … npm run typecheck em execução — 0s
+[EOS][CHECK] … npm run typecheck em execução — 0s
+[EOS][CHECK] … npm run typecheck em execução — 0s
+[EOS][CHECK] … npm run typecheck em execução — 1s
+[EOS][CHECK] … npm run typecheck em execução — 1s
+[EOS][CHECK] ✓ npm run typecheck PASS — 1.5s
+[EOS][CHECK] ▶ npm run typecheck
+✖ emite heartbeat enquanto um quality gate continua em execução (1551.5501ms)
+[EOS][CHECK] ✗ npm run typecheck TIMEOUT — 0s
+[EOS][CHECK] ✗ npm run typecheck FAIL [TIMEOUT] — 1.7s
+[EOS][CHECK] ▶ npm run typecheck
+✔ timeout encerra o gate e produz evidência FAIL sem bloquear a auditoria (1688.5598ms)
+[EOS][CHECK] ✓ npm run typecheck PASS — 1.5s
+[EOS][CHECK] ▶ npm run build
+[EOS][CHECK] ✗ npm run build TIMEOUT — 0s
+[EOS][CHECK] ✗ npm run build FAIL [TIMEOUT] — 1.6s
+✔ eos.risk.yml permite timeout específico por check sem relaxar os demais gates (3113.8905ms)
+✔ detecta riscos comuns de app gerado por IA com arquivo e linha verificáveis (11.9806ms)
+✔ integração de dados sem claim RLS causalmente provado permanece inconclusiva (8.209ms)
+✔ detecta segredos literais em TOML, INI, YAML, JSON e .env sem reportar placeholders (14.4541ms)
+✔ detecta mass-assignment e upload sem autorização observável em rotas Flask (7.5899ms)
+✔ usa a integração Supabase do backend como localização e ignora Array.from() (11.0983ms)
+✔ Array.from() sozinho não é classificado como integração Supabase (3.2765ms)
+✔ Array.from() não é classificado como acesso a dados/autorização frontend (2.9518ms)
+✔ ignora ambientes virtuais Python ao ampliar a coleta de formatos (5.3088ms)
+[EOS][CHECK] ▶ npm run test
+[EOS][CHECK] ✓ npm run test PASS — 0.8s
+[EOS][CHECK] ▶ npm run test
+✔ sem artefatos de governança o gate fica INSUFFICIENT_EVIDENCE e impede GREEN (827.9182ms)
+[EOS][CHECK] ✓ npm run test PASS — 0.7s
+[EOS][CHECK] ▶ npm run test
+✔ com os três artefatos de .eos/ o gate de governança é satisfeito (698.1938ms)
+[EOS][CHECK] ✓ npm run test PASS — 0.7s
+✔ eos.risk.yml com arquitetura declarada satisfaz o gate sem documentação local (725.0867ms)
+[EOS][CHECK] ▶ npm run security:test
+[EOS][CHECK] ✓ npm run security:test PASS — 0.9s
+✔ claim IDOR é classificado como IDOR e só vira PROVEN quando a mutação quebra a autorização (2474.1643ms)
+▶ MandatoryDirectoryRule applicability
+  ✔ não cria finding quando domínio não se aplica (1.9914ms)
+  ✔ não reprova ausência quando domínio é apenas opcional (0.3297ms)
+  ✔ reprova ausência quando domínio foi declarado obrigatório (0.3674ms)
+✔ MandatoryDirectoryRule applicability (4.0494ms)
+▶ EOS Phase 1.1 — Hardened AI Agent Configuration & Security Suite
+  ✔ 1. SecretStoreService — AES-256-GCM Encryption & Decryption Integrity (49.5042ms)
+  ✔ 2. Tampering Detection — GCM Authentication Tag Rejects Altered Ciphertext (52.7131ms)
+  ✔ 3. Concurrency Protection — Concurrent Parallel Writes Maintain File Lock Rollback (236.1183ms)
+  ✔ 4. Schema Versioning & Migration — Legacy Unversioned File Migration (23.4922ms)
+  ✔ 5. Zero-Knowledge Registry — DTOs Exclude Raw API Keys (64.3815ms)
+  ✔ 6. Symlink & Path Traversal Defense — ContextPolicy Invariants (1.5074ms)
+  ✔ 7. LocalApplicationApiServer — Session Token Auth Enforcement & Size Limits (136.5442ms)
+✔ EOS Phase 1.1 — Hardened AI Agent Configuration & Security Suite (566.2642ms)
+▶ EOS Phase 1.2 — Causal Transition Invariants & Lineage Protection Suite
+  ✔ 1. INVARIANT 1 — Finding sem Evidências Concretas é Rejeitado (2.4218ms)
+  ✔ 2. INVARIANT 2 — ActionPlan sem Finding Vinculado é Rejeitado (0.3943ms)
+  ✔ 3. INVARIANT 3 — Execução sem ApprovalRecord Assinado é Bloqueada (0.3698ms)
+  ✔ 4. INVARIANT 4 — Aprovação com Hash Divergente Invalida a Execução (0.2709ms)
+  ✔ 5. INVARIANT 5 — Alteração na Árvore de Arquivos Pós-Aprovação Exige Revalidação (0.2608ms)
+  ✔ 6. INVARIANT 6 — Revalidação Rejeita Reutilização do AuditRun Anterior (Stale AuditRun) (0.1843ms)
+✔ EOS Phase 1.2 — Causal Transition Invariants & Lineage Protection Suite (6.1516ms)
+▶ EOS Phase 1.3 — End-to-End Systemic Integration & Adversarial Pipeline Suite
+  ✔ SCENARIO 1 — End-to-End Remediation Pipeline: Observação -> Finding -> Proposta -> Aprovação -> Execução -> Revalidação Cega (GREEN) (8.9223ms)
+  ✔ SCENARIO 2 (ATAQUE ADVERSARIAL A) — Alteração de Artefato de Plano Pós-Aprovação é Travada (0.6119ms)
+  ✔ SCENARIO 3 (ATAQUE ADVERSARIAL B) — Mutação do Repositório Pós-Aprovação Bloqueia Execução (0.3492ms)
+  ✔ SCENARIO 4 (ATAQUE ADVERSARIAL C) — Reutilização de AuditRun Antigo (Replay Attack) na Revalidação é Rejeitada (0.2453ms)
+✔ EOS Phase 1.3 — End-to-End Systemic Integration & Adversarial Pipeline Suite (11.8781ms)
+▶ EOS Phase 1.4 — Semantic Authorization Policy & Operational Resilience Suite
+  ✔ 1. SEMANTIC POLICY — Malicious-but-Valid ActionPlan Targeting Forbidden File is Blocked (1.2267ms)
+  ✔ 2. IDEMPOTÊNCIA DE EXECUÇÃO — Execução Duplicada Detectada como NOOP (2.0752ms)
+  ✔ 3. DEFESA TOCTOU ATÔMICA — Mutação do Arquivo no Milissegundo Antes da Gravação Dispara Bloqueio (18.4964ms)
+  ✔ 4. CONFLITO DE REMEDIAÇÃO — Dois Planos Alterando o Mesmo Arquivo São Rejeitados (0.4237ms)
+  ✔ 5. RESILIÊNCIA DE PROVEDOR — Falha de Provedor de IA Degrada Sem Quebrar a Governança (0.2129ms)
+  ✔ 6. CRASH RECOVERY — Recuperação Segura de Interrupção no Meio da Execução com ExecutionJournal Persistente (12.9546ms)
+✔ EOS Phase 1.4 — Semantic Authorization Policy & Operational Resilience Suite (36.9656ms)
+▶ EOS Phase 1.5 — Audit History Projection & Zero-Knowledge Isolation Suite (Real Disk Persistence)
+  ✔ 1. PROJEÇÃO DE HISTÓRICO — Retorna DTOs de Resumo Válidos Lidos do Disco Real (10.2263ms)
+  ✔ 2. RASTREABILIDADE CAUSAL DA TIMELINE — Evidência -> Finding -> ActionPlan -> Approval -> Revalidation (6.9718ms)
+  ✔ 3. ISOLAMENTO DE SEGURANÇA — DTOs da Timeline NUNCA Exigem ou Vazem API Keys (5.6969ms)
+  ✔ 4. VÍNCULO DE APERFEIÇOAMENTO — approvedPlanHash === planHash é Preservado na Projeção Lida do Disco (8.2724ms)
+  ✔ 5. ISOLAMENTO ESTRUTURAL DE PROJETO (DEFESA IDOR) — Rejeita Consulta de AuditRun de Outro Projeto no Disco (6.504ms)
+✔ EOS Phase 1.5 — Audit History Projection & Zero-Knowledge Isolation Suite (Real Disk Persistence) (39.3803ms)
+▶ EOS Phase 4.9 — Module Resolution & Architecture Layer Rules Suite
+  ✔ TEST-RESOLVE-01: alias válido em tsconfig -> resolve para arquivo correto (1.6765ms)
+  ✔ TEST-RESOLVE-02: barrel export -> segue destino sem ambiguidade (0.4086ms)
+  ✔ TEST-RESOLVE-03: type-only ou static import -> resolução determinística (0.3078ms)
+  ✔ TEST-RESOLVE-04: import inexistente -> UNRESOLVED -> não PASS (0.2563ms)
+  ✔ TEST-RESOLVE-05: dois destinos possíveis -> AMBIGUOUS -> não escolher heurística (0.3053ms)
+  ✔ TEST-RESOLVE-06: Domain -> Infrastructure real -> VIOLATION (FAIL) (1.7343ms)
+  ✔ TEST-RESOLVE-07: Domain -> Port -> PASS (0.2989ms)
+  ✔ TEST-RESOLVE-08: External package declared -> classificado como EXTERNAL (0.3303ms)
+✔ EOS Phase 4.9 — Module Resolution & Architecture Layer Rules Suite (6.8761ms)
+▶ Phase 6.1.6 Storage Integrity Suite
+  ✔ Test A - Falha de escrita não vaza FD (5.3011ms)
+  ✔ Test B - Falha de fsyncSync não vaza FD (2.5659ms)
+  ✔ Test C - Recuperação Real da Aquisição (Lock Rollback) (17.0548ms)
+  ✔ Test D - Caller Mutability Preservation (7.0588ms)
+  ✔ Test E - Repository Memory Isolation (Boundary) (13.341ms)
+✔ Phase 6.1.6 Storage Integrity Suite (48.5255ms)
+▶ EOS Phase 1 — System Context Integrity Suite
+  ✔ Deve criar uma instância válida (1.4836ms)
+  ✔ IMMUTABILITY: Rejeita mutações na raiz (Root Level) (2.4074ms)
+  ✔ IMMUTABILITY: Rejeita mutações em nested objects (Authentication/Deployment) (0.3696ms)
+  ✔ IMMUTABILITY: Rejeita mutações em nested arrays (Push, Modificação de Índice) (0.5458ms)
+  ✔ INVARIANT: Rejeita campos identificadores vazios (system_id e system_name) (4.036ms)
+  ✔ INVARIANT: Rejeita enums inválidos (Type Safety no construtor runtime) (0.4438ms)
+  ✔ INVARIANT: Rejeita inicialização sem blocos aninhados obrigatórios (0.3744ms)
+✔ EOS Phase 1 — System Context Integrity Suite (13.4376ms)
+▶ EOS Phase 2 — Assessment Snapshot Hardening Suite
+  ✔ Identity: Aceita IDs canônicos válidos e rejeita strings vazias/malformadas (1.5855ms)
+  ✔ Target Provenance Policy: Rejeita proveniência inválida (3.901ms)
+  ✔ Target Invariant: Rejeita target_id distinto na comparação (0.862ms)
+  ✔ Temporal Invariant: Rejeita ISO inválido e Time Travel (AFTER < BEFORE) (0.8051ms)
+  ✔ Execution Invariant: Rejeita execução idêntica em Remediação (0.6621ms)
+  ✔ Scope Invariant: Rejeita target finding inexistente no BEFORE e exige target array (0.684ms)
+  ✔ Resolution Semantics: Classifica new_findings, resolved e persisting corretamente (1.6911ms)
+  ✔ Stale Evidence: Detecta evidência reutilizada e bloqueia resolução (0.7846ms)
+  ✔ Immutability: Rejeita mutações em arrays e provenance (0.6813ms)
+✔ EOS Phase 2 — Assessment Snapshot Hardening Suite (19.4404ms)
+▶ EOS Phase 3 — NIST Assessment Engine & Invariants Suite (SSDF PW.8.2)
+  ✔ 1. UNKNOWN applicability -> never VERIFIED (2.1964ms)
+  ✔ 2. NOT_APPLICABLE without rationale -> throws exception (0.6684ms)
+  ✔ 3. NO_FINDING != VERIFIED (Absence of findings without evidence yields NOT_VERIFIED) (0.448ms)
+  ✔ 4. Missing evidence -> NOT_VERIFIED (0.3027ms)
+  ✔ 5. Sufficient evidence -> VERIFIED (0.5839ms)
+  ✔ 6. Contradictory evidence -> NON_COMPLIANT (0.5166ms)
+  ✔ 7. Mapping without authority -> reject evaluation (0.3719ms)
+  ✔ 8. Authorized mapping != VERIFIED (Mapping with no evidence still yields NOT_VERIFIED) (0.3355ms)
+  ✔ 9. BEFORE state -> NON_COMPLIANT when failing evidence present (0.391ms)
+  ✔ 10 & 11. End-to-End Remediation Pipeline: False Remediation BLOCKED & True Remediation VERIFIED with Real Execution (1640.4817ms)
+  ✔ 12. Stale evidence -> reject (NOT_VERIFIED) (0.4063ms)
+  ✔ 13. Target mismatch -> reject (NOT_VERIFIED) (0.2412ms)
+  ✔ 14. Temporal inversion -> reject in AssessmentSnapshot comparison (0.4532ms)
+  ✔ 15. One PASS Evidence does not satisfy all criteria (0.3503ms)
+  ✔ 16. Required criterion without evidence -> NOT_VERIFIED (0.3323ms)
+  ✔ 17. Criterion-specific Evidence -> VERIFIED when all satisfied (0.2372ms)
+  ✔ 18. Contradictory criterion Evidence -> NON_COMPLIANT (0.3054ms)
+  ✔ 19. Synthetic Evidence cannot establish VERIFIED (0.3048ms)
+  ✔ 20. Missing provenance -> NOT_VERIFIED (0.1664ms)
+  ✔ 21. Fact without supporting Evidence -> NOT_VERIFIED (0.0932ms)
+  ✔ 22. AFTER status is derived exclusively by NistAssessmentEngine (1531.2991ms)
+  ✔ 23. AssessmentRemediationService cannot force VERIFIED on failing evidence (0.4467ms)
+  ✔ 24. Invalid Finding reference cannot be treated as materialized Finding (0.2038ms)
+  ✔ 25. False Evidence Misuse Attack (Evidence PASS of C2 injected as C3 yields NOT_VERIFIED for C3) (0.1381ms)
+✔ EOS Phase 3 — NIST Assessment Engine & Invariants Suite (SSDF PW.8.2) (3186.8108ms)
+▶ EOS Phase 3 — Native Multi-Agent Orchestration Suite
+  ✔ SCENARIO 1: False Fix is Blocked by Reviewer (FALSE_GREEN_BLOCKED) (6.1521ms)
+  ✔ SCENARIO 2: True Fix -> VERIFIED (0.8255ms)
+  ✔ SCENARIO 3: False Evidence (Insufficient payload explicitly blocks GREEN) (0.5499ms)
+  ✔ SCENARIO 4: Conflict -> NO MAJORITY VOTE (0.5859ms)
+  ✔ SCENARIO 5: Worker Failure -> WORKER_EXECUTION_FAILURE (0.389ms)
+  ✔ SCENARIO 6: Invalid State Transition (0.7057ms)
+  ✔ SCENARIO 7: False Verdict Injection (Worker returing VERIFIED with empty evidence) (0.5151ms)
+  ✔ SCENARIO 8: Mock Default Safety (Mock without explicit config fails safely) (0.3233ms)
+✔ EOS Phase 3 — Native Multi-Agent Orchestration Suite (12.5208ms)
+[EOS][CHECK] ▶ npm run test:rls
+[EOS][CHECK] ✓ npm run test:rls PASS — 0.8s
+[EOS][CHECK] ▶ npm run test:rls
+✔ claim RLS só fica GREEN após pré-teste, cenários entre tenants e mutação de política (2343.8221ms)
+[EOS][CHECK] ✓ npm run test:rls PASS — 0.8s
+[EOS][CHECK] ▶ npm run test:rls
+✔ registros de cenário sem mutação declarada de política RLS ficam BLOCKED (855.0085ms)
+[EOS][CHECK] ✓ npm run test:rls PASS — 0.9s
+✔ RLS desabilitado no pré-teste fica BLOCKED mesmo com saída de cenário (905.1767ms)
+✔ catálogo resolve as regras estáticas do motor de apps geradas com taxonomia completa (1.7873ms)
+[EOS][CHECK] ▶ npm run test
+[EOS][CHECK] ✓ npm run test PASS — 0.7s
+[EOS][CHECK] ▶ npm run security:test
+✔ claim ACTIVE declarado sem avaliador formal impede GREEN (782.3651ms)
+[EOS][CHECK] ✓ npm run security:test PASS — 0.7s
+[EOS][CHECK] ▶ npm run security:test
+✔ claim ACTIVE com validação executável é materializado como YELLOW até prova causal (774.3842ms)
+[EOS][CHECK] ✓ npm run security:test PASS — 0.6s
+✔ claim ACTIVE com causal_spec só vira PROVEN quando a mutação quebra a mesma validação (2301.0016ms)
+▶ EOS Phase 4.1 — Self-Governance & Governor Integrity Suite
+  ✔ Deve aprovar a integridade dos módulos essenciais do Core do EOS (2.447ms)
+  ✔ Deve detectar adulteração se um módulo do Core do EOS for removido ou corrompido (0.7385ms)
+  ✔ Deve travar o HardQualityGate em BLOCKED se a integridade do governador for violada (0.4474ms)
+✔ EOS Phase 4.1 — Self-Governance & Governor Integrity Suite (5.239ms)
+ℹ tests 173
+ℹ suites 14
+ℹ pass 171
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 1
+ℹ todo 0
+ℹ duration_ms 18135.0772
+
+✖ failing tests:
+
+test at EOS\tests\execution-observability.test.ts:24:1
+✖ emite heartbeat enquanto um quality gate continua em execução (1551.5501ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(messages.some(message => message.includes('[EOS][CHECK] ▶ npm run typecheck')))
+  
+      at TestContext.<anonymous> (C:\Users\lindo\OneDrive\Desktop\Dev\Projeto\EOS\EOS\tests\execution-observability.test.ts:41:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+exit=1

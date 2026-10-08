@@ -1,0 +1,3 @@
+﻿AUD-2026-10-08-02 | arquivos novos (untracked, nao cobertos pelo git diff):
+EOS/core/services/audit-registry-service.ts — incluir via: Get-Content EOS/core/services/audit-registry-service.ts
+EOS/tests/audit-registry.test.ts — incluir via: Get-Content EOS/tests/audit-registry.test.ts

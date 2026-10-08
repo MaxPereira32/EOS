@@ -1,0 +1,33 @@
+﻿# EVIDENCIA EVD-EOS-GOV-003-001 - Baseline de repositorio e ambiente
+DATA: 2026-10-08T10:39:37.1924939-03:00  TZ: E. South America Standard Time
+REPO: C:\Users\lindo\OneDrive\Desktop\Dev\Projeto\EOS
+PROJETO: Engineering Operating System (EOS) v2.2.0
+
+== git status --short --branch ==
+## main...origin/main
+ M EOS/core/platform/eos-mcp-server.ts
+?? docs/auditoria/
+== git rev-parse HEAD ==
+508581c1897172299fb0bc3b8a9e75e0c77c98d6
+== git log -5 --oneline ==
+508581c feat(audit): expand static coverage, execution causes and governance gates
+8d015d0 feat(audit): make architecture rules context-aware
+ca624e0 feat(security): add causal RLS and generated app checks
+d06b2a2 fix(audit): bound check termination and per-check timeouts
+877caf1 feat(audit): prove declared security claims causally
+== git diff --stat ==
+ EOS/core/platform/eos-mcp-server.ts | 21 ++++++---------------
+ 1 file changed, 6 insertions(+), 15 deletions(-)
+== git diff --check ==
+exit=0
+== node ==
+v24.19.0
+== npm ==
+11.17.0
+== tsx ==
+tsx v4.23.12
+node v24.19.0
+== OS ==
+Microsoft Windows 11 Pro for Workstations build 26200
+== PowerShell ==
+5.1.26100.9444

@@ -1,0 +1,2 @@
+{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"smoke","version":"1"}}}
+{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"eos_run_audit","arguments":{"project_path":"C:\\Users\\lindo\\AppData\\Local\\Temp\\opencode\\eos-smoke-target"}}}

@@ -1,0 +1,2 @@
+{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2024-11-05","capabilities":{"tools":{},"resources":{}},"serverInfo":{"name":"eos-mcp-server","version":"2.2.0"}}}
+{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"Erro executando a ferramenta eos_run_audit: AuditTarget Error: O caminho 'C:\\Users\\lindo\\AppData\\Local\\Temp\\opencode\\eos-does-not-exist-xyz' não existe."}],"isError":true}}

@@ -1,0 +1,29 @@
+﻿# CAMPANHA AUD-2026-10-08-02 — dois projetos + reauditoria + simultaneas
+DATA: 2026-10-08T11:19:33.8470386-03:00 TZ: E. South America Standard Time
+CWD: C:\Users\lindo\OneDrive\Desktop\Dev\Projeto\EOS | projX=C:\Users\lindo\AppData\Local\Temp\opencode\eos-campaign\proj-x | projY=C:\Users\lindo\AppData\Local\Temp\opencode\eos-campaign\proj-y
+hash EOS/.eos/auditoria.json ANTES: B7D0C9DFD1C4BE1A6AC26C6C6AD4382709FAAF7BEE90C50E6688DB19277B3C80
+
+1) DOIS PROJETOS (mesmo cwd):
+  projX runs: 2 pastas (x1=RUN-0aa536fe1bee, x2=RUN-25a8006b325f)
+  projY runs: 1 pasta (y1=RUN-04240dd126ae)
+  projX canônico root_path: C:\\Users\\lindo\\AppData\\Local\\Temp\\opencode\\eos-campaign\\proj-x
+  projY canônico root_path: C:\\Users\\lindo\\AppData\\Local\\Temp\\opencode\\eos-campaign\\proj-y
+  indice projX runs: 2 | indice projY runs: 1
+2) REAUDITORIA (mesmo problema persistente):
+  x2 gate EOS-GOVERNANCE-001 previous_run_ids = [RUN-0aa536fe1bee] (x1=RUN-0aa536fe1bee)
+  interface x2 = CLI | project_id x2 = PRJ-0af84e5a3ba80440
+  hash x1 inalterado apos x2: True
+3) SIMULTANEAS (Promise.all, interface API):
+{
+  "simultaneas": true,
+  "projeto_x": {
+    "run_id": "RUN-68ae17b0824a",
+    "status": "BLOCKED"
+  },
+  "projeto_y": {
+    "run_id": "RUN-f7ec80baf7fc",
+    "status": "BLOCKED"
+  }
+}
+  projX total runs: 3 | projY total runs: 2
+4) ANCHOR: hash EOS/.eos/auditoria.json DEPOIS: B7D0C9DFD1C4BE1A6AC26C6C6AD4382709FAAF7BEE90C50E6688DB19277B3C80 (inalterado=True)

@@ -1,0 +1,46 @@
+﻿diff --git a/EOS/core/platform/eos-mcp-server.ts b/EOS/core/platform/eos-mcp-server.ts
+index 5e3d725..e40fad3 100644
+--- a/EOS/core/platform/eos-mcp-server.ts
++++ b/EOS/core/platform/eos-mcp-server.ts
+@@ -14,6 +14,7 @@ import { RemediationEngine } from '../engines/remediation-engine';
+ import { PatchApplierEngine } from '../engines/patch-applier';
+ import { RuleCatalog } from '../rules/rule-catalog';
+ import { Asset, Finding } from '../domain-graph';
++import { AuditApplicationService } from '../services/audit-application-service';
+ 
+ export class EosMcpServer {
+   private platform = new EosPlatformV2();
+@@ -218,7 +219,7 @@ export class EosMcpServer {
+     ];
+   }
+ 
+-  private handleToolCall(id: any, params: any): void {
++  private async handleToolCall(id: any, params: any): Promise<void> {
+     const { name, arguments: args = {} } = params || {};
+ 
+     try {
+@@ -226,20 +227,10 @@ export class EosMcpServer {
+ 
+       switch (name) {
+         case 'eos_run_audit': {
+-          resultData = {
+-            status: 'SUCCESS',
+-            pipeline_version: 'v2.2.0',
+-            quality_gates: {
+-              passed: true,
+-              score: 94.5,
+-              gate_results: {
+-                architecture_drift: 'PASSED',
+-                security_boundaries: 'PASSED',
+-                dependency_coupling: 'PASSED',
+-              },
+-            },
+-            summary: 'Pipeline executado com sucesso. Todos os portões de qualidade foram atendidos sem desvios bloqueantes.',
+-          };
++          const targetPath = args.project_path || '.';
++          const service = new AuditApplicationService();
++          const report = await service.executeAudit(targetPath);
++          resultData = report;
+           break;
+         }
+ 

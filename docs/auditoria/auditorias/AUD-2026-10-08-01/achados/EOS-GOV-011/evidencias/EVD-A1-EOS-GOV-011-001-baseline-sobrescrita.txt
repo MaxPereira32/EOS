@@ -1,0 +1,10 @@
+﻿# EVIDENCIA EVD-A1-EOS-GOV-011-001 - Reproducao da sobrescrita de artefatos entre execucoes
+DATA: 2026-10-08T10:50:31.3524771-03:00  TZ: E. South America Standard Time
+COMANDO (cwd=C:\Users\lindo\AppData\Local\Temp\opencode\eos-gov011-target): npx tsx EOS/bin/eos.ts audit .  (executado 2x)
+
+run1: exit=1 run_id=RUN-24ee91d4c89a sha256=3286F83CD969F5C4C638281B0C2F25734144EC77F004689675F4FDFDB6CA9434
+run2: exit=1 run_id=RUN-af5943f81102 sha256=61544FDDF44196650D9B13B9D2035914C22C8A9950D6BD836CE210D877850828
+mesmo caminho (.eos\auditoria.json) apos 2 execucoes: SIM
+arquivo alterado entre execucoes (hash diverge): True
+pasta de historico .eos\auditorias existe: False
+RESULTADO: execucao 2 sobrescreveu integralmente a execucao 1; nenhum historico preservado.

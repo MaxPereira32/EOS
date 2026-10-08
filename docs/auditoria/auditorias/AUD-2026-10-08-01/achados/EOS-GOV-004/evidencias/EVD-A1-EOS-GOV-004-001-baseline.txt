@@ -1,0 +1,13 @@
+﻿BASELINE 2026-10-08 | commit 508581c | working tree modificado (eos-mcp-server.ts + iter2) | comando: Select-String EOS\bin\eos.ts -Pattern "MockAgentExecutor|registerMock|EVI-123"
+106: const { MockAgentExecutor } = require('../core/orchestration/agent-executors');
+109: const mockExecutor = new MockAgentExecutor();
+110: mockExecutor.registerMock('IMPLEMENTER', {
+113: mockExecutor.registerMock('REVIEWER', {
+116: mockExecutor.registerMock('EVIDENCE_AUDITOR', {
+117: run_id: 'CLI', agent_id: 'CLI-EVI', role: 'EVIDENCE_AUDITOR', status: 'SUCCESS', evidence_ids: ['EVI-123']
+
+BASELINE 2026-10-08 | commit 508581c | working tree modificado (eos-mcp-server.ts + iter2) | comando: Select-String multi-agent-orchestration-engine.ts -Pattern "FALSE VERDICT|evidence_ids.length"
+151: if (!res.evidence_ids || res.evidence_ids.length === 0) {
+152: this.transitionTo('BLOCKED', 'FALSE VERDICT INJECTION DETECTED: Agent claimed VERIFIED with no evidence');
+159: if (aud.status === 'SUCCESS' && (!aud.evidence_ids || aud.evidence_ids.length === 0)) {
+NOTA: reconciliador bloqueia apenas evidence_ids VAZIO; evidencia fixa nao-vazia (EVI-123) passa o gate -> CLI orchestrate ainda pode emitir VERIFIED a partir de mock.

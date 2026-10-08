@@ -1,0 +1,29 @@
+﻿# EVIDENCIA EVD-A1-EOS-GOV-012-001 - Artefatos de auditoria ancorados ao cwd (nao ao alvo)
+
+DATA: 2026-10-08T10:57 (TZ America/Sao_Paulo, UTC-3)
+CWD DA EXECUCAO: C:\Users\lindo\OneDrive\Desktop\Dev\Projeto\EOS
+ALVO: C:\Users\lindo\AppData\Local\Temp\opencode\eos-gov011-target
+COMANDO REAL: .\node_modules\.bin\tsx.cmd EOS\bin\eos.ts audit <ALVO>   (executado do CWD acima)
+
+## Resultado observado (execucao real)
+
+- exit code do processo: 1 (coerente: alvo sem governanca declarada -> INSUFFICIENT_EVIDENCE)
+- audit_run_id: RUN-c4d937159005
+- target_id: TGT-ac52a7ad54bbe1b7
+- target.root_path gravado em `EOS\.eos\auditoria.json` = C:\Users\lindo\AppData\Local\Temp\opencode\eos-gov011-target
+
+## Comprovacao complementar
+
+- O `.eos` do alvo NAO recebeu esta execucao: `eos-gov011-target\.eos\auditorias` contem apenas RUN-3f799785436e e RUN-96ade1853e65 (execucoes anteriores feitas com cwd = alvo).
+- O artefato canonico `EOS\.eos\auditoria.json` foi sobrescrito com o relatorio do ALVO auditado (nao do EOS).
+
+## Conclusao (sustentada pela execucao acima)
+
+Os artefatos de uma auditoria sao ancorados ao **cwd do processo**, nao ao projeto auditado. Consequencias:
+1. Auditorias de projetos distintos executadas da mesma cwd compartilham o mesmo `.eos` -> violacao direta de CA-14-02 da proposta Codex (secao 14) e da regra de nao-mistura.
+2. O `.eos` do projeto auditado pode nunca receber os registros das auditorias (depende de onde o operador estava).
+3. O caminho canonico `EOS\.eos\auditoria.json` carrega hoje o relatorio de OUTRO projeto (o alvo-sonda), evidenciando a mistura.
+
+## Errata (integridade do registro)
+
+A primeira versao deste arquivo (10:56) foi produzida apos uma tentativa de comando que falhou por erro de sintaxe do cmd (exit=1 do proprio shell) e leu um `.eos\auditoria.json` **estale** de execucao anterior (RUN-5e01c40cb4f3, alvo eos-smoke-target), gerando conclusao sem execucao real. Detectado e corrigido imediatamente: reexecucao real (RUN-c4d937159005) e reescrita desta evidencia ANTES de qualquer uso em parecer. Nenhuma conclusao foi publicada com base na versao incorreta.

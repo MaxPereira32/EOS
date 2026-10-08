@@ -1,0 +1,13 @@
+﻿BASELINE 2026-10-08 | commit 508581c | working tree modificado (eos-mcp-server.ts + iter2) | comando: Select-String local-application-api-server.ts -Pattern "test-connection|latencyMs|CONNECTED|fetch|http"
+1: import * as http from 'http';
+9: private server: http.Server | null = null;
+26: allowedOrigins: ['http://localhost:5173', 'http://localhost:5174'],
+47: this.server = http.createServer((req, res) => this.handleRequest(req, res));
+99: private async handleRequest(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+112: res.setHeader('Access-Control-Allow-Origin', 'http://localhost:5174');
+193: if (url === '/api/agents/test-connection' && method === 'POST') {
+207: latencyMs: 84,
+208: status: 'CONNECTED',
+236: private parseRequestBody(req: http.IncomingMessage): Promise<any> {
+266: private sendJSON(res: http.ServerResponse, statusCode: number, payload: any) {
+NOTA: handler retorna latencyMs 84 fixo (linha 207) apos retrieveCredential, sem qualquer chamada de rede (sem fetch/http no handler).

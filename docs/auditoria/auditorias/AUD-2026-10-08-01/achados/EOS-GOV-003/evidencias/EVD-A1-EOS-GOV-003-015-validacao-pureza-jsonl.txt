@@ -1,0 +1,21 @@
+﻿# Validacao de pureza JSONL do stdout MCP - detector de regressao CA-06
+DATA: 2026-10-08T10:49:11.4380696-03:00 TZ: E. South America Standard Time
+METODO: cada linha nao-vazia do stdout do processo MCP e parseada com JSON (ConvertFrom-Json); linha que falha = poluicao do protocolo.
+
+[PRE-R02 (defeituoso)] EVD-A1-EOS-GOV-003-005-smoke-02-scripted-prefix-stdout.txt
+  linhas totais=4  linhas invalidas=2
+  INVALID: [EOS][CHECK] ▶ npm run test
+  INVALID: [EOS][CHECK] ✓ npm run test PASS — 0.5s
+
+[POS-R02 (corrigido)] EVD-A1-EOS-GOV-003-010-smoke-03-scripted-prefix2-stdout.txt
+  linhas totais=2  linhas invalidas=0
+
+[POS-R02 (corrigido, scriptless)] EVD-A1-EOS-GOV-003-016-smoke-04-scriptless-prefix2-stdout.txt
+  linhas totais=2  linhas invalidas=0
+
+[PRE-R02 (scriptless)] EVD-A1-EOS-GOV-003-004-smoke-01-scriptless-prefix-stdout.txt
+  linhas totais=2  linhas invalidas=0
+
+[POS-R02 (adversarial invalido)] EVD-A1-EOS-GOV-003-009-smoke-05-invalid-path-adversarial-stdout.txt
+  linhas totais=2  linhas invalidas=0
+
