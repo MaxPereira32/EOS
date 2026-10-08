@@ -257,14 +257,28 @@ export class EosMcpServer {
         }
 
         case 'eos_check_rules': {
-          const activeRules = [
-            {
-              rule_id: 'SEC-RULE-309-HTTP-TRACE-PREFIX',
-              title: 'HTTP TRACE Method Enabled & Session Cookie Security Prefix',
-              severity: 'HIGH',
-              owasp: 'A05:2021-Security Misconfiguration',
-              cwe: 'CWE-693',
-            },
+          interface CheckRulesEntry {
+            rule_id: string;
+            title: string;
+            severity: string;
+            owasp: string;
+            cwe: string;
+            category?: string;
+            evaluation_method?: string;
+          }
+
+          // A fonte primária é o RuleCatalog real; as entradas legadas ficam
+          // como complemento para não quebrar consumidores existentes.
+          const catalogRules: CheckRulesEntry[] = RuleCatalog.getAllRules().map(rule => ({
+            rule_id: rule.rule_id,
+            title: rule.name,
+            severity: rule.default_severity,
+            owasp: rule.taxonomy.owasp_category,
+            cwe: rule.taxonomy.cwe_id,
+            category: rule.category,
+            evaluation_method: rule.evaluation_method,
+          }));
+          const legacyRules: CheckRulesEntry[] = [
             {
               rule_id: 'ARCH-RULE-101-DOMAIN-BOUNDARY-VIOLATION',
               title: 'Domain Boundary Direct Database Access Violation',
@@ -276,17 +290,25 @@ export class EosMcpServer {
               rule_id: 'DEP-RULE-202-CIRCULAR-MODULE-DEPENDENCY',
               title: 'Forbidden Circular Dependency between Core and Feature Modules',
               severity: 'MEDIUM',
+              owasp: 'A06:2021-Vulnerable and Outdated Components',
               cwe: 'CWE-1047',
             },
           ];
+          const merged = [...catalogRules];
+          for (const legacy of legacyRules) {
+            if (!merged.some(rule => rule.rule_id === legacy.rule_id)) merged.push(legacy);
+          }
 
-          const filtered = args.category
-            ? activeRules.filter(r => r.rule_id.includes(args.category.toUpperCase()))
-            : activeRules;
+          const categoryFilter = typeof args.category === 'string' ? args.category.toUpperCase() : null;
+          const filtered = categoryFilter
+            ? merged.filter(rule => rule.rule_id.includes(categoryFilter)
+              || (rule.category !== undefined && rule.category === categoryFilter))
+            : merged;
 
           resultData = {
             total_rules: filtered.length,
             rules: filtered,
+            source: 'RuleCatalog+legacy',
           };
           break;
         }

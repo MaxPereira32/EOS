@@ -61,6 +61,7 @@ test('timeout encerra o gate e produz evidência FAIL sem bloquear a auditoria',
       executeProjectChecks(targetPath: string): Promise<Array<{
         state: string;
         exit_code: number;
+        failure_cause?: string;
         output_excerpt: string;
       }>>;
     };
@@ -69,6 +70,7 @@ test('timeout encerra o gate e produz evidência FAIL sem bloquear a auditoria',
 
     assert.strictEqual(checks[0].state, 'FAIL');
     assert.strictEqual(checks[0].exit_code, -1);
+    assert.strictEqual(checks[0].failure_cause, 'TIMEOUT');
     assert.match(checks[0].output_excerpt, /Tempo limite excedido/);
   } finally {
     if (previousTimeout === undefined) delete process.env.EOS_CHECK_TIMEOUT_MS;

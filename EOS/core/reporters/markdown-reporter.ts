@@ -68,11 +68,11 @@ export class MarkdownReporter {
     if (!report.execution_evidences || report.execution_evidences.length === 0) {
       mdLines.push(`*Nenhuma validação executável foi registrada.*`);
     } else {
-      mdLines.push(`| Comando | Resultado | Código | Duração | SHA-256 stdout | SHA-256 stderr | Saída redigida |`);
-      mdLines.push(`|---|---:|---:|---:|---|---|---|`);
+      mdLines.push(`| Comando | Resultado | Causa | Código | Duração | SHA-256 stdout | SHA-256 stderr | Saída redigida |`);
+      mdLines.push(`|---|---|---|---:|---:|---|---|---|`);
       for (const check of report.execution_evidences) {
         const excerpt = check.output_excerpt.replace(/\|/g, '\\|').replace(/\r?\n/g, ' ');
-        mdLines.push(`| \`${check.command_line}\` | ${check.state} | ${check.exit_code} | ${check.duration_ms} ms | \`${check.stdout_sha256 || 'N/A'}\` | \`${check.stderr_sha256 || 'N/A'}\` | ${excerpt} |`);
+        mdLines.push(`| \`${check.command_line}\` | ${check.state} | ${check.failure_cause || '—'} | ${check.exit_code} | ${check.duration_ms} ms | \`${check.stdout_sha256 || 'N/A'}\` | \`${check.stderr_sha256 || 'N/A'}\` | ${excerpt} |`);
       }
     }
     mdLines.push(``);

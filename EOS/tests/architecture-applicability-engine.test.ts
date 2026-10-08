@@ -100,4 +100,40 @@ describe('ArchitectureApplicabilityEngine', () => {
       assert.strictEqual(assessment.domain_policy, 'NOT_APPLICABLE');
     });
   });
+
+  it('infere perfil de monólito modular a partir de manifesto aninhado e stack Python', () => {
+    withTempProject(root => {
+      writeJson(root, 'frontend/package.json', {
+        name: 'frontend',
+        dependencies: { '@angular/core': '^8.2.14' },
+      });
+      fs.mkdirSync(path.join(root, 'backend'), { recursive: true });
+      fs.writeFileSync(path.join(root, 'backend', 'requirements.txt'), 'Flask\nSQLAlchemy\npsycopg2-binary\n');
+      for (const moduleName of ['users', 'observations', 'sites', 'taxonomy']) {
+        fs.mkdirSync(path.join(root, 'backend', 'app', 'core', moduleName), { recursive: true });
+      }
+
+      const assessment = new ArchitectureApplicabilityEngine().assess(root);
+
+      assert.strictEqual(assessment.inferred_profile, 'MODULAR_MONOLITH');
+      assert.notStrictEqual(assessment.effective_profile, 'UNKNOWN');
+      assert.ok(assessment.confidence >= 0.8);
+      assert.ok(assessment.signals.includes('persistência Python detectada'));
+      assert.ok(assessment.signals.includes('dependências de framework lidas de manifesto aninhado'));
+    });
+  });
+
+  it('frontend aninhado sem backend nem persistência continua STATIC_FRONTEND', () => {
+    withTempProject(root => {
+      writeJson(root, 'frontend/package.json', {
+        name: 'frontend',
+        dependencies: { '@angular/core': '^8.2.14' },
+      });
+
+      const assessment = new ArchitectureApplicabilityEngine().assess(root);
+
+      assert.strictEqual(assessment.inferred_profile, 'STATIC_FRONTEND');
+      assert.strictEqual(assessment.domain_policy, 'NOT_APPLICABLE');
+    });
+  });
 });

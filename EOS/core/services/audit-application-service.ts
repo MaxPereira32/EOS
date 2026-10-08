@@ -54,6 +54,54 @@ function parseExecutionTimeout(value: string | undefined): number | null {
     : null;
 }
 
+const TOOLING_MISSING_PATTERNS: readonly RegExp[] = [
+  // Windows cmd (pt-BR e en-US)
+  /n[ãa]o\s+[ée]\s+reconhecido\s+como\s+um\s+comando/i,
+  /is\s+not\s+recognized\s+as\s+an\s+internal\s+or\s+external\s+command/i,
+  // Shells POSIX
+  /command\s+not\s+found/i,
+  /:\s*\d+:\s*[\w.@/-]+:\s*not\s+found/i,
+  // npm não encontrou runtime/script obrigatório
+  /npm\s+err!?\s+code\s+enoent/i,
+];
+
+function looksLikeMissingTooling(output: string): boolean {
+  return TOOLING_MISSING_PATTERNS.some(pattern => pattern.test(output));
+}
+
+const GOVERNANCE_BASELINE_DOCS = ['.eos/contexto.md', '.eos/arquitetura-atual.md', '.eos/decisores.md'];
+
+/**
+ * Avalia a presença de artefatos mínimos de governança. A ausência não prova
+ * insegurança, mas impede tratar a auditoria como completa (fail-closed).
+ */
+function assessGovernanceArtifacts(rootPath: string): RuleEvaluationResult {
+  const fs = require('fs');
+  const missingDocs = GOVERNANCE_BASELINE_DOCS.filter(doc => !fs.existsSync(path.join(rootPath, doc)));
+
+  let declaration = false;
+  try {
+    const riskPath = path.join(rootPath, 'eos.risk.yml');
+    if (fs.existsSync(riskPath)) {
+      const content = fs.readFileSync(riskPath, 'utf8');
+      declaration = /^\s+profile\s*:/m.test(content)
+        || /^\s+domain_directory\s*:/m.test(content)
+        || /^security_claims\s*:/m.test(content);
+    }
+  } catch {
+    declaration = false;
+  }
+
+  const baselineComplete = missingDocs.length === 0;
+  const status = baselineComplete || declaration ? 'PASS' : 'INSUFFICIENT_EVIDENCE';
+  const rationale = baselineComplete
+    ? 'Artefatos mínimos de governança presentes: contexto, arquitetura atual e decisores.'
+    : declaration
+      ? `eos.risk.yml declara arquitetura/claims; documentação de governança ausente no alvo: ${missingDocs.join(', ')}.`
+      : `Cobertura de governança parcial: ausentes ${missingDocs.join(', ')} e nenhuma declaração de arquitetura/claims em eos.risk.yml.`;
+  return { rule_id: 'EOS-GOVERNANCE-001', rule_version: '1.0', status, rationale, facts_used: [] };
+}
+
 function readDeclaredExecutionTimeoutConfig(rootPath: string): DeclaredExecutionTimeoutConfig {
   const result: DeclaredExecutionTimeoutConfig = {
     defaultTimeoutMs: null,
@@ -294,27 +342,140 @@ function findNestedPackageManifests(rootPath: string): string[] {
   return results;
 }
 
+interface DeclaredExternalCheck {
+  readonly name: string;
+  readonly argv: readonly string[];
+}
+
+const MAX_EXTERNAL_CHECKS = 8;
+const MAX_ARGV_LENGTH = 32;
+const MAX_ARG_LENGTH = 4096;
+
+/** Interpreta um array YAML inline (`["a", 'b', c]`) preservando aspas simples/duplas. */
+function parseInlineArgv(value: string): string[] | null {
+  const trimmed = value.trim();
+  if (!trimmed.startsWith('[') || !trimmed.endsWith(']')) return null;
+  const inner = trimmed.slice(1, -1).trim();
+  if (!inner) return [];
+  const items: string[] = [];
+  const pattern = /\s*(?:"((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)'|([^,]+))/g;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(inner)) !== null) {
+    const raw = match[1] ?? match[2] ?? match[3] ?? '';
+    let item = raw.replace(/\\(["'\\])/g, '$1').trim();
+    if (item.length >= 2
+      && ((item.startsWith('"') && item.endsWith('"')) || (item.startsWith("'") && item.endsWith("'")))) {
+      item = item.slice(1, -1);
+    }
+    if (item.length > 0) items.push(item);
+  }
+  return items;
+}
+
+/**
+ * Lê `execution.external_checks` do eos.risk.yml. Cada item declara `name` e
+ * `argv` (inline ou lista). O EOS executa exatamente o argv declarado, sem
+ * shell próprio, e registra a evidência como qualquer outro gate.
+ */
+function readDeclaredExternalChecks(rootPath: string): DeclaredExternalCheck[] {
+  try {
+    const riskPath = path.join(rootPath, 'eos.risk.yml');
+    if (!require('fs').existsSync(riskPath)) return [];
+    const lines = require('fs').readFileSync(riskPath, 'utf8').split(/\r?\n/);
+    const checks: DeclaredExternalCheck[] = [];
+    let inExecution = false;
+    let inExternalChecks = false;
+    let currentName: string | null = null;
+    let currentArgv: string[] = [];
+    let collectingArgvLines = false;
+
+    const flush = (): void => {
+      const validName = currentName !== null && /^[A-Za-z0-9._-]{1,64}$/.test(currentName);
+      const validArgv = currentArgv.length > 0
+        && currentArgv.length <= MAX_ARGV_LENGTH
+        && currentArgv.every(arg => arg.length > 0 && arg.length <= MAX_ARG_LENGTH);
+      if (validName && validArgv && checks.length < MAX_EXTERNAL_CHECKS) {
+        checks.push({ name: currentName as string, argv: [...currentArgv] });
+      }
+      currentName = null;
+      currentArgv = [];
+      collectingArgvLines = false;
+    };
+
+    for (const line of lines) {
+      if (/^execution\s*:/.test(line)) {
+        inExecution = true;
+        continue;
+      }
+      if (!inExecution) continue;
+      if (/^[^\s#][^:]*\s*:/.test(line)) {
+        flush();
+        inExecution = false;
+        break;
+      }
+
+      if (/^\s+external_checks\s*:/.test(line)) {
+        inExternalChecks = true;
+        continue;
+      }
+      if (!inExternalChecks) continue;
+
+      const nameMatch = line.match(/^\s*-\s+name\s*:\s*["']?([^"'#]+?)["']?\s*$/);
+      if (nameMatch) {
+        flush();
+        currentName = nameMatch[1].trim();
+        continue;
+      }
+      if (currentName === null) continue;
+
+      const inlineArgv = line.match(/^\s+argv\s*:\s*(\[.*\])\s*$/);
+      if (inlineArgv) {
+        const parsed = parseInlineArgv(inlineArgv[1]);
+        if (parsed) currentArgv = parsed;
+        collectingArgvLines = false;
+        continue;
+      }
+      if (/^\s+argv\s*:\s*$/.test(line)) {
+        collectingArgvLines = true;
+        continue;
+      }
+      if (collectingArgvLines) {
+        const itemMatch = line.match(/^\s+-\s+(.*?)\s*$/);
+        if (itemMatch) {
+          let item = itemMatch[1].trim();
+          if (item.length >= 2
+            && ((item.startsWith('"') && item.endsWith('"')) || (item.startsWith("'") && item.endsWith("'")))) {
+            item = item.slice(1, -1);
+          }
+          if (item.length > 0) currentArgv.push(item);
+          continue;
+        }
+        collectingArgvLines = false;
+      }
+    }
+
+    flush();
+    return checks;
+  } catch {
+    return [];
+  }
+}
+
 export class AuditApplicationService {
-  private async executeProjectCheck(
-    rootPath: string,
-    check: string,
-    workingDirectory: string = rootPath,
-    options: ProjectCheckOptions = {},
-  ): Promise<ExecutionEvidence> {
+  private async runCapturedCommand(params: {
+    readonly command: string;
+    readonly args: readonly string[];
+    readonly commandLine: string;
+    readonly checkId: string;
+    readonly workingDirectory: string;
+    readonly timeoutMs: number;
+    readonly env?: NodeJS.ProcessEnv;
+    readonly rlsClaim?: { readonly id: string; readonly nonce: string };
+  }): Promise<ExecutionEvidence> {
     const childProcess = require('child_process');
     const startedAt = Date.now();
     const isWindows = process.platform === 'win32';
-    const command = isWindows ? (process.env.ComSpec || 'cmd.exe') : 'npm';
-    const args = isWindows ? ['/d', '/s', '/c', 'npm.cmd', 'run', check] : ['run', check];
-    const relativeWorkingDir = path.relative(rootPath, workingDirectory).replace(/\\/g, '/');
-    const commandLine = relativeWorkingDir
-      ? `npm --prefix ${relativeWorkingDir} run ${check}`
-      : `npm run ${check}`;
-    const declaredTimeouts = readDeclaredExecutionTimeoutConfig(rootPath);
-    const timeoutMs = parseExecutionTimeout(process.env.EOS_CHECK_TIMEOUT_MS)
-      ?? declaredTimeouts.checkTimeoutsMs[check]
-      ?? declaredTimeouts.defaultTimeoutMs
-      ?? 120_000;
+    const { command, args, commandLine, checkId, workingDirectory, timeoutMs } = params;
     const heartbeatMs = Math.max(250, Number(process.env.EOS_CHECK_HEARTBEAT_MS || 15000));
     const maxCapturedBytes = 10 * 1024 * 1024;
 
@@ -338,12 +499,7 @@ export class AuditApplicationService {
         shell: false,
         windowsHide: true,
         stdio: ['ignore', 'pipe', 'pipe'],
-        env: options.rlsClaim ? {
-          ...process.env,
-          EOS_RLS_CLAIM_ID: options.rlsClaim.id,
-          EOS_RLS_NONCE: options.rlsClaim.nonce,
-          EOS_RLS_PHASE: 'BASELINE',
-        } : undefined,
+        env: params.env,
       });
 
       child.stdout?.on('data', (chunk: unknown) => {
@@ -429,26 +585,40 @@ export class AuditApplicationService {
           stderr = appendBounded(stderr, `\n${spawnError.message}`);
         }
 
+        // Um processo que não inicia ou cujo binário interno não existe é
+        // ferramental ausente, não teste reprovado: o resultado permanece
+        // inconclusivo (NOT_AVAILABLE) e nunca vira evidência de aprovação.
+        const toolingMissing = Boolean(spawnError) || (!timedOut && looksLikeMissingTooling(stderr));
         const exitCode = timedOut || spawnError ? -1 : (typeof code === 'number' ? code : -1);
-        const state = exitCode === 0 ? 'PASS' : 'FAIL';
+        const state: ExecutionEvidence['state'] = toolingMissing
+          ? 'NOT_AVAILABLE'
+          : exitCode === 0 ? 'PASS' : 'FAIL';
+        const failureCause: ExecutionEvidence['failure_cause'] = state === 'PASS'
+          ? undefined
+          : toolingMissing
+            ? 'TOOLING_MISSING'
+            : timedOut
+              ? 'TIMEOUT'
+              : 'TEST_FAILED';
         const durationMs = Date.now() - startedAt;
         const output = redactOutput(`${stdout}\n${stderr}`).replace(/\s+/g, ' ').trim();
         const symbol = state === 'PASS' ? '✓' : '✗';
-        console.log(`[EOS][CHECK] ${symbol} ${commandLine} ${state} — ${(durationMs / 1000).toFixed(1)}s`);
+        console.log(`[EOS][CHECK] ${symbol} ${commandLine} ${state}${failureCause ? ` [${failureCause}]` : ''} — ${(durationMs / 1000).toFixed(1)}s`);
 
         resolve({
-          check_id: `EOS-EXEC-${check.toUpperCase()}`,
+          check_id: checkId,
           command_line: commandLine,
           working_directory: workingDirectory,
           exit_code: exitCode,
           state,
+          failure_cause: failureCause,
           duration_ms: durationMs,
           stdout_sha256: crypto.createHash('sha256').update(stdout).digest('hex'),
           stderr_sha256: crypto.createHash('sha256').update(stderr).digest('hex'),
           output_excerpt: output.slice(0, 500) || '(sem saída)',
-          ...(options.rlsClaim ? {
-            rls_claim_id: options.rlsClaim.id,
-            rls_nonce: options.rlsClaim.nonce,
+          ...(params.rlsClaim ? {
+            rls_claim_id: params.rlsClaim.id,
+            rls_nonce: params.rlsClaim.nonce,
             rls_records: extractRlsRecords(`${stdout}\n${stderr}`),
           } : {}),
         });
@@ -466,9 +636,81 @@ export class AuditApplicationService {
     });
   }
 
+  private async executeProjectCheck(
+    rootPath: string,
+    check: string,
+    workingDirectory: string = rootPath,
+    options: ProjectCheckOptions = {},
+  ): Promise<ExecutionEvidence> {
+    const isWindows = process.platform === 'win32';
+    const command = isWindows ? (process.env.ComSpec || 'cmd.exe') : 'npm';
+    const args = isWindows ? ['/d', '/s', '/c', 'npm.cmd', 'run', check] : ['run', check];
+    const relativeWorkingDir = path.relative(rootPath, workingDirectory).replace(/\\/g, '/');
+    const commandLine = relativeWorkingDir
+      ? `npm --prefix ${relativeWorkingDir} run ${check}`
+      : `npm run ${check}`;
+    const declaredTimeouts = readDeclaredExecutionTimeoutConfig(rootPath);
+    const timeoutMs = parseExecutionTimeout(process.env.EOS_CHECK_TIMEOUT_MS)
+      ?? declaredTimeouts.checkTimeoutsMs[check]
+      ?? declaredTimeouts.defaultTimeoutMs
+      ?? 120_000;
+
+    return this.runCapturedCommand({
+      command,
+      args,
+      commandLine,
+      checkId: `EOS-EXEC-${check.toUpperCase()}`,
+      workingDirectory,
+      timeoutMs,
+      env: options.rlsClaim
+        ? {
+            ...process.env,
+            EOS_RLS_CLAIM_ID: options.rlsClaim.id,
+            EOS_RLS_NONCE: options.rlsClaim.nonce,
+            EOS_RLS_PHASE: 'BASELINE',
+          }
+        : undefined,
+      rlsClaim: options.rlsClaim,
+    });
+  }
+
+  private describeArgv(argv: readonly string[]): string {
+    return argv
+      .map(arg => (/[\s"']/.test(arg) ? `"${arg.replace(/"/g, '\\"')}"` : arg))
+      .join(' ');
+  }
+
+  private async executeExternalChecks(rootPath: string): Promise<ExecutionEvidence[]> {
+    const declared = readDeclaredExternalChecks(rootPath);
+    if (declared.length === 0) return [];
+    const declaredTimeouts = readDeclaredExecutionTimeoutConfig(rootPath);
+    const results: ExecutionEvidence[] = [];
+
+    for (const check of declared) {
+      const [command, ...args] = check.argv;
+      if (!command) continue;
+      const timeoutMs = parseExecutionTimeout(process.env.EOS_CHECK_TIMEOUT_MS)
+        ?? declaredTimeouts.checkTimeoutsMs[check.name]
+        ?? declaredTimeouts.defaultTimeoutMs
+        ?? 120_000;
+      results.push(await this.runCapturedCommand({
+        command,
+        args,
+        commandLine: this.describeArgv(check.argv),
+        checkId: `EOS-EXEC-EXT-${check.name.toUpperCase()}`,
+        workingDirectory: rootPath,
+        timeoutMs,
+      }));
+    }
+    return results;
+  }
+
   private async executeProjectChecks(rootPath: string): Promise<ExecutionEvidence[]> {
     const packagePath = path.join(rootPath, 'package.json');
     if (!require('fs').existsSync(packagePath)) {
+      // Checks externos declarados no eos.risk.yml não dependem de package.json.
+      const externalOnly = await this.executeExternalChecks(rootPath);
+      if (externalOnly.length > 0) return externalOnly;
       return [{
         check_id: 'EOS-EXEC-001', command_line: 'package.json', working_directory: rootPath,
         exit_code: -1, state: 'NOT_AVAILABLE', duration_ms: 0,
@@ -517,6 +759,8 @@ export class AuditApplicationService {
         }));
       }
     }
+
+    results.push(...(await this.executeExternalChecks(rootPath)));
 
     for (const manifestPath of findNestedPackageManifests(rootPath)) {
       let nestedScripts: Record<string, string> = {};
@@ -687,13 +931,18 @@ export class AuditApplicationService {
         : `A coleta registrou ${fsCollectionResult.coverage.files_errored} erro(s) e ${fsCollectionResult.coverage.files_inaccessible} arquivo(s) inacessível(is); o escopo não está completamente comprovado.`,
       facts_used: []
     });
+
+    // Governança explícita: ausência de contexto/arquitetura/decisores e de
+    // declaração em eos.risk.yml vira evidência insuficiente, nunca aprovação.
+    ruleResults.push(assessGovernanceArtifacts(target.root_path));
+
     const unavailableChecks = executionEvidences.filter(check => check.state === 'NOT_AVAILABLE');
     const failedChecks = executionEvidences.filter(check => check.state === 'FAIL');
     ruleResults.push({
       rule_id: 'EOS-EXECUTION-001', rule_version: '1.0',
       status: failedChecks.length > 0 ? 'FAIL' : unavailableChecks.length > 0 ? 'INSUFFICIENT_EVIDENCE' : 'PASS',
       rationale: failedChecks.length > 0
-        ? `Validações executadas com falha: ${failedChecks.map(check => check.command_line).join(', ')}.`
+        ? `Validações executadas com falha: ${failedChecks.map(check => `${check.command_line}${check.failure_cause ? ` [${check.failure_cause}]` : ''}`).join(', ')}.`
         : unavailableChecks.length > 0
           ? unavailableChecks[0].output_excerpt
           : `Validações executadas e aprovadas: ${executionEvidences.map(check => check.command_line).join(', ')}.`,
@@ -759,6 +1008,9 @@ export class AuditApplicationService {
 
     const inferClaimType = (claimId: string, declaredType: string): SecurityClaimEvaluation['claim_type'] => {
       if (declaredType === 'RLS') return 'RLS';
+      if (declaredType === 'IDOR' || claimId.includes('IDOR')) return 'IDOR';
+      if (declaredType === 'HTTP_ROUTE' || declaredType === 'AUTHORIZATION') return 'AUTHORIZATION';
+      if (declaredType === 'AUTHENTICATION') return 'AUTHENTICATION';
       if (claimId.includes('AUTH')) return 'AUTHENTICATION';
       if (claimId.includes('RBAC') || claimId.includes('AUTHZ')) return 'AUTHORIZATION';
       return 'DATA_MUTABILITY';

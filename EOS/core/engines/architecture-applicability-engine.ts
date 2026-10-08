@@ -108,6 +108,94 @@ function safeReadPackageJson(rootPath: string): Record<string, any> | null {
   }
 }
 
+const NESTED_WALK_EXCLUDED = new Set(['node_modules', 'dist', 'build', 'release', 'coverage', 'vendor', '__pycache__', '.venv', 'venv']);
+
+/**
+ * Manifestos aninhados (ex.: frontend/package.json) carregam o framework real
+ * em monorepos; sem isso a inferência de perfil fica `UNKNOWN` indevidamente.
+ */
+function collectNestedManifestDependencies(rootPath: string): Record<string, unknown> {
+  const merged: Record<string, unknown> = {};
+  const visit = (directory: string, depth: number): void => {
+    if (depth > 3) return;
+    let entries: fs.Dirent[];
+    try {
+      entries = fs.readdirSync(directory, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      if (entry.name.startsWith('.') || NESTED_WALK_EXCLUDED.has(entry.name)) continue;
+      const child = path.join(directory, entry.name);
+      const manifestPath = path.join(child, 'package.json');
+      try {
+        if (fs.existsSync(manifestPath)) {
+          const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+          Object.assign(merged, manifest.dependencies || {}, manifest.devDependencies || {});
+        }
+      } catch {
+        // Manifesto inválido não deve derrubar a inferência.
+      }
+      visit(child, depth + 1);
+    }
+  };
+  visit(rootPath, 0);
+  return merged;
+}
+
+const PYTHON_PERSISTENCE_PATTERN = /(sqlalchemy|psycopg2?|asyncpg|django|flask[-_]sqlalchemy|pymongo|alembic|geoalchemy)/i;
+const PYTHON_MANIFEST_CANDIDATES = [
+  'requirements.txt',
+  'requirements-dev.txt',
+  'backend/requirements.txt',
+  'backend/requirements-dev.txt',
+  'pyproject.toml',
+  'backend/pyproject.toml',
+];
+
+function hasPythonPersistence(rootPath: string): boolean {
+  for (const candidate of PYTHON_MANIFEST_CANDIDATES) {
+    try {
+      const fullPath = path.join(rootPath, candidate);
+      if (fs.existsSync(fullPath) && PYTHON_PERSISTENCE_PATTERN.test(fs.readFileSync(fullPath, 'utf8'))) {
+        return true;
+      }
+    } catch {
+      // Sinal opcional: erro de leitura não deve transformar heurística em hard failure.
+    }
+  }
+  return exists(rootPath, 'migrations') || exists(rootPath, 'backend/migrations');
+}
+
+/** Conta módulos de negócio em layouts Python comuns (`backend/<pacote>/core|modules`). */
+function countPythonBusinessModules(rootPath: string): number {
+  let total = 0;
+  for (const base of ['backend', 'server', 'api']) {
+    const basePath = path.join(rootPath, base);
+    try {
+      if (!fs.existsSync(basePath) || !fs.statSync(basePath).isDirectory()) continue;
+      for (const entry of fs.readdirSync(basePath, { withFileTypes: true })) {
+        if (!entry.isDirectory() || entry.name.startsWith('.') || entry.name === '__pycache__' || entry.name === 'src') continue;
+        for (const container of ['core', 'modules', 'modulos']) {
+          const containerPath = path.join(basePath, entry.name, container);
+          try {
+            if (!fs.existsSync(containerPath) || !fs.statSync(containerPath).isDirectory()) continue;
+            total += fs.readdirSync(containerPath, { withFileTypes: true })
+              .filter(child => child.isDirectory() && !child.name.startsWith('__') && !child.name.startsWith('.'))
+              .length;
+          } catch {
+            // Sinal opcional.
+          }
+        }
+      }
+    } catch {
+      // Sinal opcional.
+    }
+  }
+  return total;
+}
+
 function exists(rootPath: string, relativePath: string): boolean {
   try {
     return fs.existsSync(path.join(rootPath, relativePath));
@@ -138,12 +226,21 @@ function countBusinessModuleDirs(rootPath: string): number {
 
 function inferProfile(rootPath: string): { profile: ArchitectureProfile; confidence: number; signals: string[] } {
   const pkg = safeReadPackageJson(rootPath);
+  const nestedDependencies = collectNestedManifestDependencies(rootPath);
+  const rootDependencyCount = Object.keys(pkg?.dependencies || {}).length
+    + Object.keys(pkg?.devDependencies || {}).length;
   const dependencies = {
     ...(pkg?.dependencies || {}),
     ...(pkg?.devDependencies || {}),
+    ...nestedDependencies,
   } as Record<string, unknown>;
 
   const signals: string[] = [];
+  if (rootDependencyCount === 0 && Object.keys(nestedDependencies).length > 0) {
+    signals.push('dependências de framework lidas de manifesto aninhado');
+  }
+  const pythonPersistence = hasPythonPersistence(rootPath);
+  if (pythonPersistence) signals.push('persistência Python detectada');
   const hasFrontendFramework = Boolean(
     dependencies.react || dependencies['react-dom'] || dependencies.vue ||
     dependencies['@angular/core'] || dependencies.svelte || dependencies.next ||
@@ -157,7 +254,7 @@ function inferProfile(rootPath: string): { profile: ArchitectureProfile; confide
     dependencies['drizzle-orm'] || dependencies.prisma || dependencies.typeorm ||
     dependencies.sequelize || dependencies.mongoose || dependencies.firebase ||
     dependencies['@supabase/supabase-js'] || dependencies.pg || dependencies.mysql2
-  );
+  ) || pythonPersistence;
   const hasDomainDir = [
     'src/domain',
     'src/dominio',
@@ -165,7 +262,7 @@ function inferProfile(rootPath: string): { profile: ArchitectureProfile; confide
     'backend/src/domain',
     'backend/src/dominio',
   ].some(candidate => exists(rootPath, candidate));
-  const businessModuleCount = countBusinessModuleDirs(rootPath);
+  const businessModuleCount = countBusinessModuleDirs(rootPath) + countPythonBusinessModules(rootPath);
   const hasComponentLibrarySignals = Boolean(pkg?.peerDependencies?.react) &&
     (exists(rootPath, 'src/components') || exists(rootPath, 'src/componentes')) &&
     !hasBackendFramework;

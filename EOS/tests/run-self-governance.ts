@@ -1,6 +1,11 @@
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import { FirestoreSecurityEngine } from '../core/engines/firestore-security-engine';
 import { CausalityMutationEngine } from '../core/engines/causality-mutation-engine';
 import { HardQualityGateEngine } from '../core/engines/hard-quality-gate-engine';
+import { GeneratedAppSecurityEngine } from '../core/engines/generated-app-security-engine';
+import { RuleCatalog } from '../core/rules/rule-catalog';
 import { SecurityClaimEvaluation, FormalEvidence } from '../core/domain/types';
 
 console.log('======================================================');
@@ -62,6 +67,33 @@ assert(resG.overall_phase_status === 'BLOCKED', 'CASE G: Score 100 com Hard Gate
 
 // TEST 4: CASE H
 assert(mutResC.mutated_status === 'PASS', 'CASE H: Teste simulado continua fornecendo PASS após mutação (comprovando falha de causação)');
+
+// TEST 5: Taxonomia e catálogo das regras estáticas (Fases A/D)
+const taxonomyRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'eos-selfgov-taxonomy-'));
+try {
+  fs.writeFileSync(path.join(taxonomyRoot, 'routes.py'), [
+    '@api.route("/items", methods=["POST"])',
+    '@jwt_required(optional=True)',
+    'def create():',
+    '    payload = dict(request.get_json())',
+    '    for field in payload:',
+    '        if hasattr(ItemModel, field):',
+    '            datas2db[field] = payload[field]',
+    '    item = ItemModel(**datas2db)',
+  ].join('\n'));
+  const scan = new GeneratedAppSecurityEngine().scan(taxonomyRoot, 'TGT-SELF-GOV', false);
+  const massAssignment = scan.findings.find(finding => finding.finding_id.startsWith('EOS-GENAI-PY-MASSASSIGN-001'));
+  assert(
+    massAssignment?.taxonomy?.cwe_id === 'CWE-915: Improperly Controlled Modification of Dynamically-Determined Object Attributes',
+    'CASE I: mass-assignment deve carregar a taxonomia CWE-915',
+  );
+  assert(
+    RuleCatalog.getRule('EOS-GENAI-PY-MASSASSIGN-001') !== undefined,
+    'CASE J: regra estática deve resolver no RuleCatalog',
+  );
+} finally {
+  fs.rmSync(taxonomyRoot, { recursive: true, force: true });
+}
 
 console.log('\n------------------------------------------------------');
 console.log(`RESULTADO FINAL DA SUÍTE DE SELF-GOVERNANCE: ${passed} PASSED, ${failed} FAILED.`);

@@ -145,6 +145,15 @@ export interface RuleEvaluationResult {
   readonly facts_used: readonly string[];
 }
 
+export interface FindingTaxonomy {
+  readonly rule_ref: string;
+  readonly owasp_category: string;
+  readonly cwe_id: string;
+  readonly cvss_v4_vector: string;
+  readonly nist_sp_800_53?: string;
+  readonly mitre_attack_id?: string;
+}
+
 export interface Finding {
   readonly finding_id: string;
   readonly rule_id: string;
@@ -159,6 +168,8 @@ export interface Finding {
   readonly confidence: number;
   readonly status: 'OPEN' | 'MITIGATED' | 'FALSE_POSITIVE';
   readonly timestamp: string;
+  /** Taxonomia corporativa (OWASP/CWE/CVSS) quando a regra está no catálogo. */
+  readonly taxonomy?: FindingTaxonomy;
 }
 
 export interface CoverageMetrics {
@@ -222,7 +233,7 @@ export interface FormalEvidence {
 
 export interface SecurityClaimEvaluation {
   readonly claim_id: string;
-  readonly claim_type: 'FIRESTORE_RULES' | 'HTTP_ROUTE' | 'AUTHORIZATION' | 'AUTHENTICATION' | 'DATA_MUTABILITY' | 'RLS';
+  readonly claim_type: 'FIRESTORE_RULES' | 'HTTP_ROUTE' | 'AUTHORIZATION' | 'AUTHENTICATION' | 'DATA_MUTABILITY' | 'RLS' | 'IDOR';
   readonly target_artifact: string;
   readonly evidence: FormalEvidence;
   readonly security_contract?: SecurityDataContract;
@@ -262,6 +273,8 @@ export interface ExecutionEvidence {
   readonly working_directory: string;
   readonly exit_code: number;
   readonly state: 'PASS' | 'FAIL' | 'NOT_AVAILABLE';
+  /** Causa operacional quando o check não passa; ausente apenas em PASS. */
+  readonly failure_cause?: 'TOOLING_MISSING' | 'TEST_FAILED' | 'TIMEOUT';
   readonly duration_ms: number;
   readonly stdout_sha256: string;
   readonly stderr_sha256: string;
