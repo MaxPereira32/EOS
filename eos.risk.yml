@@ -1,0 +1,5 @@
+# Política declarativa do EOS (alvo: o próprio repositório).
+# Perfil efetivo apurado pela engine: CLI_OR_SCRIPT (confiança 0.90) —
+# declaração idêntica à inferência; divergência seria falso verde.
+architecture:
+  profile: cli-or-script

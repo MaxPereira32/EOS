@@ -18,8 +18,12 @@ function printUsage() {
   printBanner();
   console.log('Uso: eos <comando> [caminho_alvo]\n');
   console.log('Comandos disponíveis:');
-  console.log('  audit <path>  - Executa a esteira real de auditoria no diretório informado');
-  console.log('  fix           - (DESABILITADO) Remediação autônoma travada por segurança');
+  console.log('  mcp                     - Inicia o servidor MCP nativo (stdio, JSON-RPC 2.0)');
+  console.log('  audit <path>            - Executa a esteira real de auditoria no diretório informado');
+  console.log('  orchestrate <finding_id> - Protocolo multi-agente para o finding informado');
+  console.log('  nist-assess [req_id]    - Avaliação normativa NIST SSDF SP 800-218 (padrão: PW.8.2)');
+  console.log('  report [path]           - Reexibe o resumo da última auditoria (.eos/auditoria.json)');
+  console.log('  fix                     - (DESABILITADO) Remediação autônoma travada por segurança');
   console.log('\nExemplo: npx tsx EOS/bin/eos.ts audit ./src\n');
 }
 
@@ -216,6 +220,43 @@ async function main() {
         console.log('\n✅ AVALIAÇÃO NORMATIVA E REAVALIAÇÃO CONCLUÍDAS: Critérios comprovados por evidência.');
       } else {
         console.error(`\n💥 AVALIAÇÃO NORMATIVA REJEITADA OU BLOQUEADA! Status: ${result.final_reassessment.status}`);
+        process.exitCode = 1;
+      }
+      break;
+    }
+
+    case 'report': {
+      printBanner();
+      const fs = require('fs');
+      const reportPath = path.join(path.resolve(targetPath), '.eos', 'auditoria.json');
+      if (!fs.existsSync(reportPath)) {
+        console.error(`[-] Nenhuma auditoria encontrada em '${reportPath}'. Execute 'eos audit <path>' primeiro.`);
+        process.exitCode = 1;
+        break;
+      }
+      let report: any;
+      try {
+        report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+      } catch (err: any) {
+        console.error(`[-] Falha ao ler '${reportPath}': ${err.message || err}`);
+        process.exitCode = 1;
+        break;
+      }
+      console.log('\n======================================================');
+      console.log(`  📄 EOS GOVERNANCE AUDIT REPORT (${report.audit_run_id || 'UNKNOWN'})`);
+      console.log('======================================================\n');
+      console.log(`  - Timestamp:            ${report.timestamp || 'UNKNOWN'}`);
+      console.log(`  - Target ID:            ${report.target?.target_id || 'UNKNOWN'}`);
+      console.log(`  - Arquivos Analisados:  ${report.coverage?.files_analyzed ?? '?'} / ${report.coverage?.files_discovered ?? '?'}`);
+      console.log(`  - Quality Gates:        ${(report.rule_results || []).length}`);
+      console.log(`  - Security Claims:      ${(report.security_claims || []).length}`);
+      console.log(`  - Achados (Findings):   ${(report.findings || []).length}`);
+      console.log(`  - OVERALL PHASE STATUS:  [ ${report.overall_phase_status || 'UNKNOWN'} ]`);
+
+      const hasRuleFailures = (report.rule_results || []).some((r: any) => r.status === 'FAIL');
+      const hasInconclusive = (report.rule_results || []).some((r: any) => r.status === 'INSUFFICIENT_EVIDENCE' || r.status === 'ERROR');
+      const isBlockedOrRed = report.overall_phase_status === 'BLOCKED' || report.overall_phase_status === 'RED';
+      if (isBlockedOrRed || hasRuleFailures || hasInconclusive) {
         process.exitCode = 1;
       }
       break;
