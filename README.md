@@ -134,11 +134,11 @@ O EOS disponibiliza um CLI corporativo unificado (`EOS/bin/eos.ts`) com controle
 | `npx tsx EOS/bin/eos.ts orchestrate <finding_id>` | Executa o protocolo multi-agente nativo para validação e restauração de invariantes com rastreamento formal em JSON. |
 | `npx tsx EOS/bin/eos.ts nist-assess <req_id>` | Executa a esteira de conformidade normativa NIST SSDF SP 800-218 (ex: `PW.8.2`) com snapshots antes/depois. |
 | `npm run mcp` | Inicia o servidor MCP nativo (stdio, JSON-RPC 2.0) para agentes de IA. |
-| `npm run report` | Gera relatório consolidado da última auditoria (requer implementação do `case 'report'` no CLI — atualmente cai no help). |
+| `npm run report` | Reexibe o resumo da última auditoria (`.eos/auditoria.json`); falha fechado sem auditoria prévia. |
 | `npm run self-governance` | Executa a auto-governança do EOS sobre sua própria base de código. |
 | `npm run test` | Executa a suíte de testes de integridade e conformidade. |
 
-> ⚠️ **Nota:** os scripts `npm run graph` e o `help` do CLI (`--help`) estão desatualizados — o CLI implementa `mcp`, `audit`, `orchestrate` e `nist-assess`, mas o `printUsage()` anuncia apenas `audit`/`fix`, e não há `case 'graph'` implementado. Não use `npm run graph` até correção.
+> 🔒 **Comandos implementados:** `mcp`, `audit`, `orchestrate`, `nist-assess`, `report` (ver `npx tsx EOS/bin/eos.ts --help`). O script `graph` foi removido: não há construtor de grafo a partir de fonte ou auditoria, e anunciá-lo seria falso sucesso.
 
 > 🔒 **Aviso de Salvaguarda:** O comando de remediação direta (`eos fix`) permanece intencionalmente **desabilitado por segurança** para garantir validação atômica de *Unified Diff* e contenção contra *Path Traversal* antes de qualquer escrita no disco.
 

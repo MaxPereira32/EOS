@@ -6,9 +6,9 @@ Este documento é o manifesto oficial de governança e controle de versão do **
 
 ## 1. Identificação do Framework
 
-* **Versão Ativa**: EOS v0.9.0
-* **Data de Homologação**: 2026-07-14
-* **Status**: Homologado e Pronto para Congelamento Técnico
+* **Versão Ativa**: EOS v2.2.0 (CLI v4.0.0 — Self-Governed Hard Gate Edition)
+* **Data de Homologação**: 2026-10-09
+* **Status**: Ativo (ver `package.json` como fonte da versão do pacote)
 
 ---
 
@@ -56,6 +56,7 @@ Este documento é o manifesto oficial de governança e controle de versão do **
 | **v0.7.0** | 2026-07-14 | Introdução do Knowledge Graph (carregamento de Features e Domínios de negócio no Semantic Graph). |
 | **v0.8.0** | 2026-07-14 | Implementação da Dependency Engine (acoplamentos proibidos) e Security Engine (rotas expostas e pacotes vulneráveis). |
 | **v0.9.0** | 2026-07-14 | Implementação da Architecture Diff Engine (delta de nós e arestas com histórico no MarkdownReporter). |
+| **v2.2.0** | 2026-10-09 | CLI v4.0.0 Hard Gate; claims causais declarados; per-run archive e audit registry; mailbox; HMAC via SecretStore (detalhes em `git log` e `docs/history`). |
 
 ---
 

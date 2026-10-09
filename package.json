@@ -9,7 +9,6 @@
   "scripts": {
     "mcp": "tsx EOS/bin/eos.ts mcp",
     "audit": "tsx EOS/bin/eos.ts audit",
-    "graph": "tsx EOS/bin/eos.ts graph",
     "fix": "tsx EOS/bin/eos.ts fix",
     "report": "tsx EOS/bin/eos.ts report",
     "test": "tsx --test EOS/tests/**/*.test.ts",
