@@ -25,8 +25,10 @@ If executing via terminal:
 # Run audit pipeline
 npm run audit
 
-# Analyze Domain Graph and Blast Radius
-npm run graph
+# Reexibir o resumo da última auditoria (sem reexecutar a esteira)
+npx tsx EOS/bin/eos.ts report
+# Nota: análise de Domain Graph/Blast Radius só via ferramenta MCP `eos_query_graph`;
+# não existe comando CLI `graph` (removido por não ter construtor honesto).
 
 # Generate and apply autonomous fixes
 npm run fix

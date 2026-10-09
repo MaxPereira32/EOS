@@ -74,6 +74,31 @@ test('CA-04-02b: report reexibe auditoria existente sem reexecutar a esteira', (
   }
 });
 
+test('CA-04-02d: report com auditoria BLOCKED espelha exit do audit', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'eos-cor04-'));
+  try {
+    fs.mkdirSync(path.join(root, '.eos'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, '.eos', 'auditoria.json'),
+      JSON.stringify({
+        audit_run_id: 'RUN-fixture-cor04-blocked',
+        timestamp: '2026-10-09T00:00:00.000Z',
+        target: { target_id: 'TGT-fixture' },
+        coverage: { files_analyzed: 1, files_discovered: 1 },
+        rule_results: [{ rule_id: 'R-1', status: 'PASS' }],
+        security_claims: [],
+        findings: [],
+        overall_phase_status: 'BLOCKED',
+      }),
+    );
+    const { stdout, exitCode } = runCli(['report', root]);
+    assert.notStrictEqual(exitCode, 0);
+    assert.match(stdout, /BLOCKED/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('CA-04-02c: package.json sem script quebrado (graph removido, report presente)', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8'));
   assert.strictEqual(pkg.scripts.graph, undefined, 'script graph removido');
