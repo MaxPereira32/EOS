@@ -9,15 +9,15 @@
 |---|---|---|---|---|
 | COR-01 | ACH-01 (Firestore SIMULATION_ONLY) | P0 | CONCLUIDO (R01 APROVADA humana; merge `cf3e200`) | Claim condicionado à declaração + aceite formal |
 | COR-02 | ACH-02 + EOS-SEC-005 (HMAC hardcoded + canonicalização rasa) | P0 | CONCLUIDO (R01 APROVADA humana; merge `cf3e200`) | Segredo via SecretStore + canonicalização recursiva |
-| COR-09 | Lacuna §G (parecer não travado a SHA) | P1 | PLANEJADO | Verificação de impacto automática parecer↔HEAD (reutilizar `artifact-binding-engine`) |
-| COR-03 | ACH-03 (boundary API local) | P1 | EM_ANALISE | Auditar boundary completo; validar `projectId/id` |
-| COR-04 | ACH-06 (CLI help + `graph`/`report`) | P1 | PLANEJADO | Help completo; implementar ou remover `graph`/`report` |
-| COR-05 | ACH-08 (ACF parcial) | P2 | PLANEJADO | `.eos/arquitetura-atual.md` + `.eos/decisores.md` mínimos reais |
-| COR-06 | ACH-04 (RLS Supabase) | P2 | PLANEJADO | Claim RLS + validação runtime ou não-aplicabilidade justificada |
-| COR-08 | ACH-07 (`eos-version.md` v0.9.0) | P3 | PLANEJADO | Sincronizar com v2.2.0 / CLI v4.0.0 |
-| COR-07 | ACH-05 (falsos positivos SECRET-001) | P3 | PLANEJADO | Confirmar example sem segredo; allowlist documentada |
-| COR-10 | R1 revisão-R01 (rotação silenciosa em store corrompido) | P2 | PLANEJADO | Distinguir "store ausente" (gerar) de "store ilegível" (falhar fechado) |
-| COR-11 | R2 revisão-R01 (gate `includes('FIRESTORE')` super-inclusivo) | P3 | PLANEJADO | Allowlist exata de ids de claim |
+| COR-09 | Lacuna §G (parecer não travado a SHA) | P1 | CONCLUIDO (`verify-audit`, AUD-06 R01 APROVADA, merge `26cc06d`) | Verificação de impacto automática parecer↔HEAD (reutilizar `artifact-binding-engine`) |
+| COR-03 | ACH-03 (boundary API local) | P1 | CONCLUIDO (AUD-05 R01 APROVADA, merge `581c7a5`) | Auditar boundary completo; validar `projectId/id` |
+| COR-04 | ACH-06 (CLI help + `graph`/`report`) | P1 | CONCLUIDO (AUD-04 R01 APROVADA, merge `8b363db`) | Help completo; implementar ou remover `graph`/`report` |
+| COR-05 | ACH-08 (ACF parcial) | P2 | CONCLUIDO (AUD-04 R01 APROVADA) | `.eos/arquitetura-atual.md` + `.eos/decisores.md` mínimos reais |
+| COR-06 | ACH-04 (RLS Supabase) | P2 | CONCLUIDO (AUD-05 R01 APROVADA; auto-sinalização eliminada na causa) | Claim RLS + validação runtime ou não-aplicabilidade justificada |
+| COR-08 | ACH-07 (`eos-version.md` v0.9.0) | P3 | CONCLUIDO (AUD-04 R01 APROVADA) | Sincronizar com v2.2.0 / CLI v4.0.0 |
+| COR-07 | ACH-05 (falsos positivos SECRET-001) | P3 | CONCLUIDO (AUD-05 R01 APROVADA) | Confirmar example sem segredo; allowlist documentada |
+| COR-10 | R1 revisão-R01 (rotação silenciosa em store corrompido) | P2 | CONCLUIDO (AUD-05 R01 APROVADA) | Distinguir "store ausente" (gerar) de "store ilegível" (falhar fechado) |
+| COR-11 | R2 revisão-R01 (gate `includes('FIRESTORE')` super-inclusivo) | P3 | CONCLUIDO (AUD-05 R01 APROVADA) | Allowlist exata de ids de claim |
 
 ## Dependências e ordem
 

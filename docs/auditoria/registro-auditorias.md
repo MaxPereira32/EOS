@@ -7,6 +7,9 @@
 | AUD-2026-10-08-01 | 2026-10-08 | Reauditoria do plano de correções do EOS: EOS-GOV-003 (R01 e R02), EOS-GOV-011 (novo), verificação de baseline dos demais achados | `508581c` + working tree modificado | opencode (deepseek-v4.1-flash) | R01: opencode (independente do implementador original); R02/GOV-011: subagente opencode (auditoria independente) | `auditorias/AUD-2026-10-08-01/` | **Concluída (escopo parcial)** — EOS-GOV-003 e EOS-GOV-011 aprovados com auditoria independente; demais achados com baseline material e status registrados |
 | AUD-2026-10-08-02 | 2026-10-08 | Implementação planejada §14 (F1+F2): EOS-GOV-012 (ancoragem ao alvo), EOS-GOV-013 (identificação/índice), EOS-GOV-014 (recorrência); F3 bloqueada (EOS-SEC-005); storage externo fora de escopo | `508581c` + working tree (inclui AUD-01 não commitada) | opencode (deepseek-v4.1-flash) | subagente opencode (independente, a executar) | `auditorias/AUD-2026-10-08-02/` | **Concluída** — EOS-GOV-012/013/014 aprovados com auditoria independente (ressalva documental atendida); item 14 permanece ABERTO (F3/L2-completo/multi-processo/L4/storage) |
 | AUD-2026-10-09-03 | 2026-10-09 | COR-01 (claim Firestore condicionado à declaração) + COR-02 (HMAC via SecretStore + canonicalização); branch `fix/audit-p0` base `93288df` | `93288df` + branch `fix/audit-p0` | opencode | decisor humano (usuário), aprovação explícita 2026-10-09 | `auditorias/AUD-2026-10-09-03/` | **Concluída** — R01 COR-01/COR-02 APROVADAS (CA-01-01..04, CA-02-01..05 com testes executados); merge `cf3e200` em `main`; revisão técnica por agente independente dispensada pelo usuário (recomendada, não bloqueante) |
+| AUD-2026-10-09-04 | 2026-10-09 | Fase A: COR-04 (CLI/help + report, graph removido) + COR-08 (manifesto) + COR-05 (perfil declarado); branch `fix/fase-a-gates` base `3df369d` | `3df369d` + branch `fix/fase-a-gates` | opencode | subagente opencode (revisão independente, veredito APROVADO) | `auditorias/AUD-2026-10-09-04/` | **Concluída** — R01 APROVADA com 2 residuais baixos corrigidos pré-merge (SKILL.md, CA-04-02d); merge `8b363db` em `main` |
+| AUD-2026-10-09-05 | 2026-10-09 | Fase B: COR-10/11/03/06/07; branch `fix/fase-b-seguranca` base `8b363db` | `8b363db` + branch `fix/fase-b-seguranca` | opencode | subagente opencode (revisão independente, veredito APROVADO) | `auditorias/AUD-2026-10-09-05/` | **Concluída** — R01 APROVADA; primeira auto-auditoria GREEN (`RUN-d16c641060e9`); merge `581c7a5` em `main` |
+| AUD-2026-10-09-06 | 2026-10-09 | COR-09 (`verify-audit`) + remoção dos artefatos Firebase; branch `fix/cor09-verify-audit` base `581c7a5` | `581c7a5` + branch `fix/cor09-verify-audit` | opencode | subagente opencode (revisão independente, veredito APROVADO) | `auditorias/AUD-2026-10-09-06/` | **Concluída** — R01 APROVADA com 1 residual real corrigido pré-merge (CA-09-05); aceite CA-01-03 superado pela remoção; merge `26cc06d` em `main` |
 
 ## Mapa de sequências
 
@@ -15,5 +18,8 @@
 | A1 | AUD-2026-10-08-01 |
 | A2 | AUD-2026-10-08-02 |
 | A3 | AUD-2026-10-09-03 |
+| A4 | AUD-2026-10-09-04 |
+| A5 | AUD-2026-10-09-05 |
+| A6 | AUD-2026-10-09-06 |
 
 > Sequências de evidência (`EVD-A<seq>-…`) são imutáveis e únicas globalmente via este mapa.
