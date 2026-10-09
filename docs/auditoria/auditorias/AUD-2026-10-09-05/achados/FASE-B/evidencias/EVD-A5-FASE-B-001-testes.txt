@@ -1,0 +1,33 @@
+﻿[EOS][CHECK] ▶ npm run test
+[EOS][CHECK] ✓ npm run test PASS — 1.0s
+[EOS][CHECK] ▶ npm run test
+✔ CA-01-01: alvo com firestore.rules e sem declaração não emite claim nem finding Firestore (1090.3945ms)
+[EOS][CHECK] ✓ npm run test PASS — 1.0s
+[EOS][CHECK] ▶ npm run test
+✔ CA-01-02: ausência do claim não mascara outros vereditos (1085.3163ms)
+[EOS][CHECK] ✓ npm run test PASS — 1.1s
+[EOS][CHECK] ▶ npm run test
+✔ CA-11-01: id com substring incidental não ativa o motor legado (1226.7423ms)
+[EOS][CHECK] ✓ npm run test PASS — 1.0s
+✔ CA-01-04: com claim FIRESTORE ACTIVE declarado, a avaliação legada executa (1076.9269ms)
+✔ CA-03-01: id/projectId inválidos rejeitados no boundary (400, sem execução) (155.9343ms)
+✔ CA-03-02: corpos POST inválidos rejeitados antes do store (400) (26.2773ms)
+✔ CA-03-03: provedor inexistente vira 404, não 500 (13.9552ms)
+✔ CA-03-04: fluxo guardado por validate*() não é sinalizado pelo scanner (16.5898ms)
+✔ CA-06-01: menção ao pacote em lista de dependências não é integração (20.4196ms)
+✔ CA-06-02: uso real do client continua sinalizado (sem prova causal) (10.6196ms)
+✔ CA-06-03: vocabulário de detecção Firebase não é integração (8.1714ms)
+✔ CA-06-04: uso real do Firestore continua sinalizado (10.8546ms)
+✔ CA-07-01: template com REPLACE_WITH_* e union de tipos não sinaliza (26.8102ms)
+✔ CA-07-02: segredo literal real continua detectado (19.4958ms)
+✔ CA-10-01: store ausente gera e opera normalmente (127.4195ms)
+✔ CA-10-02: store corrompido falha fechado, sem rotação silenciosa (52.9589ms)
+✔ CA-10-02b: JSON válido fora do formato falha fechado (5.4801ms)
+ℹ tests 17
+ℹ suites 0
+ℹ pass 17
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6146.2352

@@ -1,0 +1,15 @@
+﻿warning: in the working copy of 'docs/auditoria/auditorias/AUD-2026-01-01-03/achados/X/evidencias/MANIFEST.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/auditoria/auditorias/AUD-2026-01-01-03/achados/X/evidencias/MANIFEST.md', LF will be replaced by CRLF the next time Git touches it
+✔ CA-09-01: manifestos íntegros aprovam (3092.2918ms)
+✔ CA-09-02: artefato adulterado ou ausente reprova (6105.6342ms)
+✔ CA-09-03: mudança pós---since exige nova rodada (7520.5966ms)
+✔ CA-09-04: auditoria inexistente falha fechado (3008.0261ms)
+✔ CA-09-05: manifestos sem entradas verificáveis não aprovam em silêncio (3049.7648ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 23394.092

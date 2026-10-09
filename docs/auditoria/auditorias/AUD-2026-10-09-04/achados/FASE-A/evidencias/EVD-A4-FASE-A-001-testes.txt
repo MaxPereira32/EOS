@@ -1,0 +1,18 @@
+﻿✔ CA-04-01: help anuncia todos os comandos implementados (3159.8705ms)
+✔ CA-04-02: report falha fechado sem auditoria prévia (3006.3863ms)
+✔ CA-04-02b: report reexibe auditoria existente sem reexecutar a esteira (3010.6126ms)
+✔ CA-04-02d: report com auditoria BLOCKED espelha exit do audit (2980.4184ms)
+✔ CA-04-02c: package.json sem script quebrado (graph removido, report presente) (2.0182ms)
+[EOS][CHECK] ▶ npm run test
+[EOS][CHECK] ✓ npm run test PASS — 1.1s
+✔ CA-05-02: perfil declarado idêntico ao inferido, sem contradição (1203.9247ms)
+✔ CA-05-01: eos.risk.yml do próprio EOS declara o perfil verdadeiro (1.8332ms)
+✔ CA-08-01: EOS/eos-version.md declara a versão efetiva do pacote (2.0623ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 12601.7919

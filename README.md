@@ -135,10 +135,11 @@ O EOS disponibiliza um CLI corporativo unificado (`EOS/bin/eos.ts`) com controle
 | `npx tsx EOS/bin/eos.ts nist-assess <req_id>` | Executa a esteira de conformidade normativa NIST SSDF SP 800-218 (ex: `PW.8.2`) com snapshots antes/depois. |
 | `npm run mcp` | Inicia o servidor MCP nativo (stdio, JSON-RPC 2.0) para agentes de IA. |
 | `npm run report` | Reexibe o resumo da última auditoria (`.eos/auditoria.json`); falha fechado sem auditoria prévia. |
+| `npx tsx EOS/bin/eos.ts verify-audit <AUD-ID> [repo] [--since <sha>]` | Verifica SHA-256 dos manifestos de evidência e, com `--since`, reprova mudanças no dossiê pós-aprovação. |
 | `npm run self-governance` | Executa a auto-governança do EOS sobre sua própria base de código. |
 | `npm run test` | Executa a suíte de testes de integridade e conformidade. |
 
-> 🔒 **Comandos implementados:** `mcp`, `audit`, `orchestrate`, `nist-assess`, `report` (ver `npx tsx EOS/bin/eos.ts --help`). O script `graph` foi removido: não há construtor de grafo a partir de fonte ou auditoria, e anunciá-lo seria falso sucesso.
+> 🔒 **Comandos implementados:** `mcp`, `audit`, `orchestrate`, `nist-assess`, `report`, `verify-audit` (ver `npx tsx EOS/bin/eos.ts --help`). O script `graph` foi removido: não há construtor de grafo a partir de fonte ou auditoria, e anunciá-lo seria falso sucesso.
 
 > 🔒 **Aviso de Salvaguarda:** O comando de remediação direta (`eos fix`) permanece intencionalmente **desabilitado por segurança** para garantir validação atômica de *Unified Diff* e contenção contra *Path Traversal* antes de qualquer escrita no disco.
 
@@ -174,12 +175,13 @@ Para adotar o **EOS** em seu projeto de software:
        └── decisores.md               # Registro de ADRs
    ```
 
-2. **Execute as análises de governança:**
-   - Integre o EOS no seu pipeline de CI/CD ou no workflow local para rodar a auditoria:
-     ```bash
-     npx tsx <caminho-para-eos>/EOS/bin/eos.ts audit .
-     ```
-   - Os relatórios de conformidade e ACF serão gerados em `.eos/auditoria.json` e `.eos/acf-auditoria.md`.
+ 2. **Execute as análises de governança:**
+    - Integre o EOS no seu pipeline de CI/CD ou no workflow local para rodar a auditoria:
+      ```bash
+      npx tsx <caminho-para-eos>/EOS/bin/eos.ts audit .
+      ```
+    - Os relatórios de conformidade e ACF serão gerados em `.eos/auditoria.json` e `.eos/acf-auditoria.md`.
+    - Opcional: declare o perfil arquitetural em `eos.risk.yml` (`architecture.profile`, ex. `cli-or-script`) — sem ele, o perfil é inferido e a governança pode ficar insuficiente.
 
 ---
 
