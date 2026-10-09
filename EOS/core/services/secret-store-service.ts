@@ -14,9 +14,9 @@ export class SecretStoreService {
   private readonly lockFilePath: string;
   private readonly machineKeyPath: string;
 
-  constructor(customConfig?: Partial<SecretStoreConfig>) {
-    const rootDir = process.cwd();
-    const eosDir = path.join(rootDir, '.eos');
+  constructor(customConfig?: Partial<SecretStoreConfig>, rootDir?: string) {
+    const resolvedRoot = rootDir || process.cwd();
+    const eosDir = path.join(resolvedRoot, '.eos');
     
     if (!fs.existsSync(eosDir)) {
       fs.mkdirSync(eosDir, { recursive: true });

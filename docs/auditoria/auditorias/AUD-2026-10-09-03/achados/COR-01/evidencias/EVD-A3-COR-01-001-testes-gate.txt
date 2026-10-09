@@ -1,0 +1,22 @@
+﻿[EOS][CHECK] ▶ npm run test
+[EOS][CHECK] ✓ npm run test PASS — 0.6s
+[EOS][CHECK] ▶ npm run test
+✔ CA-01-01: alvo com firestore.rules e sem declaração não emite claim nem finding Firestore (606.9251ms)
+[EOS][CHECK] ✓ npm run test PASS — 0.6s
+[EOS][CHECK] ▶ npm run test
+✔ CA-01-02: ausência do claim não mascara outros vereditos (678.1283ms)
+[EOS][CHECK] ✓ npm run test PASS — 0.8s
+✔ CA-01-04: com claim FIRESTORE ACTIVE declarado, a avaliação legada executa (883.1225ms)
+✔ CA-02-01: nenhum literal de chave no fonte do signer (0.8442ms)
+✔ CA-02-02: sign + verify passam com segredo do SecretStore (45.1518ms)
+✔ CA-02-03: mutação aninhada invalida a assinatura (repro EOS-SEC-005 invertida) (40.6724ms)
+✔ CA-02-03b: ordem de chaves não afeta a assinatura (canonicalização) (28.196ms)
+✔ CA-02-05: store inacessível falha fechado (nenhuma assinatura emitida) (1.781ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2717.8908
