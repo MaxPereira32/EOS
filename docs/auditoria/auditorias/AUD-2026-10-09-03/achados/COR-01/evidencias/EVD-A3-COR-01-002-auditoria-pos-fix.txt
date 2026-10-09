@@ -1,0 +1,24 @@
+﻿╔══════════════════════════════════════════════════════════════╗
+║    EOS v4.0 Self-Governed Continuous Security Audit CLI      ║
+╚══════════════════════════════════════════════════════════════╝
+
+[EOS Audit] Iniciando auditoria em modo AUDIT no caminho: '.'...
+
+======================================================
+  🔍 EOS GOVERNANCE AUDIT SUMMARY (RUN-dac3bd498480)
+======================================================
+
+  - Target ID:            TGT-4a0207f3fc76d4c5
+  - Arquivos Analisados:  451 / 451
+  - Quality Gates:        8
+  - Perfil Arquitetural:  CLI_OR_SCRIPT
+  - Política de Domínio:  NOT_APPLICABLE
+  - Security Claims:       0
+  - Achados (Findings):   5
+  - OVERALL PHASE STATUS:  [ RED ]
+
+Relatórios gerados em:
+  - C:\Users\lindo\OneDrive\Desktop\Dev\Projeto\EOS\.eos\auditoria.json
+  - C:\Users\lindo\OneDrive\Desktop\Dev\Projeto\EOS\.eos\acf-auditoria.md
+  - C:\Users\lindo\OneDrive\Desktop\Dev\Projeto\EOS\.eos\auditorias\RUN-dac3bd498480
+
