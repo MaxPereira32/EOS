@@ -16,6 +16,8 @@
 | COR-06 | ACH-04 (RLS Supabase) | P2 | PLANEJADO | Claim RLS + validação runtime ou não-aplicabilidade justificada |
 | COR-08 | ACH-07 (`eos-version.md` v0.9.0) | P3 | PLANEJADO | Sincronizar com v2.2.0 / CLI v4.0.0 |
 | COR-07 | ACH-05 (falsos positivos SECRET-001) | P3 | PLANEJADO | Confirmar example sem segredo; allowlist documentada |
+| COR-10 | R1 revisão-R01 (rotação silenciosa em store corrompido) | P2 | PLANEJADO | Distinguir "store ausente" (gerar) de "store ilegível" (falhar fechado) |
+| COR-11 | R2 revisão-R01 (gate `includes('FIRESTORE')` super-inclusivo) | P3 | PLANEJADO | Allowlist exata de ids de claim |
 
 ## Dependências e ordem
 
