@@ -21,7 +21,7 @@ const EXCLUDED_DIRECTORIES = new Set([
 ]);
 const EXCLUDED_FILENAMES = new Set(['package-lock.json', 'npm-shrinkwrap.json', 'yarn.lock', 'pnpm-lock.yaml', 'poetry.lock', 'pipfile.lock', 'cargo.lock']);
 const SECRET_KEY_PATTERN = /\b(?:[A-Za-z_][\w.-]*?)?(?:api[_-]?key|secret|token|password|passwd|salt|service[_-]?role(?:[_-]?key)?)[\w.-]*\b/i;
-const PLACEHOLDER_SECRET_PATTERN = /(?:process\.env|import\.meta\.env|os\.environ|example|placeholder|changeme|change[_-]?me|replace[_-]?me|your[_-]|smtpd?|relay\s+host|host\s+(?:password|username)|\$\{|<[^>]+>)/i;
+const PLACEHOLDER_SECRET_PATTERN = /(?:process\.env|import\.meta\.env|os\.environ|example|placeholder|changeme|change[_-]?me|replace[_-]?me|replace[_-]?with|your[_-]|smtpd?|relay\s+host|host\s+(?:password|username)|\$\{|<[^>]+>)/i;
 
 /**
  * Static fail-closed review for high-frequency defects in generated web apps.
@@ -38,9 +38,17 @@ export class GeneratedAppSecurityEngine {
     };
 
     const text = files.map(file => file.lines.join('\n')).join('\n');
-    const supabasePattern = /(?:@supabase\/supabase-js|createClient\s*\(|\bsupabase\s*[._]|SUPABASE_(?:URL|SERVICE_ROLE_KEY|STORAGE_BUCKET))/i;
+    // COR-06: exigir USO real do client (chamada de método, env) — a mera
+    // menção ao nome do pacote (ex.: na própria lista de dependências da
+    // engine) não é integração e gerava auto-sinalização.
+    const supabasePattern = /(?:createClient\s*\(|\bsupabase\s*\.\s*[a-zA-Z]+\s*\(|SUPABASE_(?:URL|SERVICE_ROLE_KEY|STORAGE_BUCKET))/i;
     const supabaseUses = supabasePattern.test(text);
-    const firebaseUses = /(?:initializeApp\s*\(|getFirestore\s*\(|firebase\/firestore|firebase\/app)/i.test(text);
+    // COR-06 (cont.): Firebase exige import/inicialização E uso observável
+    // (coleção/docs/auth). A mera menção em vocabulário de detecção ou
+    // catálogo de regras não é integração (auto-sinalização).
+    const firebaseImport = /(?:initializeApp\s*\(|from\s+['"]firebase\/(?:firestore|auth|app)['"]|require\s*\(\s*['"]firebase\/(?:firestore|auth|app)['"])/i.test(text);
+    const firebaseUsage = /(?:getFirestore\s*\(|collection\s*\(|getDocs?\s*\(|addDoc\s*\(|onSnapshot\s*\(|getAuth\s*\(|signIn[A-Za-z]*\s*\()/i.test(text);
+    const firebaseUses = firebaseImport && firebaseUsage;
     const supabasePolicy = /(?:alter\s+table[\s\S]{0,300}enable\s+row\s+level\s+security|create\s+policy)/i.test(text);
     const firebaseRules = files.some(file => file.relative.endsWith('.rules')
       && /service\s+cloud\.firestore/i.test(file.lines.join('\n')) && /allow\s+(?:read|write)/i.test(file.lines.join('\n')));
@@ -51,7 +59,7 @@ export class GeneratedAppSecurityEngine {
         'A integração Supabase foi observada, mas suas políticas podem ser gerenciadas fora deste repositório. Isso não prova ausência de política nem vulnerabilidade explorável. Declare um claim RLS e valide as permissões reais do recurso em runtime.', 'MEDIUM', 0.65);
     }
     if (firebaseUses && !firebaseRules) {
-      const location = this.firstMatch(files, /(?:initializeApp\s*\(|getFirestore\s*\(|firebase\/firestore|firebase\/app)/i);
+      const location = this.firstMatch(files, /(?:getFirestore\s*\(|collection\s*\(|getDocs?\s*\(|addDoc\s*\(|onSnapshot\s*\(|getAuth\s*\(|signIn[A-Za-z]*\s*\()/i);
       if (location) add('EOS-GENAI-RLS-002', location.file, location.line, 'Firebase sem regras de acesso verificáveis',
         'Risco: o código usa Firebase/Firestore sem firestore.rules aplicável no escopo auditado. Correção: mantenha default deny, regras vinculadas a request.auth/tenant e teste-as no emulador real.', 'CRITICAL', 0.92);
     }
@@ -84,7 +92,10 @@ export class GeneratedAppSecurityEngine {
         }
 
         const userInput = /(?:req(?:uest)?\.body|req\.query|req\.params|formData\s*\(|searchParams)/i.test(line);
-        const validated = /(?:safeParse|\.parse\s*\(|validate\s*\(|zod|joi|yup|class-validator|sanitize|normaliz)/i.test(nearby);
+        // COR-03b: qualquer chamada validate*() observável conta como validação
+        // (ex.: validateIdParam no boundary da API local) — vocabulário antes
+        // restrito ao literal `validate(` não reconhecia o próprio padrão do EOS.
+        const validated = /(?:safeParse|\.parse\s*\(|validate[\w$]*\s*\(|zod|joi|yup|class-validator|sanitize|normaliz)/i.test(nearby);
         if (userInput && !validated) {
           add('EOS-GENAI-INPUT-001', file, index + 1, 'Entrada do usuário sem validação ou normalização observável',
             'Risco: dados controlados pelo usuário entram no fluxo sem contrato verificável. Correção: valide tipo, tamanho, formato e normalização no boundary do servidor antes de persistir ou consultar.', 'HIGH', 0.76);
@@ -163,6 +174,9 @@ export class GeneratedAppSecurityEngine {
   }
 
   private isHardcodedSecret(line: string, file: SourceFile): boolean {
+    // COR-07: declarações de tipo/interface nunca guardam segredo em runtime
+    // (ex.: `export type SecretStoreType = 'A' | 'B'`) — não são atribuições.
+    if (/^\s*(?:export\s+|declare\s+)?(?:type|interface)\b/.test(line)) return false;
     const sourceAssignment = new RegExp(`(?:\\b(?:const|let|var)\\s+)?${SECRET_KEY_PATTERN.source}\\s*[:=]\\s*(['"])([^'"\\n]{8,})\\1`, 'i');
     const sourceMatch = line.match(sourceAssignment);
     if (sourceMatch && !PLACEHOLDER_SECRET_PATTERN.test(line)) return true;

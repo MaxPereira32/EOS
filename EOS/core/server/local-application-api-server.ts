@@ -12,6 +12,27 @@ export class LocalApplicationApiServer {
   private sessionToken: string;
   private requestCounts: Map<string, { count: number; windowStart: number }> = new Map();
 
+  // COR-03: validação sintática no boundary. O serviço interno impõe isolamento
+  // de projeto; aqui rejeitamos forma inválida antes de qualquer processamento.
+  private static readonly MAX_ID_LENGTH = 256;
+  private static readonly ID_PATTERN = /^[A-Za-z0-9_.\-]+$/;
+  private static readonly MAX_PROVIDER_ID_LENGTH = 128;
+  private static readonly MAX_API_KEY_LENGTH = 8192;
+
+  private static validateIdParam(value: unknown, name: string, required: boolean): string | null {
+    if (value === null || value === undefined || value === '') {
+      return required ? `INVALID_INPUT: '${name}' é obrigatório.` : null;
+    }
+    if (typeof value !== 'string') return `INVALID_INPUT: '${name}' deve ser texto.`;
+    if (value.length > LocalApplicationApiServer.MAX_ID_LENGTH) {
+      return `INVALID_INPUT: '${name}' excede ${LocalApplicationApiServer.MAX_ID_LENGTH} caracteres.`;
+    }
+    if (!LocalApplicationApiServer.ID_PATTERN.test(value)) {
+      return `INVALID_INPUT: '${name}' contém caracteres inválidos.`;
+    }
+    return null;
+  }
+
   constructor(customConfig?: Partial<LocalApplicationApiConfig>) {
     const eosDir = path.join(process.cwd(), '.eos');
     if (!fs.existsSync(eosDir)) {
@@ -60,8 +81,9 @@ export class LocalApplicationApiServer {
       });
 
       this.server.listen(this.config.defaultPort, this.config.bindAddress, () => {
-        fs.writeFileSync(this.config.portLockFilePath, String(this.config.defaultPort), 'utf8');
-        resolve(this.config.defaultPort);
+        const assignedPort = (this.server?.address() as any)?.port || this.config.defaultPort;
+        fs.writeFileSync(this.config.portLockFilePath, String(assignedPort), 'utf8');
+        resolve(assignedPort);
       });
     });
   }
@@ -150,6 +172,12 @@ export class LocalApplicationApiServer {
 
         if (url.startsWith('/api/audit-history/detail')) {
           const auditRunId = urlParams.get('id') || 'AUD-2026-00142';
+          const invalidId = LocalApplicationApiServer.validateIdParam(auditRunId, 'id', true)
+            || LocalApplicationApiServer.validateIdParam(projectId, 'projectId', false);
+          if (invalidId) {
+            this.sendJSON(res, 400, { error: invalidId });
+            return;
+          }
           try {
             const detail = historyService.getAuditTimelineDetail(auditRunId, projectId);
             if (!detail) {
@@ -176,8 +204,17 @@ export class LocalApplicationApiServer {
         const body = await this.parseRequestBody(req);
         const { providerId, apiKey } = body;
 
-        if (!providerId || !apiKey) {
-          this.sendJSON(res, 400, { error: 'providerId e apiKey são obrigatórios.' });
+        const invalidProvider = LocalApplicationApiServer.validateIdParam(providerId, 'providerId', true);
+        if (invalidProvider || String(providerId).length > LocalApplicationApiServer.MAX_PROVIDER_ID_LENGTH) {
+          this.sendJSON(res, 400, { error: invalidProvider || `INVALID_INPUT: 'providerId' excede ${LocalApplicationApiServer.MAX_PROVIDER_ID_LENGTH} caracteres.` });
+          return;
+        }
+        if (typeof apiKey !== 'string' || apiKey.length === 0) {
+          this.sendJSON(res, 400, { error: `INVALID_INPUT: 'apiKey' é obrigatória.` });
+          return;
+        }
+        if (apiKey.length > LocalApplicationApiServer.MAX_API_KEY_LENGTH) {
+          this.sendJSON(res, 400, { error: `INVALID_INPUT: 'apiKey' excede ${LocalApplicationApiServer.MAX_API_KEY_LENGTH} caracteres.` });
           return;
         }
 
@@ -194,8 +231,13 @@ export class LocalApplicationApiServer {
         const body = await this.parseRequestBody(req);
         const { providerId } = body;
 
+        const invalidProvider = LocalApplicationApiServer.validateIdParam(providerId, 'providerId', true);
+        if (invalidProvider) {
+          this.sendJSON(res, 400, { error: invalidProvider });
+          return;
+        }
         try {
-          const rawKey = this.secretStore.retrieveCredential(providerId || '');
+          const rawKey = this.secretStore.retrieveCredential(providerId);
           if (!rawKey) {
             this.sendJSON(res, 404, { success: false, error: 'Nenhuma credencial configurada para este provedor.' });
             return;
@@ -211,6 +253,10 @@ export class LocalApplicationApiServer {
         } catch (err: any) {
           if (err.message?.includes('TAMPERING_DETECTED')) {
             this.sendJSON(res, 403, { success: false, error: 'SECURITY_VIOLATION_TAMPERING_DETECTED: A credencial salva foi adulterada.' });
+            return;
+          }
+          if (err.message?.startsWith('NOT_FOUND_ERROR')) {
+            this.sendJSON(res, 404, { success: false, error: 'Nenhuma credencial configurada para este provedor.' });
             return;
           }
           throw err;
