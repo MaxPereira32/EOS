@@ -23,6 +23,7 @@ function printUsage() {
   console.log('  orchestrate <finding_id> - Protocolo multi-agente para o finding informado');
   console.log('  nist-assess [req_id]    - Avaliação normativa NIST SSDF SP 800-218 (padrão: PW.8.2)');
   console.log('  report [path]           - Reexibe o resumo da última auditoria (.eos/auditoria.json)');
+  console.log('  verify-audit <AUD-ID> [repo] [--since <sha>] - Verifica integridade dos manifestos e mudanças pós-aprovação');
   console.log('  fix                     - (DESABILITADO) Remediação autônoma travada por segurança');
   console.log('\nExemplo: npx tsx EOS/bin/eos.ts audit ./src\n');
 }
@@ -258,6 +259,107 @@ async function main() {
       const isBlockedOrRed = report.overall_phase_status === 'BLOCKED' || report.overall_phase_status === 'RED';
       if (isBlockedOrRed || hasRuleFailures || hasInconclusive) {
         process.exitCode = 1;
+      }
+      break;
+    }
+
+    case 'verify-audit': {
+      printBanner();
+      const fs = require('fs');
+      const crypto = require('crypto');
+      const { execFileSync } = require('child_process');
+      const rawArgs = process.argv.slice(3);
+      const audId = rawArgs.find(a => !a.startsWith('--') && !a.includes('/') && !a.includes('\\') && a !== '.');
+      const sinceIdx = rawArgs.indexOf('--since');
+      const sinceSha = sinceIdx >= 0 ? rawArgs[sinceIdx + 1] : null;
+      const repoArg = rawArgs.find(a => !a.startsWith('--') && a !== audId && a !== sinceSha);
+      const repoRoot = path.resolve(repoArg || '.');
+
+      if (!audId || /^AUD-\d{4}-\d{2}-\d{2}-\d{2}$/.test(audId) === false) {
+        console.error('[-] Uso: eos verify-audit <AUD-ID> [repo] [--since <sha>] (ex.: AUD-2026-10-09-05)');
+        process.exitCode = 1;
+        break;
+      }
+      const audDir = path.join(repoRoot, 'docs', 'auditoria', 'auditorias', audId);
+      if (!fs.existsSync(audDir)) {
+        console.error(`[-] Auditoria não encontrada: '${audDir}'.`);
+        process.exitCode = 1;
+        break;
+      }
+
+      // 1. Integridade: recomputa SHA-256 de cada entrada de cada MANIFEST.md.
+      const manifests: string[] = [];
+      const walk = (dir: string): void => {
+        for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+          const full = path.join(dir, entry.name);
+          if (entry.isDirectory()) walk(full);
+          else if (entry.name === 'MANIFEST.md') manifests.push(full);
+        }
+      };
+      walk(audDir);
+
+      let checked = 0;
+      const failures: string[] = [];
+      for (const manifest of manifests) {
+        const lines = fs.readFileSync(manifest, 'utf8').split(/\r?\n/);
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith('|')) continue;
+          const cells = trimmed.split('|').map((c: string) => c.trim()).filter((c: string) => c.length > 0);
+          if (cells.length < 2 || /^-+$/.test(cells.join('')) || /^arquivo$/i.test(cells[0])) continue;
+          const file = cells[0];
+          const expectedSha = cells[cells.length - 1].toLowerCase();
+          if (!/^[0-9a-f]{64}$/.test(expectedSha)) continue;
+          checked++;
+          const abs = path.join(path.dirname(manifest), file);
+          if (!fs.existsSync(abs)) {
+            failures.push(`AUSENTE: ${path.relative(repoRoot, abs)} (registrado em ${path.relative(repoRoot, manifest)})`);
+            continue;
+          }
+          const actual = crypto.createHash('sha256').update(fs.readFileSync(abs)).digest('hex');
+          if (actual !== expectedSha) {
+            failures.push(`HASH DIVERGENTE: ${path.relative(repoRoot, abs)}`);
+          }
+        }
+      }
+
+      // 2. Mudanças pós-aprovação: arquivos do dossiê alterados desde --since exigem nova rodada.
+      let postApprovalChanges: string[] = [];
+      if (sinceSha) {
+        try {
+          const out = execFileSync('git', ['diff', '--name-only', sinceSha, 'HEAD', '--', path.relative(repoRoot, audDir) || '.'], {
+            cwd: repoRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
+          });
+          postApprovalChanges = out.split(/\r?\n/).map((s: string) => s.trim()).filter(Boolean);
+        } catch (err: any) {
+          console.error(`[-] Falha ao comparar com '${sinceSha}': ${err.message || err}`);
+          process.exitCode = 1;
+          break;
+        }
+      }
+
+      console.log('\n======================================================');
+      console.log(`  🛡️ EOS AUDIT INTEGRITY VERDICT (${audId})`);
+      console.log('======================================================\n');
+      console.log(`  - Manifestos:           ${manifests.length}`);
+      console.log(`  - Artefatos checados:   ${checked}`);
+      if (checked === 0) {
+        failures.push('NENHUM_ARTEFATO_VERIFICAVEL: manifestos vazios ou sem entradas SHA-256 — aprovação silenciosa proibida.');
+      }
+      console.log(`  - Falhas de integridade:${failures.length}`);
+      failures.forEach(f => console.log(`    ❌ ${f}`));
+      if (sinceSha) {
+        console.log(`  - Mudanças desde ${sinceSha}: ${postApprovalChanges.length}`);
+        postApprovalChanges.forEach(f => console.log(`    ⚠️ ${f} (exige nova rodada)`));
+      } else {
+        console.log('  - Base de aprovação:    não informada (use --since <sha> para travar parecer↔SHA)');
+      }
+
+      if (failures.length > 0 || postApprovalChanges.length > 0) {
+        console.error('\n💥 VERIFICAÇÃO REPROVADA: registros adulterados/ausentes ou dossiê alterado pós-aprovação.');
+        process.exitCode = 1;
+      } else {
+        console.log('\n✅ VERIFICAÇÃO APROVADA: manifestos íntegros' + (sinceSha ? ' e dossiê inalterado desde a aprovação.' : '.'));
       }
       break;
     }
