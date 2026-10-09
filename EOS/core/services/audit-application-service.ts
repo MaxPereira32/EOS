@@ -975,11 +975,11 @@ export class AuditApplicationService {
     }
 
     // 6. Execução via Domain Adapters Universais (Decoupled Architecture)
-    // COR-01 (AUD-2026-10-09-03, H1): claims Firestore só existem quando
-    // declarados ACTIVE em eos.risk.yml. Sem declaração, nenhuma emissão —
-    // nunca BLOCKED automático sem prova nem contrato.
+    // COR-01 (AUD-2026-10-09-03, H1) + COR-11 (allowlist exata): o motor
+    // legado Firestore só avalia o próprio claim. Qualquer outro id declarado
+    // segue a trilha declarada (fail-closed com motivos), nunca o legado.
     const firestoreClaimDeclared = declaredActiveSecurityClaimIds.some(
-      id => id === 'SEC-CLAIM-FIRESTORE-001' || id.includes('FIRESTORE')
+      id => id === 'SEC-CLAIM-FIRESTORE-001'
     );
     const envelopes: EvidenceEnvelope[] = [];
     const firestoreAdapter = new FirestoreDomainAdapter();

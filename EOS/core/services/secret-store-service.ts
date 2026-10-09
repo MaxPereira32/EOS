@@ -213,21 +213,28 @@ export class SecretStoreService {
       return { schemaVersion: 1, credentials: {} };
     }
 
+    // COR-10: store presente porém ilegível falha fechado — nunca confundir
+    // corrupção com "primeira execução" (isso rotacionaria chaves silenciosamente).
+    let data: unknown;
     try {
       const content = fs.readFileSync(this.config.storagePath, 'utf8');
-      const data = JSON.parse(content);
-
-      if (!data.schemaVersion) {
-        return {
-          schemaVersion: 1,
-          credentials: data
-        };
-      }
-
-      return data;
-    } catch {
-      return { schemaVersion: 1, credentials: {} };
+      data = JSON.parse(content);
+    } catch (err: any) {
+      throw new Error(`CORRUPT_STORE_ERROR: '${this.config.storagePath}' ilegível (${err.message || err}). Recuse-se a operar; não gere chaves sobre store corrompido.`);
     }
+    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+      throw new Error(`CORRUPT_STORE_ERROR: '${this.config.storagePath}' com formato inválido. Recuse-se a operar; não gere chaves sobre store corrompido.`);
+    }
+
+    const record = data as { schemaVersion?: unknown; credentials?: unknown };
+    if (!record.schemaVersion) {
+      return {
+        schemaVersion: 1,
+        credentials: record as unknown as Record<string, EncryptedCredentialEnvelope>
+      };
+    }
+
+    return data as { schemaVersion: number; credentials: Record<string, EncryptedCredentialEnvelope> };
   }
 
   private writeContainerInternal(container: { schemaVersion: number; credentials: Record<string, EncryptedCredentialEnvelope> }): void {
