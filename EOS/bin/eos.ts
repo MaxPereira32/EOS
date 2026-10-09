@@ -343,6 +343,9 @@ async function main() {
       console.log('======================================================\n');
       console.log(`  - Manifestos:           ${manifests.length}`);
       console.log(`  - Artefatos checados:   ${checked}`);
+      if (checked === 0) {
+        failures.push('NENHUM_ARTEFATO_VERIFICAVEL: manifestos vazios ou sem entradas SHA-256 — aprovação silenciosa proibida.');
+      }
       console.log(`  - Falhas de integridade:${failures.length}`);
       failures.forEach(f => console.log(`    ❌ ${f}`));
       if (sinceSha) {

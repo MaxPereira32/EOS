@@ -97,3 +97,14 @@ test('CA-09-04: auditoria inexistente falha fechado', () => {
   const { exitCode } = runCli(['verify-audit', 'AUD-1900-01-01-99', REPO_ROOT]);
   assert.notStrictEqual(exitCode, 0);
 });
+
+test('CA-09-05: manifestos sem entradas verificáveis não aprovam em silêncio', t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'eos-cor09-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const evDir = path.join(root, 'docs', 'auditoria', 'auditorias', 'AUD-2026-01-01-05', 'achados', 'X', 'evidencias');
+  fs.mkdirSync(evDir, { recursive: true });
+  fs.writeFileSync(path.join(evDir, 'MANIFEST.md'), '# MANIFEST\n\n| Arquivo | SHA-256 |\n|---|---|\n');
+  const { stdout, exitCode } = runCli(['verify-audit', 'AUD-2026-01-01-05', root]);
+  assert.notStrictEqual(exitCode, 0);
+  assert.match(`${stdout}`, /NENHUM_ARTEFATO_VERIFICAVEL/);
+});
