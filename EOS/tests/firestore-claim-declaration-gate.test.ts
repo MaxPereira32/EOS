@@ -63,6 +63,27 @@ test('CA-01-02: ausência do claim não mascara outros vereditos', async () => {
   assert.ok(!rationale.includes('FIRESTORE'));
 });
 
+test('CA-11-01: id com substring incidental não ativa o motor legado', async () => {
+  const report = await auditTempProject(root => {
+    fs.writeFileSync(path.join(root, 'firestore.rules'), RULES_FIXTURE);
+    fs.writeFileSync(
+      path.join(root, 'eos.risk.yml'),
+      ['security_claims:', '  - id: SEC-CLAIM-NOT-FIRESTORE-RELATED', '    status: ACTIVE', ''].join('\n'),
+    );
+  });
+
+  assert.ok(
+    !firestoreClaimIds(report).includes('SEC-CLAIM-FIRESTORE-001'),
+    'legado restrito ao próprio claim id',
+  );
+  const declared = (report.security_claims || []).find(
+    claim => claim.claim_id === 'SEC-CLAIM-NOT-FIRESTORE-RELATED',
+  );
+  assert.ok(declared, 'id declarado segue a trilha declarada (fail-closed com motivos)');
+  assert.strictEqual(declared.phase_status, 'BLOCKED');
+  assert.ok(declared.blocking_reasons.length > 0);
+});
+
 test('CA-01-04: com claim FIRESTORE ACTIVE declarado, a avaliação legada executa', async () => {
   const report = await auditTempProject(root => {
     fs.writeFileSync(path.join(root, 'firestore.rules'), RULES_FIXTURE);
